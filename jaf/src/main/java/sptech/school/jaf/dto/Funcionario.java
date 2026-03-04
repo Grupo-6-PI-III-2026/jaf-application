@@ -1,13 +1,23 @@
 package sptech.school.jaf.dto;
 
 public class Funcionario {
-    private String nome;
+   private Integer id;
+   private String nome;
 
     public Funcionario() {
     }
 
-    public Funcionario(String nome) {
+    public Funcionario(Integer id, String nome) {
+        this.id = id;
         this.nome = nome;
+    }
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
     }
 
     public String getNome() {
@@ -21,7 +31,8 @@ public class Funcionario {
     @Override
     public String toString() {
         return "Funcionario{" +
-                "nome='" + nome + '\'' +
+                "id=" + id +
+                ", nome='" + nome + '\'' +
                 '}';
     }
 }
