@@ -1,5 +1,3 @@
-package com.sptech.school.jaf_financeiro;
-
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
