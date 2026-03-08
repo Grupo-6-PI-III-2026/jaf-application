@@ -24,7 +24,7 @@ public class ObraService {
 
     public Obra buscarPorId(Integer id) {
         for (Obra obra : obras) {
-            if (obra.getId() != null && obra.getId() == id) {
+            if (obra.getId() != null && obra.getId().equals(id)) {
                 return obra;
             }
         }
@@ -36,7 +36,7 @@ public class ObraService {
         for (Integer i = 0; i < obras.size(); i++) {
             Obra obraAtual = obras.get(i);
 
-            if (obraAtual.getId() != null && obraAtual.getId() == id) {
+            if (obraAtual.getId() != null && obraAtual.getId().equals(id)) {
                 obraAtualizada.setId(id);
                 obras.set(i, obraAtualizada);
                 return obraAtualizada;
@@ -46,6 +46,6 @@ public class ObraService {
     }
 
     public boolean deletarObra(Integer id) {
-        return obras.removeIf(obra -> obra.getId() != null && obra.getId() == id);
+        return obras.removeIf(obra -> obra.getId() != null && obra.getId().equals(id));
     }
 }

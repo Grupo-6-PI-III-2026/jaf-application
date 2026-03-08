@@ -44,7 +44,7 @@ public class GastoService {
 
         for (Gasto gasto : gastos) {
 
-            if (gasto.getFuncionario().getId() == idFuncionario) {
+            if (gasto.getFuncionario().getId().equals(idFuncionario)) {
                 gastosDoFuncionario.add(gasto);
             }
         }
