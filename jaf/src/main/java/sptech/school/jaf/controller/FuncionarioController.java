@@ -14,6 +14,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/jaf/funcionarios")
 public class FuncionarioController {
+
     private final FuncionarioService service;
 
     public FuncionarioController(FuncionarioService service) {
@@ -25,19 +26,18 @@ public class FuncionarioController {
         List<Funcionario> lista = service.listarTodos();
 
         if (lista.isEmpty()) {
-            return ResponseEntity.status(204).build(); // 204 No Content
+            return ResponseEntity.status(204).build();
         }
-        return ResponseEntity.status(200).body(lista); // 200 OK
+        return ResponseEntity.status(200).body(lista);
     }
 
-    // Buscando um funcionário específico pela URL (ex: /jaf/funcionarios/1)
     @GetMapping("/{id}")
-    public ResponseEntity<Funcionario> buscar(@PathVariable int id) {
+    public ResponseEntity<Funcionario> buscar(@PathVariable Integer id) {
         Funcionario func = service.buscarPorId(id);
 
         if (func != null) {
             return ResponseEntity.status(200).body(func);
         }
-        return ResponseEntity.status(404).build(); // 404 Not Found
+        return ResponseEntity.status(404).build();
     }
 }

@@ -31,4 +31,21 @@ public class ObraService {
 
         return null;
     }
+
+    public Obra atualizarObra(Integer id, Obra obraAtualizada) {
+        for (Integer i = 0; i < obras.size(); i++) {
+            Obra obraAtual = obras.get(i);
+
+            if (obraAtual.getId() != null && obraAtual.getId() == id) {
+                obraAtualizada.setId(id);
+                obras.set(i, obraAtualizada);
+                return obraAtualizada;
+            }
+        }
+        return null;
+    }
+
+    public boolean deletarObra(Integer id) {
+        return obras.removeIf(obra -> obra.getId() != null && obra.getId() == id);
+    }
 }

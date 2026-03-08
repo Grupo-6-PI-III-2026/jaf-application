@@ -22,7 +22,7 @@ public class GastoService {
         this.obraService = obraService;
     }
 
-    public Gasto registrarGasto(int idFuncionario, int idObra, Gasto novoGasto) {
+    public Gasto registrarGasto(Integer idFuncionario, Integer idObra, Gasto novoGasto) {
 
         Funcionario func = funcionarioService.buscarPorId(idFuncionario);
         Obra obra = obraService.buscarPorId(idObra);
@@ -39,7 +39,7 @@ public class GastoService {
         return novoGasto;
     }
 
-    public List<Gasto> listarGastosDoFuncionario(int idFuncionario) {
+    public List<Gasto> listarGastosDoFuncionario(Integer idFuncionario) {
         List<Gasto> gastosDoFuncionario = new ArrayList<>();
 
         for (Gasto gasto : gastos) {

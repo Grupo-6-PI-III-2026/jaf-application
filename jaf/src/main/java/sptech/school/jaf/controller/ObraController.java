@@ -38,11 +38,34 @@ public class ObraController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Obra> buscarObra(@PathVariable int id) {
+    public ResponseEntity<Obra> buscarObra(@PathVariable Integer id) {
         Obra obra = obraService.buscarPorId(id);
 
         if (obra != null) {
             return ResponseEntity.status(200).body(obra);
+        }
+        return ResponseEntity.status(404).build();
+    }
+
+    // ENDPOINT 4 - ATUALIZAR OBRA
+    @PutMapping("/{id}")
+    public ResponseEntity<Obra> atualizarObra(@PathVariable Integer id, @RequestBody Obra obraAtualizada) {
+        Obra atualizada = obraService.atualizarObra(id, obraAtualizada);
+
+        if (atualizada != null) {
+            return ResponseEntity.status(200).body(atualizada);
+        }
+        return ResponseEntity.status(404).build();
+    }
+
+    // ENDPOINT 5 - DELETAR OBRA
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deletarObra(@PathVariable Integer id) {
+        boolean foiDeletado = obraService.deletarObra(id);
+
+        if (foiDeletado) {
+
+            return ResponseEntity.status(204).build();
         }
         return ResponseEntity.status(404).build();
     }
