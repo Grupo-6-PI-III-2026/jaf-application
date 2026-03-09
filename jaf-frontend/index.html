@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Login e Obras</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+
+    <div class="container">
+        <h2>Painel do Sistema</h2>
+
+        <div class="card">
+            <div class="card_title"> Login e Cadastro de Usuário</div>
+            
+            <div class="form_group">
+                <label for="input_nome">Nome (Opcional):</label>
+                <input type="text" id="input_nome" placeholder="Digite o nome">
+            </div>
+
+            <div class="form_group">
+                <label for="input_email">E-mail:</label>
+                <input type="email" id="input_email" placeholder="Digite o e-mail">
+            </div>
+
+            <div class="form_group">
+                <label for="input_senha">Senha:</label>
+                <input type="password" id="input_senha" placeholder="Digite a senha">
+            </div>
+
+            <div class="button_group">
+                <button onclick="login()">Entrar (Login)</button>
+                <button onclick="CriarUser()">Cadastrar (Apenas Admin)</button>
+               
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card_title"> Consulta de Obras</div>
+            
+            <div class="button_group" style="margin-bottom: 15px;">
+                <button onclick="obras()">Ver Todas as Obras</button>
+            </div>
+
+            <div class="form_group">
+                <label for="input_obra">Buscar Obra Específica (ID):</label>
+                <input type="text" id="input_obra" placeholder="Digite o ID da obra">
+            </div>
+
+            <button onclick="obra()">Buscar Obra Específica</button>
+        </div>
+
+        <div class="card">
+            <div class="card_title"> Administração</div>
+            <button onclick="buscar()">Buscar Todos os Usuários</button>
+        </div>
+
+        <div class="card">
+    <div class="card_title"> Registrar Gasto</div>
+
+    <div class="form_group">
+        <label for="input_gasto_obra">Obra:</label>
+        <select id="input_gasto_obra">
+            <option value="">Selecione a obra</option>
+        </select>
+    </div>
+
+    <div class="form_group">
+        <label for="input_gasto_categoria">Categoria:</label>
+        <select id="input_gasto_categoria">
+            <option value="">Selecione a categoria</option>
+            <option value="servico">Serviço</option>
+            <option value="material">Material</option>
+            <option value="outro">Outro</option>
+        </select>
+    </div>
+
+    <div class="form_group">
+        <label for="input_gasto_pagamento">Forma de Pagamento:</label>
+        <select id="input_gasto_pagamento">
+            <option value="">Selecione a forma de pagamento</option>
+            <option value="cartao_credito">Cartão de Crédito</option>
+            <option value="cartao_debito">Cartão de Débito</option>
+            <option value="dinheiro">Dinheiro</option>
+            <option value="pix">Pix</option>
+            <option value="transferencia">Transferência</option>
+        </select>
+    </div>
+
+    <div class="form_group">
+        <label for="input_gasto_valor">Valor (R$):</label>
+        <input type="number" id="input_gasto_valor" placeholder="Digite o valor" min="0" step="0.01">
+    </div>
+
+    <div class="form_group">
+        <label for="input_gasto_data">Data:</label>
+        <input type="date" id="input_gasto_data">
+    </div>
+
+    <div class="form_group">
+        <label for="input_gasto_descricao">Descrição:</label>
+        <input type="text" id="input_gasto_descricao" placeholder="Descreva o gasto">
+    </div>
+
+    <button onclick="registrarGasto()">Registrar Gasto</button>
+</div>
+    </div>
+
+    
+
+</body>
+</html>
+<script>
+        function validarToken() {
+        const token = sessionStorage.getItem('token');
+        if (!token) return null;
+        return (
+            JSON.parse(atob(token))
+        )
+        ;
+    }
+
+    // BUSCAR USUARIOS
+    async function buscar() {
+        const dado = validarToken();
+
+        if (!dado) {
+            console.log('Nenhum usuario logado');
+            return;
+        }
+
+        if (dado.role.toLowerCase() === "admin") {
+            const resposta = await fetch('http://localhost:3000/usuarios');
+            const dados = await resposta.json();
+            console.log('dados', dados);
+        } else {
+            console.log('Acesso negado, Você nao tem permissão de acesso');
+        }
+    }
+
+    // LOGIN
+    async function login() {
+        let email = input_email.value.toLowerCase().trim();
+        let senha = input_senha.value;
+
+        if (email.trim() === "" || senha.trim() === "") {
+            console.log('Por favor, preencha o e-mail e a senha.');
+            return;
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            console.log('Formato de e-mail inválido.');
+            return;
+        }
+
+        const resposta = await fetch(`http://localhost:3000/usuarios?email=${email}&senha=${senha}`);
+        const usuariosEncontrado = await resposta.json(); 
+
+        if (usuariosEncontrado.length > 0) {
+            let usuario = usuariosEncontrado[0];
+            
+            const payload = JSON.stringify({ id: usuario.id, role: usuario.role });
+            const token = btoa(payload);
+
+            sessionStorage.setItem('token', token);
+            console.log(' Token salvo');
+            console.log(`login realizado para o ${usuario.nome || usuario.email}`);
+            carregarObras();
+        } else {
+            sessionStorage.removeItem('token');
+            console.log('usuario nao logado');
+        }
+    }
+
+    // VER OBRAS
+    async function obras() {
+        const dado = validarToken();
+
+        if (!dado) {
+            console.log('Nenhum usuario logado');
+            return;
+        }
+        
+        if (dado.role.toLowerCase() === "admin" || dado.role.toLowerCase() === "user") {
+            const resposta = await fetch('http://localhost:3000/obras');
+            const dados = await resposta.json();
+            console.log('dados', dados);
+        } else {
+            console.log('Voce nao tem permissão de acesso ');
+        }
+    }
+
+    // Obra Expecifica
+     async function obra() {
+
+        const idObra = input_obra.value.trim();
+        const dado = validarToken();
+
+        if (!dado) {
+            console.log('Nenhum usuario logado');
+            return;
+        }
+
+        if (!idObra) {
+            console.log(' informe uma obra');
+            return;
+        }
+
+        if (dado.role.toLowerCase() === "admin" || dado.role.toLowerCase() === "user") {
+            const resposta = await fetch(`http://localhost:3000/obras/${idObra}`);
+            
+            if (resposta.ok) {
+                const dados = await resposta.json();
+                console.log('Dados da obra:', dados);
+            } else {
+                console.log('Obra nao encontrada ');
+            }
+        } else {
+            console.log("Acesso negado, Você nao tem permissão de acesso");
+        }
+    }
+
+    // Criar usuario (precisa ser adm)
+   async function CriarUser() {
+        const dado = validarToken();
+
+        if (!dado) {
+            console.log('Nenhum usuario logado');
+            return;
+        }
+
+        if (dado.role.toLowerCase() === "admin") {
+            const nome  = input_nome.value;
+            const email = input_email.value.toLowerCase().trim();
+            const senha = input_senha.value;
+            const role = "user"
+
+            if (email.trim() === "" || senha.trim() === "") {
+                console.log('Email e senha sao obrigatorios para cadastro')
+                return
+            }
+
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+            if (!emailRegex.test(email)) {
+                console.log('Insira um e-mail valido para cadastrar')
+                return
+            }
+
+            if (senha.length < 6) {
+                console.log('A senha deve ter pelo menos 6 caracteres');
+                return;
+            }
+
+            const verificarEmail = await fetch(`http://localhost:3000/usuarios?email=${email}`);
+            const emailExistente = await verificarEmail.json();
+
+            if (emailExistente.length > 0) {
+                console.log('Email já cadastrado');
+                return;
+            }
+
+            const resposta = await fetch('http://localhost:3000/usuarios', {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    nome,
+                    email,
+                    senha,
+                    role
+                })
+            });
+
+            const dados = await resposta.json();
+            console.log('dados', dados);
+        } else {
+            console.log("Acesso negado, Você nao tem permissão de acesso");
+        }
+
+
+
+    }
+
+
+   //Colocar os dados no select
+       async function carregarObras() {
+        const dado = validarToken();
+        if (!dado) {
+            return
+        }
+        ;
+
+        const resposta = await fetch('http://localhost:3000/obras');
+        const obras = await resposta.json();
+
+        const select = input_gasto_obra;
+        select.innerHTML = '<option value="">Selecione a obra</option>';
+
+        obras.forEach(obra => {
+            const option = document.createElement('option');
+            option.value = obra.id;
+            option.textContent = obra.titulo;
+            select.appendChild(option);
+        });
+    } 
+
+    
+        // Criar os gastos de acordo com a obra
+        async function registrarGasto() {
+        const dado = validarToken();
+
+        if (!dado) {
+            console.log('Nenhum usuario logado');
+            return;
+        }
+
+        const obra_id  = input_gasto_obra.value;
+        const categoria = input_gasto_categoria.value;
+        const pagamento = input_gasto_pagamento.value;
+        const valor  = input_gasto_valor.value;
+        const data = input_gasto_data.value;
+        const descricao  = input_gasto_descricao.value.trim();
+
+        if (!obra_id) {
+            console.log('Selecione uma obra');
+            return;
+        }
+
+        if (!categoria) {
+            console.log('Selecione uma categoria');
+            return;
+        }
+
+        if (!pagamento) {
+            console.log('Selecione uma forma de pagamento');
+            return;
+        }
+
+        if (!valor || parseFloat(valor) <= 0) {
+            console.log('Informe um valor válido');
+            return;
+        }
+
+        if (!data) {
+            console.log('Informe a data do gasto');
+            return;
+        }
+
+        const resposta = await fetch('http://localhost:3000/gastos', {
+            method: "POST",
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                obra_id: parseInt(obra_id),
+                categoria,
+                pagamento,
+                valor: parseFloat(valor),
+                data,
+                descricao,
+                usuario_id: dado.id
+            })
+        });
+
+        const dados = await resposta.json();
+        console.log('Gasto registrado:', dados);
+    }
+</script>
