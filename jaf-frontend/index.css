@@ -87,3 +87,59 @@ button:hover {
     gap: 10px; 
     flex-wrap: wrap; 
 }
+
+/* Estilos para mensagens */
+.mensagens {
+    margin-bottom: 20px;
+    min-height: 40px;
+}
+
+.mensagem {
+    padding: 12px 15px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    border-left: 4px solid;
+    background-color: #f8f9fa;
+    animation: slideIn 0.3s ease-out;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.mensagem.sucesso {
+    border-left-color: #28a745;
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.mensagem.erro {
+    border-left-color: #dc3545;
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.mensagem.info {
+    border-left-color: #17a2b8;
+    background-color: #d1ecf1;
+    color: #0c5460;
+}
+
+.mensagem.dados {
+    border-left-color: #6c757d;
+    background-color: #e9ecef;
+    color: #383d41;
+    white-space: pre-wrap;
+    font-family: monospace;
+    font-size: 0.9em;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
