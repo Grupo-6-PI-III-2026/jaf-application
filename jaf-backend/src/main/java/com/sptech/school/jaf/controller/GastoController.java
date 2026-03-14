@@ -1,9 +1,9 @@
-package sptech.school.jaf.controller;
+package com.sptech.school.jaf.controller;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import sptech.school.jaf.dto.Gasto;
-import sptech.school.jaf.service.GastoService;
+import com.sptech.school.jaf.dto.Gasto;
+import com.sptech.school.jaf.service.GastoService;
 
 import java.util.List;
 

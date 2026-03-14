@@ -1,4 +1,4 @@
-package sptech.school.jaf;
+package com.sptech.school.jaf;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

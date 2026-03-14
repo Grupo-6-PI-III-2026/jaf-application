@@ -1,7 +1,7 @@
-package sptech.school.jaf.service;
+package com.sptech.school.jaf.service;
 
 import org.springframework.stereotype.Service;
-import sptech.school.jaf.dto.Funcionario;
+import com.sptech.school.jaf.dto.Funcionario;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,11 +1,10 @@
-package sptech.school.jaf.controller;
+package com.sptech.school.jaf.controller;
 import org.springframework.http.ResponseEntity;
-import sptech.school.jaf.dto.Obra;
+import com.sptech.school.jaf.dto.Obra;
 
 import org.springframework.web.bind.annotation.*;
-import sptech.school.jaf.service.ObraService;
+import com.sptech.school.jaf.service.ObraService;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @RestController

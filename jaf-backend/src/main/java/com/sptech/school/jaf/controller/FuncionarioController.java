@@ -1,14 +1,13 @@
-package sptech.school.jaf.controller;
+package com.sptech.school.jaf.controller;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import sptech.school.jaf.dto.Funcionario;
-import sptech.school.jaf.service.FuncionarioService;
+import com.sptech.school.jaf.dto.Funcionario;
+import com.sptech.school.jaf.service.FuncionarioService;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @RestController

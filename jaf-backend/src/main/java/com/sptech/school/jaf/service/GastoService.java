@@ -1,9 +1,9 @@
-package sptech.school.jaf.service;
+package com.sptech.school.jaf.service;
 
 import org.springframework.stereotype.Service;
-import sptech.school.jaf.dto.Funcionario;
-import sptech.school.jaf.dto.Gasto;
-import sptech.school.jaf.dto.Obra;
+import com.sptech.school.jaf.dto.Funcionario;
+import com.sptech.school.jaf.dto.Gasto;
+import com.sptech.school.jaf.dto.Obra;
 
 import java.util.ArrayList;
 import java.util.List;

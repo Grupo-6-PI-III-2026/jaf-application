@@ -1,4 +1,4 @@
-package sptech.school.jaf.dto;
+package com.sptech.school.jaf.dto;
 
 public class Funcionario {
    private Integer id;
