@@ -1,0 +1,276 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap');
+
+/* Global */
+.loginRoot {
+  display: flex;
+  min-height: 100vh;
+  font-family: 'DM Sans', sans-serif;
+  background: #f0f0ee;
+  padding: 0px;
+  margin: 0px;
+  box-sizing: border-box;
+}
+
+/* Painel esquerdo */
+.loginLeft {
+  flex: 0 0 50%;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 2.5rem;
+}
+
+.loginLeftBg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  background: 
+    linear-gradient(
+      160deg,
+      #0a1428cc 100% 
+    ),
+    url('../../assets/Login_Img/FundoLogin.png');
+
+  background-size: cover;       
+  background-position: center;  
+  background-repeat: no-repeat; 
+  
+  z-index: 0;
+}
+
+/* LOGO */
+.logo {
+  position: relative;
+  display: flex;
+  align-items: center;
+  z-index: 1;
+  gap: 0.6rem;
+}
+
+.logo img {
+  width: 30px;
+  height: 30px;
+}
+
+.logoName {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #fff;
+  letter-spacing: 0.01em;
+}
+
+/* conteudo da esquerda */
+.leftContent {
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding-bottom: 3rem;
+}
+
+.leftHeadline {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: clamp(2rem, 3.5vw, 3rem);
+  line-height: 1.12;
+  color: #fff;
+  margin-bottom: 1.25rem;
+  letter-spacing: -0.01em;
+}
+
+.leftSub {
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: #ffffffbf;
+  max-width: 360px;
+}
+
+.leftFooter {
+  z-index: 1;
+  font-size: 0.78rem;
+  color: #ffffff66;
+}
+
+/* RIGHT PANEL */
+.loginRightContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+.loginRight {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+  background: #f0f0ee;
+}
+
+.loginCard {
+  width: 100%;
+  max-width: 420px;
+}
+
+.cardTitle {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 2rem;
+  color: #141414;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.02em;
+}
+
+.cardSub {
+  font-size: 0.9rem;
+  color: #777;
+  margin-bottom: 2.5rem;
+  line-height: 1.5;
+}
+
+/* Campos */
+.fieldGroup {
+  margin-bottom: 1.25rem;
+}
+
+.fieldRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.fieldLabel {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  letter-spacing: 0.01em;
+}
+
+.forgotLink {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #f5b800;
+  text-decoration: none;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+}
+
+.forgotLink:hover {
+  text-decoration: underline;
+}
+
+.inputWrap {
+  position: relative;
+}
+
+.fieldInput {
+  width: 100%;
+  padding: 1rem 0rem;
+  border: 1.5px solid #e2e2e0;
+  border-radius: 10px;
+  background: #fafaf8;
+  font-size: 0.9rem;
+  color: #1a1a1a;
+  font-family: 'DM Sans', sans-serif;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  appearance: none;
+}
+
+.fieldInput::placeholder {
+  color: #b0b0aa;
+}
+
+.fieldInput:focus {
+  border-color: #f5b800;
+  box-shadow: 0 0 0 3px #f5b80021; 
+  background: #fff;
+}
+
+
+.eyeBtn {
+  position: absolute;
+  right: 0.9rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #aaa;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  transition: color 0.15s;
+}
+
+.eyeBtn:hover {
+  color: #555;
+}
+
+/* Botoes */
+.btnEntrar {
+  width: 100%;
+  margin-top: 1.75rem;
+  padding: 1rem 1.5rem;
+  background: #f5b800;
+  border: none;
+  border-radius: 50px;
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+  color: #1a1100;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  letter-spacing: 0.01em;
+  transition: background 0.18s, transform 0.12s, box-shadow 0.18s;
+  box-shadow: 0 4px 18px #f5b80047;
+}
+
+.btnEntrar:hover {
+  background: #ffc800;
+  box-shadow: 0 6px 24px #f5b80061; 
+  transform: translateY(-1px);
+}
+
+.btnEntrar:active {
+  transform: translateY(0);
+}
+
+.btnArrow {
+  font-size: 1.1rem;
+  transition: transform 0.15s;
+}
+
+.btnEntrar:hover .btnArrow {
+  transform: translateX(3px);
+}
+
+/* NO ACCESS */
+.noAccess {
+  margin-top: 2.25rem;
+  text-align: center;
+  font-size: 0.88rem;
+  color: #888;
+  line-height: 1.55;
+}
+
+.noAccess a {
+  color: #1a1a1a;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.noAccess a:hover {
+  text-decoration: underline;
+}
