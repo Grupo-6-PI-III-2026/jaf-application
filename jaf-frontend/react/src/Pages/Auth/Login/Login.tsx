@@ -1,10 +1,30 @@
 import { useState } from "react";
 import styles from "./Login.module.css";
+import { authService } from "../../../Service/Auth/Login/authService";
+import { type LoginCredentials } from "../../../Types/Auth";
 
 function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+const dadosParaLogar: LoginCredentials = {
+  email: email,
+  password: password,
+};
+
+
+    const funcLogin = async (evento: React.MouseEvent) => {
+      evento.preventDefault();
+
+      try {
+        const dataUser = await authService.login(dadosParaLogar);
+
+        console.log("Login concluido com sucesso", dataUser);
+      } catch (erro) {
+        alert(`Falha ao fazer login ${erro}`);
+      }
+    };
 
   return (
     <div className={styles.loginRoot}>
@@ -78,7 +98,6 @@ function Login() {
                   className={styles.eyeBtn}
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                 >
                   {showPassword ? (
                     <svg
@@ -114,7 +133,7 @@ function Login() {
               </div>
             </div>
 
-            <button className={styles.btnEntrar} type="button">
+            <button className={styles.btnEntrar} onClick={funcLogin} type="button">
               Entrar <span className={styles.btnArrow}>→</span>
             </button>
 

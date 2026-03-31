@@ -239,7 +239,6 @@
 .btnEntrar:hover {
   background: #ffc800;
   box-shadow: 0 6px 24px #f5b80061; 
-  transform: translateY(-1px);
 }
 
 .btnEntrar:active {
@@ -255,7 +254,7 @@
   transform: translateX(3px);
 }
 
-/* NO ACCESS */
+/* Abaixo do botao */
 .noAccess {
   margin-top: 2.25rem;
   text-align: center;
