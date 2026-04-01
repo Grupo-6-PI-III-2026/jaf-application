@@ -1,10 +1,10 @@
-package sptech.school.jaf;
+package com.jaf.application;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class JafApplicationTests {
+class ApplicationTests {
 
 	@Test
 	void contextLoads() {

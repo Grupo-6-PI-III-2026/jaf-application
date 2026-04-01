@@ -1,13 +1,13 @@
-package com.sptech.school.jaf;
+package com.jaf.application;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class JafApplication {
+public class Application {
 
 	public static void main(String[] args) {
-		SpringApplication.run(JafApplication.class, args);
+		SpringApplication.run(Application.class, args);
 	}
 
 }

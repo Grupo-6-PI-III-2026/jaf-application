@@ -1,0 +1,89 @@
+package com.jaf.application.model;
+
+import jakarta.persistence.*;
+
+import java.util.Date;
+
+@Entity
+public class Gasto {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private String descricao;
+    private String categoria;
+    private String metodoPagamento;
+    private String etapa;
+    private Date dtGasto;
+
+    @ManyToOne
+    @JoinColumn(name = "id")
+    private Funcionario funcionario;
+
+    @ManyToOne
+    @JoinColumn(name = "id")
+    private Obra obra;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getDescricao() {
+        return descricao;
+    }
+
+    public void setDescricao(String descricao) {
+        this.descricao = descricao;
+    }
+
+    public String getCategoria() {
+        return categoria;
+    }
+
+    public void setCategoria(String categoria) {
+        this.categoria = categoria;
+    }
+
+    public String getMetodoPagamento() {
+        return metodoPagamento;
+    }
+
+    public void setMetodoPagamento(String metodoPagamento) {
+        this.metodoPagamento = metodoPagamento;
+    }
+
+    public String getEtapa() {
+        return etapa;
+    }
+
+    public void setEtapa(String etapa) {
+        this.etapa = etapa;
+    }
+
+    public Date getDtGasto() {
+        return dtGasto;
+    }
+
+    public void setDtGasto(Date dtGasto) {
+        this.dtGasto = dtGasto;
+    }
+
+    public Funcionario getFuncionario() {
+        return funcionario;
+    }
+
+    public void setFuncionario(Funcionario funcionario) {
+        this.funcionario = funcionario;
+    }
+
+    public Obra getObra() {
+        return obra;
+    }
+
+    public void setObra(Obra obra) {
+        this.obra = obra;
+    }
+}
