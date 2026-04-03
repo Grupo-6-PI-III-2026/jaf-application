@@ -2,6 +2,7 @@ package com.jaf.application.model;
 
 import jakarta.persistence.*;
 
+import java.math.BigDecimal;
 import java.util.Date;
 
 @Entity
@@ -13,6 +14,7 @@ public class Gasto {
     private String categoria;
     private String metodoPagamento;
     private String etapa;
+    private BigDecimal valor;
     private Date dtGasto;
 
     @ManyToOne
@@ -85,5 +87,13 @@ public class Gasto {
 
     public void setObra(Obra obra) {
         this.obra = obra;
+    }
+
+    public BigDecimal getValor() {
+        return valor;
+    }
+
+    public void setValor(BigDecimal valor) {
+        this.valor = valor;
     }
 }
