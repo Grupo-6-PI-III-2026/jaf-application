@@ -4,7 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-import java.util.Date;
+import java.time.LocalDate;
 
 public class RelatorioDto {
 
@@ -13,7 +13,7 @@ public class RelatorioDto {
     private String titulo;
 
     @NotNull(message = "A data de emissão é obrigatória")
-    private Date dtEmissao;
+    private LocalDate dtEmissao;
 
     @NotNull(message = "O ID do funcionário responsável é obrigatório")
     private Long funcionarioResponsavelId;
@@ -26,11 +26,11 @@ public class RelatorioDto {
         this.titulo = titulo;
     }
 
-    public Date getDtEmissao() {
+    public LocalDate getDtEmissao() {
         return dtEmissao;
     }
 
-    public void setDtEmissao(Date dtEmissao) {
+    public void setDtEmissao(LocalDate dtEmissao) {
         this.dtEmissao = dtEmissao;
     }
 

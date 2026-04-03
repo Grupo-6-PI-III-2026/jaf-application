@@ -1,19 +1,22 @@
 package com.jaf.application.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import com.jaf.application.enums.Cargo;
+import jakarta.persistence.*;
+
+import static org.springframework.data.jpa.domain.AbstractPersistable_.id;
 
 @Entity
 public class Funcionario {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     private String nome;
     private String email;
     private String senha;
-    private String cargo;
+
+    @Enumerated(EnumType.STRING)
+    private Cargo cargoGlobal;
 
     public Long getId() {
         return id;
@@ -47,11 +50,11 @@ public class Funcionario {
         this.senha = senha;
     }
 
-    public String getCargo() {
-        return cargo;
+    public Cargo getCargoGlobal() {
+        return cargoGlobal;
     }
 
-    public void setCargo(String cargo) {
-        this.cargo = cargo;
+    public void setCargoGlobal(Cargo cargoGlobal) {
+        this.cargoGlobal = cargoGlobal;
     }
 }

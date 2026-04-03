@@ -5,7 +5,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-import java.util.Date;
+import java.time.LocalDate;
+
 
 public class ObraDto {
 
@@ -20,11 +21,11 @@ public class ObraDto {
     private String status;
 
     @NotNull(message = "A data de início é obrigatória")
-    private Date dtInicio;
+    private LocalDate dtInicio;
 
     @NotNull(message = "A data de término prevista é obrigatória")
     @FutureOrPresent(message = "A data de término prevista não pode estar no passado")
-    private Date dtTerminoPrevisto;
+    private LocalDate dtTerminoPrevisto;
 
     public String getTitulo() {
         return titulo;
@@ -50,19 +51,19 @@ public class ObraDto {
         this.status = status;
     }
 
-    public Date getDtInicio() {
+    public LocalDate getDtInicio() {
         return dtInicio;
     }
 
-    public void setDtInicio(Date dtInicio) {
+    public void setDtInicio(LocalDate dtInicio) {
         this.dtInicio = dtInicio;
     }
 
-    public Date getDtTerminoPrevisto() {
+    public LocalDate getDtTerminoPrevisto() {
         return dtTerminoPrevisto;
     }
 
-    public void setDtTerminoPrevisto(Date dtTerminoPrevisto) {
+    public void setDtTerminoPrevisto(LocalDate dtTerminoPrevisto) {
         this.dtTerminoPrevisto = dtTerminoPrevisto;
     }
 }

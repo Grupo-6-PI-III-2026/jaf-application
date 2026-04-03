@@ -1,22 +1,22 @@
 package com.jaf.application.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 
-import java.util.Date;
+import java.time.LocalDate;
 
 @Entity
 public class Obra {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "obra_id")
     private Long id;
+
     private String titulo;
     private String orcamento;
     private String status;
-    private Date dtInicio;
-    private Date dtTerminoPrevisto;
+
+    private LocalDate dtInicio;
+    private LocalDate dtTerminoPrevisto;
 
     public Long getId() {
         return id;
@@ -50,19 +50,19 @@ public class Obra {
         this.status = status;
     }
 
-    public Date getDtInicio() {
+    public LocalDate getDtInicio() {
         return dtInicio;
     }
 
-    public void setDtInicio(Date dtInicio) {
+    public void setDtInicio(LocalDate dtInicio) {
         this.dtInicio = dtInicio;
     }
 
-    public Date getDtTerminoPrevisto() {
+    public LocalDate getDtTerminoPrevisto() {
         return dtTerminoPrevisto;
     }
 
-    public void setDtTerminoPrevisto(Date dtTerminoPrevisto) {
+    public void setDtTerminoPrevisto(LocalDate dtTerminoPrevisto) {
         this.dtTerminoPrevisto = dtTerminoPrevisto;
     }
 }

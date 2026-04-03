@@ -2,18 +2,20 @@ package com.jaf.application.model;
 
 import jakarta.persistence.*;
 
-import javax.xml.crypto.Data;
+import java.time.LocalDate;
+
 
 @Entity
 public class Relatorio {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     private String titulo;
-    private Data dtEmissao;
+    private LocalDate dtEmissao;
 
     @ManyToOne
-    @JoinColumn(name = "id")
+    @JoinColumn(name = "funcionario_id")
     private Funcionario funcionarioResponsavel;
 
     public Long getId() {
@@ -32,11 +34,11 @@ public class Relatorio {
         this.titulo = titulo;
     }
 
-    public Data getDtEmissao() {
+    public LocalDate getDtEmissao() {
         return dtEmissao;
     }
 
-    public void setDtEmissao(Data dtEmissao) {
+    public void setDtEmissao(LocalDate dtEmissao) {
         this.dtEmissao = dtEmissao;
     }
 

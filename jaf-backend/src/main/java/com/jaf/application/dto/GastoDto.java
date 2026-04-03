@@ -3,7 +3,7 @@ package com.jaf.application.dto;
 import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.LocalDate;
 
 public class GastoDto {
     @NotBlank(message = "A descrição não pode estar vazia")
@@ -24,7 +24,7 @@ public class GastoDto {
 
     @NotNull(message = "A data do gasto é obrigatória")
     @PastOrPresent(message = "A data do gasto não pode ser no futuro")
-    private Date dtGasto;
+    private LocalDate dtGasto;
 
     @NotNull(message = "O funcionário responsável é obrigatório")
     private Long funcionarioId;
@@ -72,11 +72,11 @@ public class GastoDto {
         this.valor = valor;
     }
 
-    public Date getDtGasto() {
+    public LocalDate getDtGasto() {
         return dtGasto;
     }
 
-    public void setDtGasto(Date dtGasto) {
+    public void setDtGasto(LocalDate dtGasto) {
         this.dtGasto = dtGasto;
     }
 

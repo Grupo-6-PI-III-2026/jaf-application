@@ -1,5 +1,6 @@
 package com.jaf.application.dto;
 
+import com.jaf.application.enums.Cargo;
 import jakarta.validation.constraints.*;
 
 public class FuncionarioDto {
@@ -16,12 +17,11 @@ public class FuncionarioDto {
             message = "Senha deve ter pelo menos 1 letra maiúscula, 1 minúscula e 1 número"
     )
     @NotBlank(message = "Senha não deve ser vazia!")
-    @Size(min = 6, message = "Senha")
+    @Size(min = 6, message = "Senha deve ter no mínimo 6 caracteres")
     private String senha;
 
-    @NotBlank(message = "Cargo é obrigatório!")
-    @Size(max = 50, message = "Cargo deve ter no máximo 50 caracteres")
-    private String cargo;
+    @NotNull(message = "Cargo é obrigatório")
+    private Cargo cargo;
 
     public String getNome() {
         return nome;
@@ -47,11 +47,11 @@ public class FuncionarioDto {
         this.senha = senha;
     }
 
-    public String getCargo() {
+    public Cargo getCargo() {
         return cargo;
     }
 
-    public void setCargo(String cargo) {
+    public void setCargo(Cargo cargo) {
         this.cargo = cargo;
     }
 }

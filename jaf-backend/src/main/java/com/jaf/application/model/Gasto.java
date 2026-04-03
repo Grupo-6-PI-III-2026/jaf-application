@@ -3,26 +3,27 @@ package com.jaf.application.model;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.LocalDate;
 
 @Entity
 public class Gasto {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     private String descricao;
     private String categoria;
     private String metodoPagamento;
     private String etapa;
     private BigDecimal valor;
-    private Date dtGasto;
+    private LocalDate dtGasto;
 
     @ManyToOne
-    @JoinColumn(name = "id")
+    @JoinColumn(name = "funcionario_id")
     private Funcionario funcionario;
 
     @ManyToOne
-    @JoinColumn(name = "id")
+    @JoinColumn(name = "obra_id")
     private Obra obra;
 
     public Long getId() {
@@ -65,11 +66,11 @@ public class Gasto {
         this.etapa = etapa;
     }
 
-    public Date getDtGasto() {
+    public LocalDate getDtGasto() {
         return dtGasto;
     }
 
-    public void setDtGasto(Date dtGasto) {
+    public void setDtGasto(LocalDate dtGasto) {
         this.dtGasto = dtGasto;
     }
 
