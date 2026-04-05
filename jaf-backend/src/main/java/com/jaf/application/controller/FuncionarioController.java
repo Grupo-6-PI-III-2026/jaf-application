@@ -1,7 +1,7 @@
 package com.jaf.application.controller;
 
 import com.jaf.application.dto.FuncionarioDto;
-import com.jaf.application.model.Funcionario;
+import com.jaf.application.dto.FuncionarioResponseDto;
 import com.jaf.application.service.FuncionarioService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -20,22 +20,22 @@ public class FuncionarioController {
     }
 
     @PostMapping
-    public ResponseEntity<Funcionario> criar(@Valid @RequestBody FuncionarioDto dto) {
+    public ResponseEntity<FuncionarioResponseDto> criar(@Valid @RequestBody FuncionarioDto dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(funcionarioService.criar(dto));
     }
 
     @GetMapping
-    public ResponseEntity<List<Funcionario>> listar() {
+    public ResponseEntity<List<FuncionarioResponseDto>> listar() {
         return ResponseEntity.ok(funcionarioService.listar());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Funcionario> buscarPorId(@PathVariable Long id) {
+    public ResponseEntity<FuncionarioResponseDto> buscarPorId(@PathVariable Long id) {
         return ResponseEntity.ok(funcionarioService.buscarPorId(id));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Funcionario> atualizar(@PathVariable Long id, @Valid @RequestBody FuncionarioDto dto) {
+    public ResponseEntity<FuncionarioResponseDto> atualizar(@PathVariable Long id, @Valid @RequestBody FuncionarioDto dto) {
         return ResponseEntity.ok(funcionarioService.atualizar(id, dto));
     }
 

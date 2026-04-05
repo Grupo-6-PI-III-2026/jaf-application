@@ -4,6 +4,7 @@ import com.jaf.application.dto.GastoDto;
 import com.jaf.application.model.Funcionario;
 import com.jaf.application.model.Gasto;
 import com.jaf.application.model.Obra;
+import com.jaf.application.repository.AlocacaoObraRepository;
 import com.jaf.application.repository.FuncionarioRepository;
 import com.jaf.application.repository.GastoRepository;
 import com.jaf.application.repository.ObraRepository;
@@ -18,13 +19,14 @@ public class GastoService {
     private final GastoRepository gastoRepository;
     private final FuncionarioRepository funcionarioRepository;
     private final ObraRepository obraRepository;
+    private final AlocacaoObraRepository alocacaoObraRepository;
 
-    public GastoService(GastoRepository gastoRepository,
-                        FuncionarioRepository funcionarioRepository,
-                        ObraRepository obraRepository) {
+    // Construtor atualizado com AlocacaoObraRepository
+    public GastoService(GastoRepository gastoRepository, FuncionarioRepository funcionarioRepository, ObraRepository obraRepository, AlocacaoObraRepository alocacaoObraRepository) {
         this.gastoRepository = gastoRepository;
         this.funcionarioRepository = funcionarioRepository;
         this.obraRepository = obraRepository;
+        this.alocacaoObraRepository = alocacaoObraRepository;
     }
 
     public Gasto criar(GastoDto dto) {
@@ -32,6 +34,11 @@ public class GastoService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Funcionario nao encontrado"));
         Obra obra = obraRepository.findById(dto.getObraId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Obra nao encontrada"));
+
+        // VALIDAÇÃO DE ALOCAÇÃO
+        if (!alocacaoObraRepository.existsByFuncionarioIdAndObraId(funcionario.getId(), obra.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Funcionário não está alocado nesta obra e não pode registrar gastos.");
+        }
 
         Gasto gasto = new Gasto();
         gasto.setDescricao(dto.getDescricao());
@@ -42,7 +49,6 @@ public class GastoService {
         gasto.setDtGasto(dto.getDtGasto());
         gasto.setFuncionario(funcionario);
         gasto.setObra(obra);
-
         return gastoRepository.save(gasto);
     }
 
@@ -57,11 +63,15 @@ public class GastoService {
 
     public Gasto atualizar(Long id, GastoDto dto) {
         Gasto existente = buscarPorId(id);
-
         Funcionario funcionario = funcionarioRepository.findById(dto.getFuncionarioId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Funcionario nao encontrado"));
         Obra obra = obraRepository.findById(dto.getObraId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Obra nao encontrada"));
+
+        // VALIDAÇÃO DE ALOCAÇÃO PARA ATUALIZAÇÃO TAMBÉM
+        if (!alocacaoObraRepository.existsByFuncionarioIdAndObraId(funcionario.getId(), obra.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Funcionário não está alocado nesta obra.");
+        }
 
         existente.setDescricao(dto.getDescricao());
         existente.setCategoria(dto.getCategoria());
@@ -71,7 +81,6 @@ public class GastoService {
         existente.setDtGasto(dto.getDtGasto());
         existente.setFuncionario(funcionario);
         existente.setObra(obra);
-
         return gastoRepository.save(existente);
     }
 

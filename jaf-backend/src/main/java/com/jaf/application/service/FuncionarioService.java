@@ -1,6 +1,7 @@
 package com.jaf.application.service;
 
 import com.jaf.application.dto.FuncionarioDto;
+import com.jaf.application.dto.FuncionarioResponseDto;
 import com.jaf.application.model.Funcionario;
 import com.jaf.application.repository.FuncionarioRepository;
 import org.springframework.http.HttpStatus;
@@ -17,31 +18,37 @@ public class FuncionarioService {
         this.funcionarioRepository = funcionarioRepository;
     }
 
-    public Funcionario criar(FuncionarioDto dto) {
+    public FuncionarioResponseDto criar(FuncionarioDto dto) {
         Funcionario funcionario = new Funcionario();
         funcionario.setNome(dto.getNome());
         funcionario.setEmail(dto.getEmail());
         funcionario.setSenha(dto.getSenha());
         funcionario.setCargoGlobal(dto.getCargo());
-        return funcionarioRepository.save(funcionario);
+        return new FuncionarioResponseDto(funcionarioRepository.save(funcionario));
     }
 
-    public List<Funcionario> listar() {
-        return funcionarioRepository.findAll();
+    public List<FuncionarioResponseDto> listar() {
+        return funcionarioRepository.findAll()
+                .stream()
+                .map(FuncionarioResponseDto::new)
+                .toList();
     }
 
-    public Funcionario buscarPorId(Long id) {
-        return funcionarioRepository.findById(id)
+    public FuncionarioResponseDto buscarPorId(Long id) {
+        Funcionario funcionario = funcionarioRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Funcionario nao encontrado"));
+        return new FuncionarioResponseDto(funcionario);
     }
 
-    public Funcionario atualizar(Long id, FuncionarioDto dto) {
-        Funcionario existente = buscarPorId(id);
+    public FuncionarioResponseDto atualizar(Long id, FuncionarioDto dto) {
+        Funcionario existente = funcionarioRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Funcionario nao encontrado"));
+
         existente.setNome(dto.getNome());
         existente.setEmail(dto.getEmail());
-        existente.setSenha(dto.getSenha());
         existente.setCargoGlobal(dto.getCargo());
-        return funcionarioRepository.save(existente);
+
+        return new FuncionarioResponseDto(funcionarioRepository.save(existente));
     }
 
     public void deletar(Long id) {
