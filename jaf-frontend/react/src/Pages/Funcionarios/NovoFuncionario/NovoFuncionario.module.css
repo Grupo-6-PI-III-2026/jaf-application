@@ -1,0 +1,264 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+* {
+  font-family: 'Poppins', sans-serif;
+}
+
+.pagina {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.navegacao {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #6c757d;
+  margin-bottom: 8px;
+}
+
+.separador {
+  color: #adb5bd;
+}
+
+.ativo {
+  color: #ffc107;
+  font-weight: 600;
+}
+
+.titulo {
+  font-size: 32px;
+  font-weight: 700;
+  color: #212529;
+  margin: 0 0 8px 0;
+}
+
+.subtitulo {
+  color: #6c757d;
+  font-size: 14px;
+  margin: 0 0 32px 0;
+  max-width: 500px;
+}
+
+.formulario {
+  background-color: #2d2d2d;
+  border-radius: 16px;
+  padding: 32px;
+  margin-bottom: 32px;
+}
+
+.formularioGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+}
+
+.coluna {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.grupoCampo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rotulo {
+  font-size: 11px;
+  font-weight: 600;
+  color: #adb5bd;
+  letter-spacing: 0.5px;
+}
+
+.caixaCampo {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.icone {
+  position: absolute;
+  left: 14px;
+  color: #6c757d;
+  pointer-events: none;
+}
+
+.campo, .seletor {
+  width: 100%;
+  padding: 14px 14px 14px 44px;
+  background-color: #3d3d3d;
+  border: 1px solid #4d4d4d;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.campo::placeholder {
+  color: #6c757d;
+}
+
+.seletor {
+  appearance: none;
+  cursor: pointer;
+}
+
+.iconeSeletor {
+  position: absolute;
+  right: 14px;
+  color: #ffc107;
+  pointer-events: none;
+}
+
+.botaoOlho {
+  position: absolute;
+  right: 14px;
+  background: none;
+  border: none;
+  color: #6c757d;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.botaoOlho:hover {
+  color: #adb5bd;
+}
+
+.dica {
+  font-size: 12px;
+  color: #6c757d;
+}
+
+.cardInfo {
+  background-color: #3d3d3d;
+  border-radius: 8px;
+  padding: 16px;
+  border-left: 3px solid #ffc107;
+}
+
+.cardInfoTopo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #ffc107;
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.cardInfoTexto {
+  color: #adb5bd;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.botaoCadastrar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 24px;
+  background-color: #ffc107;
+  border: none;
+  border-radius: 8px;
+  color: #212529;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.botaoCadastrar:hover {
+  background-color: #ffca2c;
+}
+
+.botaoCancelar {
+  background: none;
+  border: none;
+  color: #6c757d;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  padding: 8px;
+  transition: color 0.2s;
+}
+
+.botaoCancelar:hover {
+  color: #adb5bd;
+}
+
+.cardsRodape {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.cardRodape {
+  text-align: center;
+  padding: 24px;
+  background-color: #F3F3F3;
+  border-radius: 10px;
+}
+
+.cardRodapeIcone {
+  color: #ffc107;
+  margin-bottom: 12px;
+}
+
+.cardRodape h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #212529;
+  margin: 0 0 8px 0;
+}
+
+.cardRodape p {
+  font-size: 13px;
+  color: #6c757d;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.cancelButton:hover {
+  color: #adb5bd;
+}
+
+.infoCards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.card {
+  text-align: center;
+  padding: 24px;
+}
+
+.cardIcon {
+  color: #ffc107;
+  margin-bottom: 12px;
+}
+
+.card h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #212529;
+  margin: 0 0 8px 0;
+}
+
+.card p {
+  font-size: 13px;
+  color: #6c757d;
+  line-height: 1.5;
+  margin: 0;
+}
