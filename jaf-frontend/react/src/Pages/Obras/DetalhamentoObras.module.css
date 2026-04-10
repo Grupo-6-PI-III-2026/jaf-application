@@ -1,0 +1,534 @@
+/* ---------- Pagina ---------- */
+.pagina {
+  padding: 28px 32px;
+  background-color: #f8f9fa;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ---------- Cabeçalho ----------  */
+.cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cabecalhoEsquerda {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.botaoVoltar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 8px;
+  background: #fff;
+  color: #495057; 
+  cursor: pointer;
+  border: 1px solid #e9ecef; 
+  transition: background 0.2s;
+}
+
+.botaoVoltar:hover {
+  background: #e9ecef;
+}
+
+.navegacao {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.navegacaoLink {
+  color: #6c757d;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.navegacaoLink:hover {
+  color: #333; 
+}
+
+.separador {
+  color: #6c757d;
+  font-size: 16px;
+}
+
+.navegacaoAtivo {
+  color: #333;
+  font-weight: 600;
+}
+
+.botaoAdicionarGasto {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #ffc107;
+  color: #333; 
+  font-weight: 600;
+  font-size: 14px;
+  border: none;
+  border-radius: 8px; 
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.botaoAdicionarGasto:hover {
+  background: #ffca2c;
+  transform: translateY(-1px);
+}
+
+/* ---------- Card da Obra ---------- */
+.cardObra {
+  background: #333;
+  border-radius: 12px;
+  display: flex;
+  overflow: hidden;
+  min-height: 210px;
+  border: 1px solid #e9ecef;
+}
+
+.cardObraImagem {
+  width: 320px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.cardObraImagem img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.cardObraInformacoes {
+  flex: 1;
+  padding: 24px 28px;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.badgeStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(67, 184, 156, 0.15);
+  color: #43b89c;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 4px 12px;
+  border-radius: 20px;
+  width: fit-content;
+  border: 1px solid rgba(67, 184, 156, 0.3);
+}
+
+.badgePonto {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #43b89c;
+}
+
+.cardObraTitulo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cardObraTitulo h1 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+  color: #fff;
+}
+
+.botaoEditar {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #dee2e6;
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.botaoEditar:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.cardObraData {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #dee2e6;
+  font-size: 13px;
+}
+
+.equipeRotulo {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #6c757d;
+  margin-top: 4px;
+  text-transform: uppercase;
+}
+
+.equipe {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.membroCard {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  padding: 8px 14px;
+}
+
+.membroAvatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.membroInformacoes {
+  display: flex;
+  flex-direction: column;
+}
+
+.membroNome {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.membroCargo {
+  font-size: 11px;
+  color: #dee2e6; 
+}
+
+.botaoAdicionarMembro {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #ffc107; 
+  border: none;
+  color: #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  flex-shrink: 0;
+}
+
+.botaoAdicionarMembro:hover {
+  background: #ffca2c;
+  transform: scale(1.08);
+}
+
+/* ---------- Métricas ---------- */
+.metricas {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.metricaCard {
+  background: #333;
+  border-radius: 12px;
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #fff;
+  border: 1px solid #e9ecef; 
+}
+
+.metricaRotulo {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #6c757d;
+  text-transform: uppercase;
+}
+
+.metricaValorDestaque {
+  font-size: 26px;
+  font-weight: 800;
+  color: #ffc107; 
+}
+
+.metricaValor {
+  font-size: 26px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.metricaTendencia {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #43b89c;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.barraProgressoWrapper {
+  margin-top: 4px;
+}
+
+.barraProgresso {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.barraProgressoPreenchimento {
+  height: 100%;
+  background: linear-gradient(90deg, #ffc107, #ffda6a); 
+  border-radius: 99px;
+  transition: width 0.4s ease;
+}
+
+.metricaSubtitulo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #dee2e6;
+  font-size: 12px;
+}
+
+/* ---------- Seção Financeiro ---------- */
+.secaoFinanceiro {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.financeiroTopo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.financeiroTitulo {
+  font-size: 18px;
+  font-weight: 700;
+  color: #333;
+  margin: 0;
+}
+
+.financeiroControles {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.campoBusca {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.iconeBusca {
+  position: absolute;
+  left: 12px;
+  color: #6c757d;
+  pointer-events: none;
+}
+
+.inputBusca {
+  padding: 9px 14px 9px 36px;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #495057;
+  background: #fff;
+  outline: none;
+  width: 210px;
+  transition: border-color 0.2s;
+}
+
+.inputBusca:focus {
+  border-color: #ffc107; 
+}
+
+.botaoFiltro {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 14px;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 13px;
+  color: #495057; 
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.botaoFiltro:hover {
+  background: #e9ecef; 
+  border-color: #dee2e6;
+}
+
+/* ---------- Tabela ---------- */
+.tabelaWrapper {
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e9ecef; 
+}
+
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tabela thead tr {
+  background: #f8f9fa; 
+  border-bottom: 1px solid #e9ecef;
+}
+
+.tabela th {
+  padding: 13px 18px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #6c757d;
+  text-transform: uppercase;
+}
+
+.tabela td {
+  padding: 14px 18px;
+  font-size: 13.5px;
+  color: #495057;
+  border-bottom: 1px solid #e9ecef; 
+}
+
+.tabela tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.tabela tbody tr:hover {
+  background: #f8f9fa; 
+}
+
+.celulaValor {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.celulaFuncionario {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-weight: 500;
+  color: #333; 
+}
+
+.avatarPequeno {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.descricaoDestaque {
+  color: #ffc107;
+  font-weight: 500;
+}
+
+/* ---------- Paginação ---------- */
+.paginacao {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: #f8f9fa; 
+  border-top: 1px solid #e9ecef; 
+}
+
+.paginacaoInfo {
+  font-size: 13px;
+  color: #6c757d;
+}
+
+.paginacaoBotoes {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.botaoPaginacao {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+  background: #fff;
+  color: #495057; 
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.botaoPaginacao:hover:not(:disabled) {
+  background: #fffbeb; 
+  border-color: #ffc107;
+  color: #333;
+}
+
+.botaoPaginacao:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.botaoPaginacaoAtivo {
+  background: #ffc107 !important; 
+  border-color: #ffc107 !important;
+  color: #333 !important; 
+}
