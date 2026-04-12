@@ -1,0 +1,166 @@
+.sidebar {
+  width: 250px;
+  height: 100vh;
+  background-color: #f8f9fa;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 16px;
+  position: fixed;
+  left: 0;
+  top: 0;
+  border-right: 1px solid #e9ecef;
+}
+
+.margin .container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  margin-bottom: 32px;
+}
+
+.logoContainer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  margin-bottom: 32px;
+}
+
+.circuloLogo {
+  width: 40px;
+  height: 40px;
+  background-color: #ffc107;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 18px;
+  color: #333;
+}
+
+.circuloLogo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.nomeEmpresa {
+  display: flex;
+  flex-direction: column;
+}
+
+.nomeEmpresa h1 {
+  font-weight: 7  00;
+  font-size: 14px;
+  color: #333;
+  margin: 0;
+}
+
+.nomeEmpresa p {
+  font-size: 12px;
+  color: #6c757d;
+  margin: 0;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.menuItem a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #495057;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.menuItem a:hover {
+  background-color: #e9ecef;
+}
+
+.menuItem a.active {
+  background-color: #fffbeb;
+  color: #333;
+  font-weight: 600;
+  border-left: 4px solid #ffc107;
+  padding-left: 12px;
+}
+
+.menuItem a.active:hover {
+  background-color: #fff3cd;
+}
+
+.menuItem svg {
+  width: 20px;
+  height: 20px;
+}
+
+.perfil {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 12px;
+  border-top: 1px solid #e9ecef;
+  margin-top: auto;
+}
+
+.circuloPerfil {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  background-color: #dee2e6;
+}
+
+.circuloPerfil img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.nomePerfil {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.nomePerfil h1 {
+  font-weight: 600;
+  font-size: 14px;
+  color: #333;
+  margin: 0;
+}
+
+.nomePerfil p {
+  font-size: 12px;
+  color: #6c757d;
+  margin: 0;
+}
+
+.notificationBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  color: #6c757d;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.notificationBtn:hover {
+  background-color: #e9ecef;
+}
