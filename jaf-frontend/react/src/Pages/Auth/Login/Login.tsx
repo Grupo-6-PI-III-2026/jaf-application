@@ -1,7 +1,7 @@
 import { useState } from "react";
 import styles from "./Login.module.css";
 import { authService } from "../../../Service/Auth/Login/authService";
-import { type LoginCredentials } from "../../../Types/Auth";
+import { type LoginCredentials } from "../../../Types/auth";
 
 function Login() {
   const [showPassword, setShowPassword] = useState(false);

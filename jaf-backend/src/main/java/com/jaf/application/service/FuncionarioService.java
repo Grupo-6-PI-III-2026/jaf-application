@@ -57,4 +57,6 @@ public class FuncionarioService {
         }
         funcionarioRepository.deleteById(id);
     }
+
+  
 }

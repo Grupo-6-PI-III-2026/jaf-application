@@ -31,7 +31,7 @@
       160deg,
       #0a1428cc 100% 
     ),
-    url('../../assets/Login_Img/FundoLogin.png');
+    url('./assets/Login_Img/FundoLogin.png');
 
   background-size: cover;       
   background-position: center;  
