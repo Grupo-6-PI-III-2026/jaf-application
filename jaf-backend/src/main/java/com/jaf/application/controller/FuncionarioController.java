@@ -2,6 +2,7 @@ package com.jaf.application.controller;
 
 import com.jaf.application.dto.FuncionarioDto;
 import com.jaf.application.dto.FuncionarioResponseDto;
+import com.jaf.application.repository.FuncionarioRepository;
 import com.jaf.application.service.FuncionarioService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
