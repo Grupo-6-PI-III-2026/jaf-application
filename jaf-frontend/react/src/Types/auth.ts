@@ -4,10 +4,5 @@ export interface LoginCredentials {
 }
 
 export interface LoginResponse {
-  token: string;
-  user: {
-    id: number;
-    nome: string;
-    email: string;
-  };
+  id: number;
 }

@@ -7,24 +7,56 @@ function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>(
+    {},
+  );
 
-const dadosParaLogar: LoginCredentials = {
-  email: email,
-  password: password,
-};
+  const dadosParaLogar: LoginCredentials = {
+    email: email,
+    password: password,
+  };
 
+  const emailRegex =
+    /^[A-Z0-9._%+-]+@(gmail|hotmail|outlook|yahoo|live)\.[A-Z]{2,}(\.[A-Z]{2,})?$/i;
 
-    const funcLogin = async (evento: React.MouseEvent) => {
-      evento.preventDefault();
+  const validateInputs = () => {
+    const nextErrors: { email?: string; password?: string } = {};
 
-      try {
-        const dataUser = await authService.login(dadosParaLogar);
+    if (!emailRegex.test(email)) {
+      nextErrors.email =
+        "Use um email valido (gmail, hotmail, outlook, yahoo, live).";
+    }
 
-        console.log("Login concluido com sucesso", dataUser);
-      } catch (erro) {
-        alert(`Falha ao fazer login ${erro}`);
-      }
-    };
+    const hasMinLength = password.length >= 8;
+    const hasUpper = /[A-Z]/.test(password);
+    const hasLower = /[a-z]/.test(password);
+    const hasSpecial = /[^A-Za-z0-9]/.test(password);
+
+    if (!hasMinLength || !hasUpper || !hasLower || !hasSpecial) {
+      nextErrors.password =
+        "A senha precisa de 8 caracteres, 1 maiuscula, 1 minuscula e 1 especial.";
+    }
+
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const funcLogin = async (evento: React.MouseEvent) => {
+    evento.preventDefault();
+
+    if (!validateInputs()) {
+      return;
+    }
+
+    try {
+      const dataUser = await authService.login(dadosParaLogar);
+
+      console.log("Login concluido com sucesso", dataUser);
+      alert("usaurio logado");
+    } catch {
+      alert("usaurio nao existe");
+    }
+  };
 
   return (
     <div className={styles.loginRoot}>
@@ -69,13 +101,21 @@ const dadosParaLogar: LoginCredentials = {
                 <label className={styles.fieldLabel}>E-mail</label>
               </div>
               <input
-                className={styles.fieldInput}
+                className={`${styles.fieldInput} ${errors.email ? styles.inputError : ""}`}
                 type="email"
                 placeholder="exemplo@jaf.com.br"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (errors.email) {
+                    setErrors((prev) => ({ ...prev, email: undefined }));
+                  }
+                }}
                 autoComplete="email"
               />
+              {errors.email && (
+                <p className={styles.errorText}>{errors.email}</p>
+              )}
             </div>
 
             <div className={styles.fieldGroup}>
@@ -87,11 +127,18 @@ const dadosParaLogar: LoginCredentials = {
               </div>
               <div className={styles.inputWrap}>
                 <input
-                  className={`${styles.fieldInput} ${styles.hasIcon}`}
+                  className={`${styles.fieldInput} ${styles.hasIcon} ${
+                    errors.password ? styles.inputError : ""
+                  }`}
                   type={showPassword ? "text" : "password"}
                   placeholder="Digite sua senha"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (errors.password) {
+                      setErrors((prev) => ({ ...prev, password: undefined }));
+                    }
+                  }}
                   autoComplete="current-password"
                 />
                 <button
@@ -131,9 +178,16 @@ const dadosParaLogar: LoginCredentials = {
                   )}
                 </button>
               </div>
+              {errors.password && (
+                <p className={styles.errorText}>{errors.password}</p>
+              )}
             </div>
 
-            <button className={styles.btnEntrar} onClick={funcLogin} type="button">
+            <button
+              className={styles.btnEntrar}
+              onClick={funcLogin}
+              type="button"
+            >
               Entrar <span className={styles.btnArrow}>→</span>
             </button>
 

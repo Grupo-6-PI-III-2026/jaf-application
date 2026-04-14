@@ -8,7 +8,6 @@ import java.time.LocalDate;
 public class Obra {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "obra_id")
     private Long id;
 
     private String titulo;

@@ -3,8 +3,6 @@ package com.jaf.application.model;
 import com.jaf.application.enums.Cargo;
 import jakarta.persistence.*;
 
-import static org.springframework.data.jpa.domain.AbstractPersistable_.id;
-
 @Entity
 public class Funcionario {
     @Id

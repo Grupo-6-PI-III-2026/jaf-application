@@ -1,53 +1,52 @@
 services:
-  mysql:
-    image: mysql:8.4
-    container_name: jaf-mysql
-    restart: unless-stopped
+  jaf-db:
+    image: mysql:8.0
+    container_name: jaf-db
+    restart: always
+    env_file:
+      - .env
     environment:
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-jafdb}
-      MYSQL_USER: ${MYSQL_USER:-jaf}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-jaf123}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root123}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
     ports:
-      - "${MYSQL_PORT:-3306}:3306"
+      - "3307:3306"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - db_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot123"]
-      interval: 10s
-      timeout: 5s
-      retries: 8
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h localhost -uroot -p$$DB_PASSWORD --silent",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 15s
 
   backend:
     build:
       context: ./jaf-backend
-      dockerfile: Dockerfile
     container_name: jaf-backend
-    restart: unless-stopped
-    depends_on:
-      mysql:
-        condition: service_healthy
-    environment:
-      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:mysql://mysql:3306/jafdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
-      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-jaf}
-      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-jaf123}
-      SPRING_DATASOURCE_DRIVER_CLASS_NAME: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:-com.mysql.cj.jdbc.Driver}
-      SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO:-update}
+    restart: on-failure:5
     ports:
-      - "${BACKEND_PORT:-8080}:8080"
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      JAVA_TOOL_OPTIONS: -Xms256m -Xmx512m
+    depends_on:
+      jaf-db:
+        condition: service_healthy
 
   frontend:
     build:
       context: ./jaf-frontend/react
-      dockerfile: Dockerfile
-      args:
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:8080}
     container_name: jaf-frontend
-    restart: unless-stopped
+    restart: always
+    ports:
+      - "80:80"
     depends_on:
       - backend
-    ports:
-      - "${FRONTEND_PORT:-5173}:80"
 
 volumes:
-  mysql_data:
+  db_data:
