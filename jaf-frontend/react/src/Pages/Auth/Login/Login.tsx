@@ -1,19 +1,22 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import styles from "./Login.module.css";
 import { authService } from "../../../Service/Auth/Login/authService";
 import { type LoginCredentials } from "../../../Types/auth";
 
 function Login() {
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>(
     {},
   );
 
   const dadosParaLogar: LoginCredentials = {
     email: email,
-    password: password,
+    senha: password, 
   };
 
   const emailRegex =
@@ -48,13 +51,20 @@ function Login() {
       return;
     }
 
+    setLoading(true);
+
     try {
       const dataUser = await authService.login(dadosParaLogar);
 
-      console.log("Login concluido com sucesso", dataUser);
-      alert("usaurio logado");
-    } catch {
-      alert("usaurio nao existe");
+      console.log("Login concluído com sucesso", dataUser);
+      
+      // Redireciona para a página de funcionários após login
+      navigate("/funcionarios/novo");
+    } catch (error: any) {
+      console.error("Erro no login:", error);
+      alert(error.message || "Usuário ou senha inválidos");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -187,8 +197,9 @@ function Login() {
               className={styles.btnEntrar}
               onClick={funcLogin}
               type="button"
+              disabled={loading}
             >
-              Entrar <span className={styles.btnArrow}>→</span>
+              {loading ? "Entrando..." : "Entrar"} <span className={styles.btnArrow}>→</span>
             </button>
 
             <p className={styles.noAccess}>
@@ -196,6 +207,13 @@ function Login() {
               <br />
               <a href="#">Solicite aqui</a>
             </p>
+            
+            {/* Credenciais de teste */}
+            <div style={{ marginTop: '20px', padding: '10px', background: '#f0f0f0', borderRadius: '5px', fontSize: '12px' }}>
+              <strong>Usuário de teste:</strong><br />
+              Email: admin@jaf.com<br />
+              Senha: Admin@123
+            </div>
           </div>
         </div>
       </div>
