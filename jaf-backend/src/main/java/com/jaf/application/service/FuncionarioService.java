@@ -4,6 +4,9 @@ import com.jaf.application.config.GerenciadorTokenJwt;
 import com.jaf.application.dto.*;
 import com.jaf.application.model.Funcionario;
 import com.jaf.application.repository.FuncionarioRepository;
+import com.jaf.application.exceptions.Conflict;
+import com.jaf.application.exceptions.NoContent;
+import com.jaf.application.exceptions.NotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -12,7 +15,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -31,6 +33,25 @@ public class FuncionarioService {
     private AuthenticationManager authenticationManager;
 
     public FuncionarioResponseDto criar(FuncionarioDto dto) {
+        if (funcionarioRepository.existsByNome(dto.getNome())){
+            throw new Conflict("Usuário já existe.");
+        }
+        Funcionario funcionario = new Funcionario();
+        funcionario.setNome(dto.getNome());
+        funcionario.setEmail(dto.getEmail());
+        funcionario.setSenha(dto.getSenha());
+        funcionario.setCargoGlobal(dto.getCargo());
+        return new FuncionarioResponseDto(funcionarioRepository.save(funcionario));
+    }
+
+    public List<FuncionarioResponseDto> listar() {
+                if (funcionarioRepository == null){
+                    throw new NoContent("Lista de funcionários vazia.");
+                }
+        return funcionarioRepository.findAll()
+                .stream()
+                .map(FuncionarioResponseDto::new)
+                .toList();
         funcionarioRepository.findByEmail(dto.getEmail())
                 .ifPresent(f -> {
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email ja cadastrado");
@@ -71,13 +92,13 @@ public class FuncionarioService {
 
     public FuncionarioResponseDto buscarPorId(Long id) {
         Funcionario funcionario = funcionarioRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Funcionario nao encontrado"));
+                .orElseThrow(() -> new NotFoundException("Usuário não encontrado."));
         return new FuncionarioResponseDto(funcionario);
     }
 
     public FuncionarioResponseDto atualizar(Long id, FuncionarioDto dto) {
         Funcionario existente = funcionarioRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Funcionario nao encontrado"));
+                .orElseThrow(() -> new NotFoundException("Usuário não encontrado."));
 
         existente.setNome(dto.getNome());
         existente.setEmail(dto.getEmail());
@@ -88,7 +109,7 @@ public class FuncionarioService {
 
     public void deletar(Long id) {
         if (!funcionarioRepository.existsById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Funcionario nao encontrado");
+            throw new NotFoundException("Usuário não encontrado.");
         }
         funcionarioRepository.deleteById(id);
     }

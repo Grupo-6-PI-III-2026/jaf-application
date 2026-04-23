@@ -5,6 +5,7 @@ import com.jaf.application.dto.FuncionarioDto;
 import com.jaf.application.dto.FuncionarioListarDto;
 import com.jaf.application.dto.FuncionarioLoginDto;
 import com.jaf.application.dto.FuncionarioResponseDto;
+import com.jaf.application.repository.FuncionarioRepository;
 import com.jaf.application.dto.FuncionarioTokenDto;
 import com.jaf.application.service.FuncionarioService;
 import jakarta.validation.Valid;

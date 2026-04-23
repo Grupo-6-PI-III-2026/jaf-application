@@ -1,6 +1,8 @@
 package com.jaf.application.service;
 
 import com.jaf.application.dto.RelatorioDto;
+import com.jaf.application.exceptions.NoContent;
+import com.jaf.application.exceptions.NotFoundException;
 import com.jaf.application.model.Funcionario;
 import com.jaf.application.model.Relatorio;
 import com.jaf.application.repository.FuncionarioRepository;
@@ -25,7 +27,7 @@ public class RelatorioService {
 
     public Relatorio criar(RelatorioDto dto) {
         Funcionario funcionario = funcionarioRepository.findById(dto.getFuncionarioResponsavelId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Funcionario nao encontrado"));
+                .orElseThrow(() -> new NotFoundException("Funcionario nao encontrado"));
 
         Relatorio relatorio = new Relatorio();
         relatorio.setTitulo(dto.getTitulo());
@@ -36,18 +38,21 @@ public class RelatorioService {
     }
 
     public List<Relatorio> listar() {
+        if (relatorioRepository == null){
+            throw new NoContent("Lista de Relatórios vazia.");
+        }
         return relatorioRepository.findAll();
     }
 
     public Relatorio buscarPorId(Long id) {
         return relatorioRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Relatorio nao encontrado"));
+                .orElseThrow(() -> new NotFoundException("Relatorio nao encontrado"));
     }
 
     public Relatorio atualizar(Long id, RelatorioDto dto) {
         Relatorio existente = buscarPorId(id);
         Funcionario funcionario = funcionarioRepository.findById(dto.getFuncionarioResponsavelId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Funcionario nao encontrado"));
+                .orElseThrow(() -> new NotFoundException("Funcionario nao encontrado"));
 
         existente.setTitulo(dto.getTitulo());
         existente.setDtEmissao(dto.getDtEmissao());
@@ -58,7 +63,7 @@ public class RelatorioService {
 
     public void deletar(Long id) {
         if (!relatorioRepository.existsById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Relatorio nao encontrado");
+            throw new NotFoundException("Relatorio nao encontrado");
         }
         relatorioRepository.deleteById(id);
     }
