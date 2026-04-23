@@ -39,6 +39,7 @@ public class SecurityConfiguracao {
     private AutenticacaoEntryPoint autenticacaoJwtEntryPoint;
 
     private static final String[] URLS_PERMITIDAS = {
+            "/",
             "/swagger-ui/**",
             "/swagger-ui.html",
             "/swagger-resources",
