@@ -1,10 +1,16 @@
 package com.jaf.application.service;
 
-import com.jaf.application.dto.FuncionarioDto;
-import com.jaf.application.dto.FuncionarioResponseDto;
+import com.jaf.application.config.GerenciadorTokenJwt;
+import com.jaf.application.dto.*;
 import com.jaf.application.model.Funcionario;
 import com.jaf.application.repository.FuncionarioRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -12,26 +18,55 @@ import java.util.List;
 
 @Service
 public class FuncionarioService {
-    private final FuncionarioRepository funcionarioRepository;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
-    public FuncionarioService(FuncionarioRepository funcionarioRepository) {
-        this.funcionarioRepository = funcionarioRepository;
-    }
+    @Autowired
+    private FuncionarioRepository funcionarioRepository;
+
+    @Autowired
+    private GerenciadorTokenJwt gerenciadorTokenJwt;
+
+    @Autowired
+    private AuthenticationManager authenticationManager;
 
     public FuncionarioResponseDto criar(FuncionarioDto dto) {
-        Funcionario funcionario = new Funcionario();
-        funcionario.setNome(dto.getNome());
-        funcionario.setEmail(dto.getEmail());
-        funcionario.setSenha(dto.getSenha());
-        funcionario.setCargoGlobal(dto.getCargo());
-        return new FuncionarioResponseDto(funcionarioRepository.save(funcionario));
+        funcionarioRepository.findByEmail(dto.getEmail())
+                .ifPresent(f -> {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email ja cadastrado");
+                });
+
+        Funcionario novoFuncionario = new Funcionario();
+        novoFuncionario.setNome(dto.getNome());
+        novoFuncionario.setEmail(dto.getEmail());
+        novoFuncionario.setSenha(passwordEncoder.encode(dto.getSenha()));
+        novoFuncionario.setCargoGlobal(dto.getCargo());
+
+        Funcionario salvo = funcionarioRepository.save(novoFuncionario);
+        return new FuncionarioResponseDto(salvo);
     }
 
-    public List<FuncionarioResponseDto> listar() {
-        return funcionarioRepository.findAll()
-                .stream()
-                .map(FuncionarioResponseDto::new)
-                .toList();
+    public FuncionarioTokenDto autenticar(Funcionario funcionario) {
+        final UsernamePasswordAuthenticationToken credentials = new UsernamePasswordAuthenticationToken(
+                funcionario.getEmail(), funcionario.getSenha());
+
+        final Authentication authentication = this.authenticationManager.authenticate(credentials);
+
+        Funcionario funcionarioAutenticado =
+                funcionarioRepository.findByEmail(funcionario.getEmail())
+                        .orElseThrow(
+                                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Email de funcionario nao encontrado"));
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        final String token = gerenciadorTokenJwt.generateToken(authentication);
+
+        return FuncionarioMapper.of(funcionarioAutenticado, token);
+    }
+
+    public List<FuncionarioListarDto> listarTodos() {
+        List<Funcionario> funcionariosEncontrados = funcionarioRepository.findAll();
+        return funcionariosEncontrados.stream().map(FuncionarioMapper::of).toList();
     }
 
     public FuncionarioResponseDto buscarPorId(Long id) {
@@ -57,4 +92,5 @@ public class FuncionarioService {
         }
         funcionarioRepository.deleteById(id);
     }
+
 }
