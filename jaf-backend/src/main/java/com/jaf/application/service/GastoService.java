@@ -1,6 +1,9 @@
 package com.jaf.application.service;
 
 import com.jaf.application.dto.GastoDto;
+import com.jaf.application.exceptions.Forbidden;
+import com.jaf.application.exceptions.NoContent;
+import com.jaf.application.exceptions.NotFoundException;
 import com.jaf.application.model.Funcionario;
 import com.jaf.application.model.Gasto;
 import com.jaf.application.model.Obra;
@@ -31,13 +34,13 @@ public class GastoService {
 
     public Gasto criar(GastoDto dto) {
         Funcionario funcionario = funcionarioRepository.findById(dto.getFuncionarioId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Funcionario nao encontrado"));
+                .orElseThrow(() -> new NotFoundException("Usuário não encontrado."));
         Obra obra = obraRepository.findById(dto.getObraId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Obra nao encontrada"));
+                .orElseThrow(() -> new NotFoundException("Obra não encontrada."));
 
         // VALIDAÇÃO DE ALOCAÇÃO
         if (!alocacaoObraRepository.existsByFuncionarioIdAndObraId(funcionario.getId(), obra.getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Funcionário não está alocado nesta obra e não pode registrar gastos.");
+            throw new Forbidden("Funcionário não está alocado nesta obra e não pode registrar gastos.");
         }
 
         Gasto gasto = new Gasto();
@@ -53,24 +56,27 @@ public class GastoService {
     }
 
     public List<Gasto> listar() {
+        if (gastoRepository == null){
+            throw new NoContent("Lista de Gastos vazia");
+        }
         return gastoRepository.findAll();
     }
 
     public Gasto buscarPorId(Long id) {
         return gastoRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Gasto nao encontrado"));
+                .orElseThrow(() -> new NotFoundException("Gasto não encontrado."));
     }
 
     public Gasto atualizar(Long id, GastoDto dto) {
         Gasto existente = buscarPorId(id);
         Funcionario funcionario = funcionarioRepository.findById(dto.getFuncionarioId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Funcionario nao encontrado"));
+                .orElseThrow(() -> new NotFoundException("Usuário não encontrado."));
         Obra obra = obraRepository.findById(dto.getObraId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Obra nao encontrada"));
+                .orElseThrow(() -> new NotFoundException("Obra não encontrada."));
 
         // VALIDAÇÃO DE ALOCAÇÃO PARA ATUALIZAÇÃO TAMBÉM
         if (!alocacaoObraRepository.existsByFuncionarioIdAndObraId(funcionario.getId(), obra.getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Funcionário não está alocado nesta obra.");
+            throw new Forbidden("Funcionário não está alocado nesta obra.");
         }
 
         existente.setDescricao(dto.getDescricao());
@@ -86,7 +92,7 @@ public class GastoService {
 
     public void deletar(Long id) {
         if (!gastoRepository.existsById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Gasto nao encontrado");
+            throw new NotFoundException("Gasto nao encontrado");
         }
         gastoRepository.deleteById(id);
     }
