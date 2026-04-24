@@ -2,15 +2,15 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import styles from "./Login.module.css";
 import { authService } from "../../../Service/Auth/Login/authService";
-import { type LoginCredentials } from "../../../Types/auth";
 
 function Login() {
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null); 
+  const [loading, setLoading] = useState(false);
 
-  const navigate = useNavigate();
 
   const emailRegex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
 
@@ -34,19 +34,15 @@ function Login() {
       return;
     }
 
-    const dadosParaLogar: LoginCredentials = { email, password };
-
+    setLoading(true); 
     try {
-      const dataUser = await authService.login(dadosParaLogar);
-
-      if (dataUser?.id) {
-        localStorage.setItem("userId", dataUser.id.toString());
-      }
-
+      await authService.login({ email, senha: password }); 
       navigate("/funcionarios/novo");
     } catch (error) {
       console.error(error);
       setErrorMessage("E-mail ou senha inválidos. Verifique suas credenciais.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -173,8 +169,9 @@ function Login() {
               className={styles.btnEntrar}
               onClick={funcLogin}
               type="button"
+              disabled={loading}
             >
-              Entrar <span className={styles.btnArrow}>→</span>
+              {loading ? "Entrando..." : "Entrar"} <span className={styles.btnArrow}>→</span>
             </button>
 
             <p className={styles.noAccess}>
@@ -182,6 +179,13 @@ function Login() {
               <br />
               <a href="#">Solicite aqui</a>
             </p>
+            
+            {/* Credenciais de teste */}
+            <div style={{ marginTop: '20px', padding: '10px', background: '#f0f0f0', borderRadius: '5px', fontSize: '12px' }}>
+              <strong>Usuário de teste:</strong><br />
+              Email: admin@jaf.com<br />
+              Senha: Admin@123
+            </div>
           </div>
         </div>
       </div>

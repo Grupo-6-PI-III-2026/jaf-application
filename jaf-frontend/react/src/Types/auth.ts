@@ -1,8 +1,8 @@
 export interface LoginCredentials {
   email: string;
-  password: string;
+  senha: string;  // Backend espera "senha", não "password"
 }
 
 export interface LoginResponse {
-  id: number;
+  token: string;  // Backend retorna token JWT
 }
