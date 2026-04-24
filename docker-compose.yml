@@ -41,6 +41,8 @@ services:
   frontend:
     build:
       context: ./jaf-frontend/react
+      args:
+        VITE_API_URL: /api
     container_name: jaf-frontend
     restart: always
     ports:

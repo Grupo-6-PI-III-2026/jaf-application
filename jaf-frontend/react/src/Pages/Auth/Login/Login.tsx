@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import styles from "./Login.module.css";
 import { authService } from "../../../Service/Auth/Login/authService";
 import { type LoginCredentials } from "../../../Types/auth";
@@ -7,54 +8,45 @@ function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>(
-    {},
-  );
+  const [errorMessage, setErrorMessage] = useState<string | null>(null); 
 
-  const dadosParaLogar: LoginCredentials = {
-    email: email,
-    password: password,
-  };
+  const navigate = useNavigate();
 
-  const emailRegex =
-    /^[A-Z0-9._%+-]+@(gmail|hotmail|outlook|yahoo|live)\.[A-Z]{2,}(\.[A-Z]{2,})?$/i;
+  const emailRegex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
 
   const validateInputs = () => {
-    const nextErrors: { email?: string; password?: string } = {};
-
-    if (!emailRegex.test(email)) {
-      nextErrors.email =
-        "Use um email valido (gmail, hotmail, outlook, yahoo, live).";
-    }
+    if (!emailRegex.test(email)) return false;
 
     const hasMinLength = password.length >= 8;
     const hasUpper = /[A-Z]/.test(password);
     const hasLower = /[a-z]/.test(password);
     const hasSpecial = /[^A-Za-z0-9]/.test(password);
 
-    if (!hasMinLength || !hasUpper || !hasLower || !hasSpecial) {
-      nextErrors.password =
-        "A senha precisa de 8 caracteres, 1 maiuscula, 1 minuscula e 1 especial.";
-    }
-
-    setErrors(nextErrors);
-    return Object.keys(nextErrors).length === 0;
+    return hasMinLength && hasUpper && hasLower && hasSpecial;
   };
 
   const funcLogin = async (evento: React.MouseEvent) => {
     evento.preventDefault();
+    setErrorMessage(null);
 
     if (!validateInputs()) {
+      setErrorMessage("E-mail ou senha inválidos. Verifique suas credenciais.");
       return;
     }
+
+    const dadosParaLogar: LoginCredentials = { email, password };
 
     try {
       const dataUser = await authService.login(dadosParaLogar);
 
-      console.log("Login concluido com sucesso", dataUser);
-      alert("usaurio logado");
-    } catch {
-      alert("usaurio nao existe");
+      if (dataUser?.id) {
+        localStorage.setItem("userId", dataUser.id.toString());
+      }
+
+      navigate("/funcionarios/novo");
+    } catch (error) {
+      console.error(error);
+      setErrorMessage("E-mail ou senha inválidos. Verifique suas credenciais.");
     }
   };
 
@@ -64,7 +56,8 @@ function Login() {
         <div className={styles.loginLeftBg} />
 
         <div className={styles.logo}>
-          <img src="src\assets\Geral\Logo.png" alt="" />
+        
+          <img src="/assets/Geral/Logo.png" alt="JAF Construtora" />
           <span className={styles.logoName}>JAF Construtora</span>
         </div>
 
@@ -87,7 +80,6 @@ function Login() {
         </p>
       </div>
 
-      {/* Direita */}
       <div className={styles.loginRightContainer}>
         <div className={styles.loginRight}>
           <div className={styles.loginCard}>
@@ -96,26 +88,27 @@ function Login() {
               Entre com suas credenciais para acessar o painel.
             </p>
 
+            
+          
+            {errorMessage && (
+              <div className={styles.errorBanner}>{errorMessage}</div>
+            )}
+
             <div className={styles.fieldGroup}>
               <div className={styles.fieldRow}>
                 <label className={styles.fieldLabel}>E-mail</label>
               </div>
               <input
-                className={`${styles.fieldInput} ${errors.email ? styles.inputError : ""}`}
+                className={styles.fieldInput}
                 type="email"
                 placeholder="exemplo@jaf.com.br"
                 value={email}
                 onChange={(e) => {
                   setEmail(e.target.value);
-                  if (errors.email) {
-                    setErrors((prev) => ({ ...prev, email: undefined }));
-                  }
+                  setErrorMessage(null);
                 }}
                 autoComplete="email"
               />
-              {errors.email && (
-                <p className={styles.errorText}>{errors.email}</p>
-              )}
             </div>
 
             <div className={styles.fieldGroup}>
@@ -127,17 +120,13 @@ function Login() {
               </div>
               <div className={styles.inputWrap}>
                 <input
-                  className={`${styles.fieldInput} ${styles.hasIcon} ${
-                    errors.password ? styles.inputError : ""
-                  }`}
+                  className={`${styles.fieldInput} ${styles.hasIcon}`}
                   type={showPassword ? "text" : "password"}
                   placeholder="Digite sua senha"
                   value={password}
                   onChange={(e) => {
                     setPassword(e.target.value);
-                    if (errors.password) {
-                      setErrors((prev) => ({ ...prev, password: undefined }));
-                    }
+                    setErrorMessage(null);
                   }}
                   autoComplete="current-password"
                 />
@@ -178,9 +167,6 @@ function Login() {
                   )}
                 </button>
               </div>
-              {errors.password && (
-                <p className={styles.errorText}>{errors.password}</p>
-              )}
             </div>
 
             <button
