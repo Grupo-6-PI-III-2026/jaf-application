@@ -40,7 +40,7 @@ public class FuncionarioService {
             throw new Conflict("Usuário já existe.");
         }
 
-        funcionarioRepository.findByEmail(dto.getEmail())
+        funcionarioRepository.findByEmailIgnoreCase(dto.getEmail())
                 .ifPresent(f -> {
                     throw new Conflict("E-mail já cadastrado.");
                 });
@@ -72,7 +72,7 @@ public class FuncionarioService {
 
         Authentication authentication = this.authenticationManager.authenticate(credentials);
 
-        Funcionario funcionarioAutenticado = funcionarioRepository.findByEmail(funcionario.getEmail())
+        Funcionario funcionarioAutenticado = funcionarioRepository.findByEmailIgnoreCase(funcionario.getEmail())
                 .orElseThrow(() -> new NotFoundException("Email de funcionário não encontrado."));
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
