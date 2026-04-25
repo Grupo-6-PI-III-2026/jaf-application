@@ -1,6 +1,9 @@
+//
 package com.jaf.application.service;
-
 import com.jaf.application.dto.AlocacaoObraDto;
+import com.jaf.application.exceptions.Conflict;
+import com.jaf.application.exceptions.NoContent;
+import com.jaf.application.exceptions.NotFoundException;
 import com.jaf.application.model.AlocacaoObra;
 import com.jaf.application.model.Funcionario;
 import com.jaf.application.model.Obra;
@@ -29,9 +32,9 @@ public class AlocacaoObraService {
 
     public AlocacaoObra criar(AlocacaoObraDto dto) {
         Funcionario funcionario = funcionarioRepository.findById(dto.getFuncionarioId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Funcionario nao encontrado"));
+                .orElseThrow(() -> new NotFoundException("Usuário não encontrado."));
         Obra obra = obraRepository.findById(dto.getObraId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Obra nao encontrada"));
+                .orElseThrow(() -> new NotFoundException("Obra não encontrado."));
 
         AlocacaoObra alocacao = new AlocacaoObra();
         alocacao.setFuncionario(funcionario);
@@ -42,21 +45,24 @@ public class AlocacaoObraService {
     }
 
     public List<AlocacaoObra> listar() {
+        if (alocacaoObraRepository == null){
+            throw new NoContent("Lista de alocações vazia.");
+        }
         return alocacaoObraRepository.findAll();
     }
 
     public AlocacaoObra buscarPorId(Long id) {
         return alocacaoObraRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Alocacao nao encontrada"));
+                .orElseThrow(() -> new NotFoundException("Alocação não encontrada."));
     }
 
     public AlocacaoObra atualizar(Long id, AlocacaoObraDto dto) {
         AlocacaoObra existente = buscarPorId(id);
 
         Funcionario funcionario = funcionarioRepository.findById(dto.getFuncionarioId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Funcionario nao encontrado"));
+                .orElseThrow(() -> new NotFoundException("Usuário não encontrado"));
         Obra obra = obraRepository.findById(dto.getObraId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Obra nao encontrada"));
+                .orElseThrow(() -> new NotFoundException("Obra não encontrada"));
 
         existente.setFuncionario(funcionario);
         existente.setObra(obra);
@@ -67,7 +73,7 @@ public class AlocacaoObraService {
 
     public void deletar(Long id) {
         if (!alocacaoObraRepository.existsById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Alocacao nao encontrada");
+            throw new NotFoundException("Alocação não encontrada.");
         }
         alocacaoObraRepository.deleteById(id);
     }

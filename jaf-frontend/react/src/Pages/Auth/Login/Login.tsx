@@ -180,12 +180,7 @@ function Login() {
               <a href="#">Solicite aqui</a>
             </p>
             
-            {/* Credenciais de teste */}
-            <div style={{ marginTop: '20px', padding: '10px', background: '#f0f0f0', borderRadius: '5px', fontSize: '12px' }}>
-              <strong>Usuário de teste:</strong><br />
-              Email: admin@jaf.com<br />
-              Senha: Admin@123
-            </div>
+          
           </div>
         </div>
       </div>
