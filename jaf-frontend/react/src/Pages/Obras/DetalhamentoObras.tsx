@@ -60,11 +60,11 @@ export default function DetalhamentoObras() {
       {/* Cabeçalho */}
       <div className={styles.cabecalho}>
         <div className={styles.cabecalhoEsquerda}>
-          <button className={styles.botaoVoltar} onClick={() => navegar("/obras")}>
+          <button className={styles.botaoVoltar} onClick={() => navegar("/home")}>
             <ArrowLeft size={18} />
           </button>
           <span className={styles.navegacao}>
-            <span className={styles.navegacaoLink} onClick={() => navegar("/obras")}>
+            <span className={styles.navegacaoLink} onClick={() => navegar("/home")}>
               Obras
             </span>
             <span className={styles.separador}>›</span>
