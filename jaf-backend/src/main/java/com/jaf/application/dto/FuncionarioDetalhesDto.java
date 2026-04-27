@@ -8,6 +8,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 
 public class FuncionarioDetalhesDto implements UserDetails {
     private String nome;
@@ -43,7 +44,8 @@ public class FuncionarioDetalhesDto implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Collections.emptyList(); // Sem níveis de autorização por enquanto
+
+        return List.of((GrantedAuthority) () -> "ROLE_" + cargo.name());
     }
 
     @Override

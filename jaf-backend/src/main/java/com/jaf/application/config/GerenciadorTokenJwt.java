@@ -62,7 +62,7 @@ public class GerenciadorTokenJwt {
         return expirationDate.before(new Date(System.currentTimeMillis()));
     }
 
-    private Claims getAllClaimsFromToken(String token) {
+    public Claims getAllClaimsFromToken(String token) {
         return Jwts.parserBuilder()
             .setSigningKey(parseSecret())    // define a chave para verificar a assinatura
             .build()

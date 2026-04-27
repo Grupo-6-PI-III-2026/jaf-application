@@ -1,4 +1,7 @@
+
 package com.jaf.application.controller;
+
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 
 import com.jaf.application.dto.AlocacaoObraDto;
 import com.jaf.application.model.AlocacaoObra;
@@ -12,6 +15,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/alocacoes")
+@SecurityRequirement(name = "Bearer")
 public class AlocacaoObraController {
     private final AlocacaoObraService alocacaoObraService;
 

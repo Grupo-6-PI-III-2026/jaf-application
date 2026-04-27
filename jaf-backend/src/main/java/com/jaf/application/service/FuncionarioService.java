@@ -23,6 +23,10 @@ import java.util.List;
 
 @Service
 public class FuncionarioService {
+        public Funcionario buscarPorEmail(String email) {
+            return funcionarioRepository.findByEmailIgnoreCase(email)
+                    .orElseThrow(() -> new NotFoundException("Usuário não encontrado."));
+        }
     @Autowired
     private PasswordEncoder passwordEncoder;
 

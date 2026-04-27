@@ -91,9 +91,19 @@ public class AutenticacaoFilter extends OncePerRequestFilter {
     private void registrarAutenticacaoNoContexto(HttpServletRequest request, String username, String jwtToken) {
         UserDetails userDetails = autenticacaoService.loadUserByUsername(username);
 
+    
+        java.util.List<org.springframework.security.core.GrantedAuthority> authorities = new java.util.ArrayList<>();
+        io.jsonwebtoken.Claims claims = jwtTokenManager.getAllClaimsFromToken(jwtToken);
+        String authoritiesClaim = (String) claims.get("authorities");
+        if (authoritiesClaim != null) {
+            for (String role : authoritiesClaim.split(",")) {
+                authorities.add((org.springframework.security.core.GrantedAuthority) () -> role);
+            }
+        }
+
         if (jwtTokenManager.validateToken(jwtToken, userDetails)) {
             UsernamePasswordAuthenticationToken autenticacao = new UsernamePasswordAuthenticationToken(
-                    userDetails, null, userDetails.getAuthorities());
+                    userDetails, null, authorities);
 
             autenticacao.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             SecurityContextHolder.getContext().setAuthentication(autenticacao);
