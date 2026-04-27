@@ -3,7 +3,6 @@ import {
   Building2,
   CheckCircle,
   DollarSign,
-  Plus,
 } from "lucide-react";
 import styles from "./Home.module.css";
 
@@ -39,11 +38,6 @@ export default function Home() {
       {/* HEADER */}
       <div className={styles.cabecalho}>
         <h1 className={styles.titulo}>Dashboard</h1>
-
-        <button className={styles.botaoAdicionar}>
-          <Plus size={16} />
-          Adicionar gasto
-        </button>
       </div>
 
       {/* MÉTRICAS */}

@@ -1,7 +1,4 @@
-
 package com.jaf.application.controller;
-
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 
 import com.jaf.application.dto.ObraDto;
 import com.jaf.application.model.Obra;
@@ -15,7 +12,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/obras")
-@SecurityRequirement(name = "Bearer")
 public class ObraController {
     private final ObraService obraService;
 
