@@ -16,7 +16,8 @@ import styles from "./NovoFuncionario.module.css";
 import {
   funcionarioService
 } from "../../../Service/Funcionarios/funcionarioService";
-
+import { toast } from "sonner";
+import { AxiosError } from "axios";
 import {type CargoApi } from "../../../Types/Register"
 
 interface ErrosFormulario {
@@ -73,7 +74,7 @@ export default function NovoFuncionario() {
     return Object.keys(nextErrors).length === 0;
   };
 
-  const handleCadastrar = async (e: React.FormEvent<HTMLFormElement>) => {
+ const handleCadastrar = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!validateInputs()) {
@@ -83,25 +84,32 @@ export default function NovoFuncionario() {
     setIsLoading(true);
 
     try {
-      const response = await funcionarioService.cadastrar({
+      await funcionarioService.cadastrar({
         nome,
         email,
         senha,
         cargo: cargo as CargoApi,
       });
 
-      console.log("Sucesso:", response);
-      alert("Funcionário cadastrado com sucesso!");
-
+      toast.success("Funcionário cadastrado com sucesso!");
       setNome("");
       setEmail("");
       setSenha("");
       setCargo("");
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Erro na API:", error);
-      alert(
-        "Falha ao cadastrar funcionário. Verifique os dados e tente novamente.",
-      );
+
+      if (error instanceof AxiosError) {
+        if (error.code === "ERR_NETWORK") {
+          toast.error("Servidor indisponível. Tente novamente mais tarde.");
+        } else if (error.response?.status === 400) {
+          toast.error("Dados inválidos. Verifique as informações e tente novamente.");
+        } else if (error.response?.status === 409) {
+          toast.error("Já existe um funcionário cadastrado com este e-mail.");
+        } else {
+          toast.error("Erro inesperado. Tente novamente.");
+        }
+      }
     } finally {
       setIsLoading(false);
     }

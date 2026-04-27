@@ -1,4 +1,6 @@
 
+
+
 /* Global */
 .loginRoot {
   display: flex;
@@ -180,7 +182,7 @@
   width: 100%;
   padding: 1rem 0rem;
   border: 1.5px solid #e2e2e0;
-  border-radius: 10px;
+  border-radius: 15px;
   background: #fafaf8;
   font-size: 0.9rem;
   color: #1a1a1a;
@@ -190,6 +192,7 @@
     border-color 0.2s,
     box-shadow 0.2s;
   appearance: none;
+  padding-left: 20px;
 }
 
 .fieldInput::placeholder {

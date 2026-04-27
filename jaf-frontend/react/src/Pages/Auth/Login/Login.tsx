@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import styles from "./Login.module.css";
 import { authService } from "../../../Service/Auth/Login/authService";
+import { toast } from "sonner";
+import { AxiosError } from "axios";
 
 function Login() {
   const navigate = useNavigate();
@@ -34,13 +36,29 @@ function Login() {
       return;
     }
 
-    setLoading(true); 
+    setLoading(true);
     try {
-      await authService.login({ email, senha: password }); 
-      navigate("/funcionarios/novo");
-    } catch (error) {
+      await authService.login({ email, senha: password });
+      toast.success("Login realizado com sucesso!");
+      setTimeout(() => {
+        navigate("/funcionarios/novo");
+      }, 1000);
+    } catch (error: unknown) {
       console.error(error);
-      setErrorMessage("E-mail ou senha inválidos. Verifique suas credenciais.");
+
+      if (error instanceof AxiosError) {
+        if (error.code === "ERR_NETWORK") {
+          toast.error("Servidor indisponível. Tente novamente mais tarde.");
+        } else if (error.response?.status === 400) {
+          setErrorMessage("E-mail e senha são obrigatórios.");
+        } else if (error.response?.status === 401) {
+          setErrorMessage(
+            "E-mail ou senha inválidos. Verifique suas credenciais.",
+          );
+        } else {
+          toast.error("Erro inesperado. Tente novamente.");
+        }
+      }
     } finally {
       setLoading(false);
     }
