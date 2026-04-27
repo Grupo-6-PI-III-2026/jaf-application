@@ -23,10 +23,7 @@ import java.util.List;
 
 @Service
 public class FuncionarioService {
-        public Funcionario buscarPorEmail(String email) {
-            return funcionarioRepository.findByEmailIgnoreCase(email)
-                    .orElseThrow(() -> new NotFoundException("Usuário não encontrado."));
-        }
+
     @Autowired
     private PasswordEncoder passwordEncoder;
 
@@ -84,6 +81,11 @@ public class FuncionarioService {
         String token = gerenciadorTokenJwt.generateToken(authentication);
 
         return FuncionarioMapper.of(funcionarioAutenticado, token);
+    }
+
+    public Funcionario buscarPorEmail(String email) {
+            return funcionarioRepository.findByEmailIgnoreCase(email)
+                    .orElseThrow(() -> new NotFoundException("Usuário não encontrado."));
     }
 
     public List<FuncionarioListarDto> listarTodos() {
