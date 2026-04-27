@@ -1,0 +1,221 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(17, 24, 39, 0.58);
+  backdrop-filter: blur(2px);
+}
+
+.modal {
+  width: 100%;
+  max-width: 880px;
+  background: #ffffff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 26px 55px rgba(17, 24, 39, 0.3);
+}
+
+.header {
+  position: relative;
+  background: #171717;
+  color: #ffffff;
+  padding: 28px 34px 30px;
+}
+
+.botaoFechar {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: transparent;
+  color: #bfbfbf;
+  transition: background 0.2s, color 0.2s;
+}
+
+.botaoFechar:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: #ffffff;
+}
+
+.titulo {
+  font-size: 34px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+
+.subtitulo {
+  margin-top: 8px;
+  font-size: 24px;
+  color: #f5b900;
+  font-weight: 600;
+}
+
+.botaoData {
+  margin-top: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: none;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #3f3f46;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.iconeData {
+  color: #f5b900;
+}
+
+.corpo {
+  padding: 22px 34px 24px;
+}
+
+.cabecalhoLista {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #a1a1aa;
+  margin-bottom: 10px;
+}
+
+.lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.itemColaborador {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+
+.infoColaborador {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.avatarCinza {
+  filter: grayscale(1);
+}
+
+.nome {
+  font-size: 22px;
+  color: #18181b;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.cargo {
+  font-size: 16px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.textoDesabilitado {
+  color: #a1a1aa;
+}
+
+.cargoDesabilitado {
+  color: #c4c4c4;
+}
+
+.toggle {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.toggleAtivo {
+  background: #f5b900;
+}
+
+.toggleInativo {
+  background: #d4d4d8;
+}
+
+.toggleDesabilitado {
+  background: #e4e4e7;
+  cursor: not-allowed;
+}
+
+.bolinhaToggle {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: left 0.2s;
+}
+
+.bolinhaAtiva {
+  left: 20px;
+}
+
+.rodape {
+  border-top: 1px solid #f1f1f1;
+  background: #f8f8f8;
+  padding: 18px 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.contador {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #71717a;
+}
+
+.botaoRegistrar {
+  border: none;
+  border-radius: 10px;
+  background: #f5b900;
+  color: #18181b;
+  padding: 12px 22px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.botaoRegistrar:hover {
+  background: #ffd451;
+}
