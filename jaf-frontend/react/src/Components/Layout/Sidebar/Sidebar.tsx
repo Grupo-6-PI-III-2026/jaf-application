@@ -25,7 +25,7 @@ export function Sidebar() {
             <div className={styles.margin}>
                 <div className={styles.container}>
                     <div className={styles.circuloLogo}>
-                        <img src="/assets/Gera/logo.png"/>
+                        <img src="/assets/Geral/logo.png"/>
                     </div>
                     <div className={styles.nomeEmpresa}>
                         <h1>JAF CONSTRUTORA</h1>

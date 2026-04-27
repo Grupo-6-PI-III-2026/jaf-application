@@ -7,8 +7,6 @@ import {
   DollarSign,
   Upload,
   ChevronDown,
-  AlertCircle,
-  CheckCircle,
   X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
