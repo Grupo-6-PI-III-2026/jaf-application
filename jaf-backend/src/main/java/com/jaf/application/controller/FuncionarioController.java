@@ -1,7 +1,4 @@
-
 package com.jaf.application.controller;
-
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 
 import com.jaf.application.config.GerenciadorTokenJwt;
 import com.jaf.application.dto.FuncionarioDto;
@@ -24,7 +21,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/funcionarios")
-@SecurityRequirement(name = "Bearer")
 public class FuncionarioController {
     private final FuncionarioService funcionarioService;
     private final AuthenticationManager authenticationManager;
@@ -42,22 +38,12 @@ public class FuncionarioController {
     @PostMapping("/login")
     public ResponseEntity<FuncionarioTokenDto> login(@Valid @RequestBody FuncionarioLoginDto loginDto) {
         Authentication authentication = authenticationManager.authenticate(
-            new UsernamePasswordAuthenticationToken(loginDto.getEmail(), loginDto.getSenha())
+                new UsernamePasswordAuthenticationToken(loginDto.getEmail(), loginDto.getSenha())
         );
-
+        
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String token = gerenciadorTokenJwt.generateToken(authentication);
-
-        var funcionario = funcionarioService.buscarPorEmail(loginDto.getEmail());
-
-        FuncionarioTokenDto dto = new FuncionarioTokenDto();
-        dto.setId(funcionario.getId());
-        dto.setNome(funcionario.getNome());
-        dto.setEmail(funcionario.getEmail());
-        dto.setCargo(funcionario.getCargoGlobal());
-        dto.setToken(token);
-
-        return ResponseEntity.ok(dto);
+                return ResponseEntity.ok(new FuncionarioTokenDto(loginDto.getEmail(), token));
     }
 
     @PostMapping

@@ -1,6 +1,7 @@
 .layout {
   display: flex;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 .mainArea {
@@ -8,6 +9,8 @@
   margin-left: 250px; 
   display: flex;
   flex-direction: column;
+  max-width: calc(100vw - 250px);
+  overflow-x: hidden;
 }
 
 .content {
@@ -15,4 +18,5 @@
   padding: 24px;
   background-color: #ffffff;
   min-height: calc(100vh - 70px);
+  overflow-x: hidden;
 }

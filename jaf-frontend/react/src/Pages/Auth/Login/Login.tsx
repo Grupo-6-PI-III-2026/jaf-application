@@ -41,7 +41,7 @@ function Login() {
       await authService.login({ email, senha: password });
       toast.success("Login realizado com sucesso!");
       setTimeout(() => {
-        navigate("/funcionarios/novo");
+        navigate("/home");
       }, 1000);
     } catch (error: unknown) {
       console.error(error);
