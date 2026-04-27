@@ -74,7 +74,7 @@ export default function DetalhamentoObras() {
       <div className={styles.cardObra}>
         <div className={styles.cardObraImagem}>
           <img
-            src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400&q=80"
+            src="https://s2.glbimg.com/YgImWrcpJX6FAHRJOlZtEnTaHYc=/e.glbimg.com/og/ed/f/original/2020/12/23/apartamento-sao-paulo-260-m2-atemporal3.jpg"
             alt="Obra Alphaville"
           />
         </div>

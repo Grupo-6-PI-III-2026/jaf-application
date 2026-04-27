@@ -1,7 +1,4 @@
-
 package com.jaf.application.controller;
-
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 
 import com.jaf.application.dto.RelatorioDto;
 import com.jaf.application.model.Relatorio;
@@ -15,7 +12,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/relatorios")
-@SecurityRequirement(name = "Bearer")
 public class RelatorioController {
     private final RelatorioService relatorioService;
 

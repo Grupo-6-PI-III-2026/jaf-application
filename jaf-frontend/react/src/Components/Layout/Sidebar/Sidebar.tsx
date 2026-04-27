@@ -11,8 +11,8 @@ import styles from "./Sidebar.module.css";
 
 // Vetor com os itens do menu da sidebar
 const menuItems = [
-  { icon: LayoutGrid, label: "Dashboard", path: "/dashboard" },
-  { icon: Pickaxe, label: "Obras", path: "/obras" },
+  { icon: LayoutGrid, label: "Dashboard", path: "/home" },
+  { icon: Pickaxe, label: "Obras", path: "/obras/detalhamento" },
   { icon: Wallet, label: "Financeiro", path: "/financeiro" },
   { icon: ChartNoAxesCombined, label: "Relatórios", path: "/relatorios" },
   { icon: Settings, label: "Configurações", path: "/configuracoes" },
@@ -25,7 +25,7 @@ export function Sidebar() {
             <div className={styles.margin}>
                 <div className={styles.container}>
                     <div className={styles.circuloLogo}>
-                        <img src="/assets/Geral/logo.png"/>
+                        <img src="/assets/Geral/Logo.png" alt="JAF Logo"/>
                     </div>
                     <div className={styles.nomeEmpresa}>
                         <h1>JAF CONSTRUTORA</h1>

@@ -1,4 +1,5 @@
 import { Pencil, MapPin, Plus } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import styles from "./CardObra.module.css";
 
 type Props = {
@@ -14,7 +15,9 @@ const formatarMoeda = (valor: number) =>
     currency: "BRL",
   });
 
-export default function cardObra({ nome, local, valor, imagem }: Props) {
+export default function CardObra({ nome, local, valor, imagem }: Props) {
+  const navigate = useNavigate();
+
   return (
     <div className={styles.card}>
 
@@ -72,7 +75,7 @@ export default function cardObra({ nome, local, valor, imagem }: Props) {
             </div>
           </div>
 
-          <button className={styles.botaoDetalhes}>
+          <button className={styles.botaoDetalhes} onClick={() => navigate('/obras/detalhamento')}>
             VISUALIZAR DETALHES
           </button>
         </div>
