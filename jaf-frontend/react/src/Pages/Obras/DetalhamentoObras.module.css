@@ -15,6 +15,12 @@
   justify-content: space-between;
 }
 
+.cabecalhoAcoes {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .cabecalhoEsquerda {
   display: flex;
   align-items: center;

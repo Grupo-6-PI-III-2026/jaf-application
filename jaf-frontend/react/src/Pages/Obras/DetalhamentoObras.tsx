@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import styles from "./DetalhamentoObras.module.css";
+import ControlePresenca from "../ControlePresenca/ControlePresenca";
 
 const equipe = [
   { nome: "Rafael Pereira", cargo: "Mestre de Obras", iniciais: "RP", cor: "#6C63FF" },
@@ -33,6 +34,7 @@ const formatarMoeda = (valor: number) =>
 
 export default function DetalhamentoObras() {
   const [paginaAtual, setPaginaAtual] = useState(1);
+  const [controlePresencaAberto, setControlePresencaAberto] = useState(false);
   const totalPaginas = 3;
   const navegar = useNavigate();
 
@@ -50,6 +52,10 @@ export default function DetalhamentoObras() {
 
   return (
     <div className={styles.pagina}>
+      <ControlePresenca
+        aberto={controlePresencaAberto}
+        onFechar={() => setControlePresencaAberto(false)}
+      />
 
       {/* Cabeçalho */}
       <div className={styles.cabecalho}>
@@ -65,9 +71,17 @@ export default function DetalhamentoObras() {
             <span className={styles.navegacaoAtivo}>Detalhes da Obra</span>
           </span>
         </div>
-        <button className={styles.botaoAdicionarGasto}>
-          💰 Adicionar gasto
-        </button>
+        <div className={styles.cabecalhoAcoes}>
+          <button
+            className={styles.botaoAdicionarGasto}
+            onClick={() => setControlePresencaAberto(true)}
+          >
+            Controle de presença
+          </button>
+          <button className={styles.botaoAdicionarGasto}>
+            💰 Adicionar gasto
+          </button>
+        </div>
       </div>
 
       {/* Card da obra */}
