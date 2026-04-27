@@ -3,6 +3,7 @@ import Login from "./Pages/Auth/Login/Login";
 import Layout from "./Components/Layout/Layout";
 import NovoFuncionario from "./Pages/Funcionarios/NovoFuncionario/NovoFuncionario";
 import DetalhamentoObras from "./Pages/Obras/DetalhamentoObras";
+import NovaObra from "./Pages/Obras/NovaObra/NovaObra";
 import Home from "./Pages/Home/Home";
 import PrivateRoute from "./Components/PrivateRoute/PrivateRoute";
 
