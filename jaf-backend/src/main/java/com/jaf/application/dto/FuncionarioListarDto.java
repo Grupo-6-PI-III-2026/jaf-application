@@ -11,7 +11,7 @@ public class FuncionarioListarDto {
     @Schema(description = "Nome do funcionário", example = "Guilherme")
     private String nome;
 
-    @Schema(description = "E-mail do funcionário", example = "guilherme@gmail.com")
+    @Schema(description = "E-mail do funcionário", example = "admin@gmail.com")
     private String email;
 
     @Schema(description = "Cargo do funcionário", example = "Administrador")

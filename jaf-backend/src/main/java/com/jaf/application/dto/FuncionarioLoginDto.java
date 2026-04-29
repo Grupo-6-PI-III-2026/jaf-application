@@ -7,11 +7,11 @@ import jakarta.validation.constraints.*;
 public class FuncionarioLoginDto {
 
     @NotBlank(message = "E-mail não pode estar vazio!")
-    @Schema(description = "E-mail do funcionário", example = "guilherme@gmail.com")
+    @Schema(description = "E-mail do funcionário", example = "admin@gmail.com")
     private String email;
 
     @NotBlank(message = "Senha não pode estar vazia!")
-    @Schema(description = "Senha do funcionário", example = "123456")
+    @Schema(description = "Senha do funcionário", example = "Admin@123")
     private String senha;
 
     public String getEmail() {
