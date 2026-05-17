@@ -1,0 +1,299 @@
+.up-page {
+  font-family: "Segoe UI", sans-serif;
+
+  min-height: 100vh;
+  padding: 32px;
+  color: #111;
+}
+
+.up-breadcrumb {
+  font-size: 12px;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.up-sep {
+  margin: 0 6px;
+}
+
+.up-active {
+  color: #FFC107;
+  font-weight: 600;
+}
+
+.up-title {
+  font-size: 26px;
+  font-weight: 700;
+  margin: 0 0 6px;
+}
+
+.up-subtitle {
+  font-size: 14px;
+  color: #555;
+  margin: 0 0 28px;
+  max-width: 560px;
+}
+
+.up-layout {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.up-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 220px;
+  flex-shrink: 0;
+}
+
+.up-profile-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px 16px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.up-avatar-wrap {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 12px;
+}
+
+.up-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #ccc url("https://i.pravatar.cc/72?img=12") center/cover no-repeat;
+}
+
+.up-online {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #22c55e;
+  border: 2px solid #fff;
+}
+
+.up-name {
+  font-weight: 700;
+  font-size: 15px;
+  margin: 0 0 4px;
+}
+
+.up-role {
+  font-size: 12px;
+  color: #888;
+  margin: 0 0 16px;
+}
+
+.up-info {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+  font-size: 12px;
+  color: #555;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.up-icon {
+  margin-right: 6px;
+}
+
+.up-impact-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  font-size: 12px;
+  color: #555;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.up-impact-title {
+  font-weight: 700;
+  font-size: 13px;
+  color: #333;
+  margin: 0 0 8px;
+}
+
+.up-impact-text {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.up-access-card {
+  flex: 1;
+  background: #1e1e1e;
+  border-radius: 12px;
+  padding: 28px;
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+
+.up-access-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.up-access-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 4px;
+  color: #f5a623;
+}
+
+.up-access-desc {
+  font-size: 13px;
+  color: #aaa;
+  margin: 0;
+}
+
+.up-module {
+  background: #2a2a2a;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 28px;
+}
+
+.up-module-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  background: #2f2f2f;
+  border-bottom: 1px solid #3a3a3a;
+}
+
+.up-module-icon {
+  font-size: 16px;
+}
+
+.up-module-name {
+  font-weight: 700;
+  font-size: 15px;
+  flex: 1;
+}
+
+.up-select-all {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #aaa;
+  cursor: pointer;
+}
+
+.up-perm-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.up-perm-item {
+  border-bottom: 1px solid #333;
+}
+
+.up-perm-item:last-child {
+  border-bottom: none;
+}
+
+.up-perm-label {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  cursor: pointer;
+}
+
+.up-checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: #f5a623;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.up-perm-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.up-perm-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.up-perm-desc {
+  font-size: 12px;
+  color: #888;
+}
+
+.up-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+.up-badge--restrito {
+  background: #7c3aed;
+  color: #fff;
+}
+
+.up-badge--critico {
+  background: #dc2626;
+  color: #fff;
+}
+
+.up-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.up-btn-cancel {
+  background: transparent;
+  border: 1px solid #555;
+  color: #ccc;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.up-btn-cancel:hover {
+  border-color: #aaa;
+}
+
+.up-btn-save {
+  background: #f5a623;
+  border: none;
+  color: #111;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.up-btn-save:hover {
+  background: #e09510;
+}

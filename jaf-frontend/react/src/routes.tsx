@@ -6,6 +6,7 @@ import DetalhamentoObras from "./Pages/Obras/DetalhamentoObras";
 import NovaObra from "./Pages/Obras/NovaObra/NovaObra";
 import Home from "./Pages/Home/Home";
 import PrivateRoute from "./Components/PrivateRoute/PrivateRoute";
+import UserPermissions from "./Pages/Permissions/Permissions";
 
 export const AppRoutes = () => {
   return (
@@ -25,6 +26,7 @@ export const AppRoutes = () => {
           <Route path="/funcionarios/novo" element={<NovoFuncionario />} />
           <Route path="/obras/detalhamento" element={<DetalhamentoObras />} />
           <Route path="/obras/criar" element={<NovaObra />} />
+          <Route path="/permissoes" element={<UserPermissions />} />
         </Route>
 
      
