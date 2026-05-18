@@ -3,12 +3,14 @@ package com.jaf.application.controller;
 import com.jaf.application.dto.GastoDto;
 import com.jaf.application.model.Gasto;
 import com.jaf.application.service.GastoService;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import java.util.List;
 
 @RestController
@@ -22,26 +24,30 @@ public class GastoController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('REGISTRAR_GASTO') or hasRole('ADMIN')")
     public ResponseEntity<Gasto> criar(@Valid @RequestBody GastoDto dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(gastoService.criar(dto));
     }
 
     @GetMapping
-    public ResponseEntity<List<Gasto>> listar() {
-        return ResponseEntity.ok(gastoService.listar());
+    public ResponseEntity<List<Gasto>> listar(Authentication authentication,
+                                              @RequestParam(required = false) Long obraId) {
+        return ResponseEntity.ok(gastoService.listarPorUsuario(authentication.getName(), obraId));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Gasto> buscarPorId(@PathVariable Long id) {
-        return ResponseEntity.ok(gastoService.buscarPorId(id));
+    public ResponseEntity<Gasto> buscarPorId(@PathVariable Long id, Authentication authentication) {
+        return ResponseEntity.ok(gastoService.buscarPorIdComEscopo(id, authentication.getName()));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('REGISTRAR_GASTO') or hasRole('ADMIN')")
     public ResponseEntity<Gasto> atualizar(@PathVariable Long id, @Valid @RequestBody GastoDto dto) {
         return ResponseEntity.ok(gastoService.atualizar(id, dto));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deletar(@PathVariable Long id) {
         gastoService.deletar(id);
         return ResponseEntity.noContent().build();

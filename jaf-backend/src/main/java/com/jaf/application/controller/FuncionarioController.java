@@ -11,6 +11,7 @@ import com.jaf.application.service.FuncionarioService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -49,26 +50,31 @@ public class FuncionarioController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<FuncionarioResponseDto> criar(@Valid @RequestBody FuncionarioDto dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(funcionarioService.criar(dto));
     }
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<FuncionarioListarDto>> listar() {
         return ResponseEntity.ok(funcionarioService.listarTodos());
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<FuncionarioResponseDto> buscarPorId(@PathVariable Long id) {
         return ResponseEntity.ok(funcionarioService.buscarPorId(id));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<FuncionarioResponseDto> atualizar(@PathVariable Long id, @Valid @RequestBody FuncionarioDto dto) {
         return ResponseEntity.ok(funcionarioService.atualizar(id, dto));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deletar(@PathVariable Long id) {
         funcionarioService.deletar(id);
         return ResponseEntity.noContent().build();

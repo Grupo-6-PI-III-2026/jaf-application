@@ -1,32 +1,26 @@
 package com.jaf.application.dto;
 
-import com.jaf.application.model.Funcionario;
 import com.jaf.application.enums.Cargo;
-import io.swagger.v3.oas.annotations.media.Schema;
+import com.jaf.application.model.Funcionario;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
+import java.util.List;
 
 public class FuncionarioDetalhesDto implements UserDetails {
-    private String nome;
-    private String email;
-    private String senha;
-    private Cargo cargo;
+    private final String nome;
+    private final String email;
+    private final String senha;
+    private final Cargo cargo;
 
     public FuncionarioDetalhesDto(Funcionario funcionario) {
         this.nome = funcionario.getNome();
         this.email = funcionario.getEmail();
         this.senha = funcionario.getSenha();
-        this.cargo = funcionario.getCargoGlobal();
-    }
-
-    public FuncionarioDetalhesDto(String nome, String email, String senha, Cargo cargo) {
-        this.nome = nome;
-        this.email = email;
-        this.senha = senha;
-        this.cargo = cargo;
+        this.cargo = funcionario.getCargoGlobal() != null ? funcionario.getCargoGlobal() : Cargo.OPERADOR_LANCAMENTO;
     }
 
     public String getNome() {
@@ -43,7 +37,11 @@ public class FuncionarioDetalhesDto implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Collections.emptyList(); // Sem níveis de autorização por enquanto
+        List<GrantedAuthority> authorities = new ArrayList<>();
+        authorities.add(new SimpleGrantedAuthority("ROLE_" + cargo.name()));
+        cargo.getPermissoes().forEach(permissao ->
+                authorities.add(new SimpleGrantedAuthority(permissao.name())));
+        return authorities;
     }
 
     @Override

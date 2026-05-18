@@ -1,9 +1,10 @@
 package com.jaf.application.service;
 
 import com.jaf.application.dto.GastoDto;
+import com.jaf.application.enums.Cargo;
 import com.jaf.application.exceptions.Forbidden;
-import com.jaf.application.exceptions.NoContent;
 import com.jaf.application.exceptions.NotFoundException;
+import com.jaf.application.model.AlocacaoObra;
 import com.jaf.application.model.Funcionario;
 import com.jaf.application.model.Gasto;
 import com.jaf.application.model.Obra;
@@ -11,11 +12,12 @@ import com.jaf.application.repository.AlocacaoObraRepository;
 import com.jaf.application.repository.FuncionarioRepository;
 import com.jaf.application.repository.GastoRepository;
 import com.jaf.application.repository.ObraRepository;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class GastoService {
@@ -24,8 +26,10 @@ public class GastoService {
     private final ObraRepository obraRepository;
     private final AlocacaoObraRepository alocacaoObraRepository;
 
-    // Construtor atualizado com AlocacaoObraRepository
-    public GastoService(GastoRepository gastoRepository, FuncionarioRepository funcionarioRepository, ObraRepository obraRepository, AlocacaoObraRepository alocacaoObraRepository) {
+    public GastoService(GastoRepository gastoRepository,
+                        FuncionarioRepository funcionarioRepository,
+                        ObraRepository obraRepository,
+                        AlocacaoObraRepository alocacaoObraRepository) {
         this.gastoRepository = gastoRepository;
         this.funcionarioRepository = funcionarioRepository;
         this.obraRepository = obraRepository;
@@ -34,13 +38,12 @@ public class GastoService {
 
     public Gasto criar(GastoDto dto) {
         Funcionario funcionario = funcionarioRepository.findById(dto.getFuncionarioId())
-                .orElseThrow(() -> new NotFoundException("Usuário não encontrado."));
+                .orElseThrow(() -> new NotFoundException("Usuario nao encontrado."));
         Obra obra = obraRepository.findById(dto.getObraId())
-                .orElseThrow(() -> new NotFoundException("Obra não encontrada."));
+                .orElseThrow(() -> new NotFoundException("Obra nao encontrada."));
 
-        // VALIDAÇÃO DE ALOCAÇÃO
         if (!alocacaoObraRepository.existsByFuncionarioIdAndObraId(funcionario.getId(), obra.getId())) {
-            throw new Forbidden("Funcionário não está alocado nesta obra e não pode registrar gastos.");
+            throw new Forbidden("Funcionario nao esta alocado nesta obra e nao pode registrar gastos.");
         }
 
         Gasto gasto = new Gasto();
@@ -55,28 +58,63 @@ public class GastoService {
         return gastoRepository.save(gasto);
     }
 
-    public List<Gasto> listar() {
-        if (gastoRepository == null){
-            throw new NoContent("Lista de Gastos vazia");
+    public List<Gasto> listarPorUsuario(String email, Long obraId) {
+        Funcionario funcionario = funcionarioRepository.findByEmailIgnoreCase(email)
+                .orElseThrow(() -> new NotFoundException("Usuario nao encontrado."));
+
+        if (funcionario.getCargoGlobal() == Cargo.ADMIN) {
+            if (obraId != null) {
+                return gastoRepository.findByObraId(obraId);
+            }
+            return gastoRepository.findAll();
         }
-        return gastoRepository.findAll();
+
+        List<AlocacaoObra> alocacoes = alocacaoObraRepository.findByFuncionarioId(funcionario.getId());
+        if (alocacoes.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        Set<Long> obraIds = new HashSet<>();
+        alocacoes.forEach(alocacao -> obraIds.add(alocacao.getObra().getId()));
+        if (obraId != null) {
+            if (!obraIds.contains(obraId)) {
+                return Collections.emptyList();
+            }
+            return gastoRepository.findByObraId(obraId);
+        }
+        return gastoRepository.findByObraIdIn(obraIds);
     }
 
     public Gasto buscarPorId(Long id) {
         return gastoRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Gasto não encontrado."));
+                .orElseThrow(() -> new NotFoundException("Gasto nao encontrado."));
+    }
+
+    public Gasto buscarPorIdComEscopo(Long id, String email) {
+        Funcionario funcionario = funcionarioRepository.findByEmailIgnoreCase(email)
+                .orElseThrow(() -> new NotFoundException("Usuario nao encontrado."));
+        Gasto gasto = buscarPorId(id);
+
+        if (funcionario.getCargoGlobal() == Cargo.ADMIN) {
+            return gasto;
+        }
+
+        boolean alocado = alocacaoObraRepository.existsByFuncionarioIdAndObraId(funcionario.getId(), gasto.getObra().getId());
+        if (!alocado) {
+            throw new Forbidden("Funcionario nao possui acesso a este gasto.");
+        }
+        return gasto;
     }
 
     public Gasto atualizar(Long id, GastoDto dto) {
         Gasto existente = buscarPorId(id);
         Funcionario funcionario = funcionarioRepository.findById(dto.getFuncionarioId())
-                .orElseThrow(() -> new NotFoundException("Usuário não encontrado."));
+                .orElseThrow(() -> new NotFoundException("Usuario nao encontrado."));
         Obra obra = obraRepository.findById(dto.getObraId())
-                .orElseThrow(() -> new NotFoundException("Obra não encontrada."));
+                .orElseThrow(() -> new NotFoundException("Obra nao encontrada."));
 
-        // VALIDAÇÃO DE ALOCAÇÃO PARA ATUALIZAÇÃO TAMBÉM
         if (!alocacaoObraRepository.existsByFuncionarioIdAndObraId(funcionario.getId(), obra.getId())) {
-            throw new Forbidden("Funcionário não está alocado nesta obra.");
+            throw new Forbidden("Funcionario nao esta alocado nesta obra.");
         }
 
         existente.setDescricao(dto.getDescricao());
