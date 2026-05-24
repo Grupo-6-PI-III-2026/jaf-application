@@ -9,6 +9,14 @@ export interface Obra {
   dtTerminoPrevisto: string;
 }
 
+export interface ObraCriarDto {
+  titulo: string;
+  orcamento: string;
+  status: string;
+  dtInicio: string; 
+  dtTerminoPrevisto: string; 
+}
+
 export const obraService = {
   listar: async (): Promise<Obra[]> => {
     const response = await api.get("/obras");
@@ -17,6 +25,11 @@ export const obraService = {
 
   buscarPorId: async (id: number): Promise<Obra> => {
     const response = await api.get(`/obras/${id}`);
+    return response.data;
+  },
+
+  criar: async (dto: ObraCriarDto): Promise<Obra> => {
+    const response = await api.post("/obras", dto);
     return response.data;
   },
 };
