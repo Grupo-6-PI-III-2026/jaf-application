@@ -50,31 +50,31 @@ public class FuncionarioController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('CRIAR_FUNCIONARIO')")
     public ResponseEntity<FuncionarioResponseDto> criar(@Valid @RequestBody FuncionarioDto dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(funcionarioService.criar(dto));
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('VISUALIZAR_FUNCIONARIOS')")
     public ResponseEntity<List<FuncionarioListarDto>> listar() {
         return ResponseEntity.ok(funcionarioService.listarTodos());
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('VISUALIZAR_FUNCIONARIOS')")
     public ResponseEntity<FuncionarioResponseDto> buscarPorId(@PathVariable Long id) {
         return ResponseEntity.ok(funcionarioService.buscarPorId(id));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('EDITAR_FUNCIONARIO')")
     public ResponseEntity<FuncionarioResponseDto> atualizar(@PathVariable Long id, @Valid @RequestBody FuncionarioDto dto) {
         return ResponseEntity.ok(funcionarioService.atualizar(id, dto));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('DELETAR_FUNCIONARIO')")
     public ResponseEntity<Void> deletar(@PathVariable Long id) {
         funcionarioService.deletar(id);
         return ResponseEntity.noContent().build();

@@ -34,41 +34,44 @@ public class ObraController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('CRIAR_OBRA')")
     public ResponseEntity<Obra> criar(@Valid @RequestBody ObraDto dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(obraService.criar(dto));
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('VISUALIZAR_OBRA')")
     public ResponseEntity<List<Obra>> listar(Authentication authentication) {
         return ResponseEntity.ok(obraService.listarPorUsuario(authentication.getName()));
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('VISUALIZAR_OBRA')")
     public ResponseEntity<Obra> buscarPorId(@PathVariable Long id, Authentication authentication) {
         return ResponseEntity.ok(obraService.buscarPorIdComEscopo(id, authentication.getName()));
     }
 
     @GetMapping("/{id}/gastos")
+    @PreAuthorize("hasAuthority('VISUALIZAR_GASTOS')")
     public ResponseEntity<List<Gasto>> listarGastosDaObra(@PathVariable Long id, Authentication authentication) {
         obraService.buscarPorIdComEscopo(id, authentication.getName());
         return ResponseEntity.ok(gastoService.listarPorUsuario(authentication.getName(), id));
     }
 
     @GetMapping("/{id}/alocacoes")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('VISUALIZAR_ALOCACOES')")
     public ResponseEntity<List<AlocacaoObra>> listarAlocacoesDaObra(@PathVariable Long id) {
         return ResponseEntity.ok(alocacaoObraService.listarPorObra(id));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('EDITAR_OBRA')")
     public ResponseEntity<Obra> atualizar(@PathVariable Long id, @Valid @RequestBody ObraDto dto) {
         return ResponseEntity.ok(obraService.atualizar(id, dto));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('DELETAR_OBRA')")
     public ResponseEntity<Void> deletar(@PathVariable Long id) {
         obraService.deletar(id);
         return ResponseEntity.noContent().build();

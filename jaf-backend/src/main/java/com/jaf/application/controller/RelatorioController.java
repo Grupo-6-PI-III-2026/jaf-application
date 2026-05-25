@@ -23,19 +23,19 @@ public class RelatorioController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('GERAR_RELATORIO')")
     public ResponseEntity<Relatorio> criar(@Valid @RequestBody RelatorioDto dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(relatorioService.criar(dto));
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('VISUALIZAR_RELATORIO')")
     public ResponseEntity<List<Relatorio>> listar() {
         return ResponseEntity.ok(relatorioService.listar());
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('VISUALIZAR_RELATORIO')")
     public ResponseEntity<Relatorio> buscarPorId(@PathVariable Long id) {
         return ResponseEntity.ok(relatorioService.buscarPorId(id));
     }

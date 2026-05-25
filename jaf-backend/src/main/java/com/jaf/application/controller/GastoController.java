@@ -24,30 +24,32 @@ public class GastoController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('REGISTRAR_GASTO') or hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('CRIAR_GASTO')")
     public ResponseEntity<Gasto> criar(@Valid @RequestBody GastoDto dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(gastoService.criar(dto));
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('VISUALIZAR_GASTOS')")
     public ResponseEntity<List<Gasto>> listar(Authentication authentication,
                                               @RequestParam(required = false) Long obraId) {
         return ResponseEntity.ok(gastoService.listarPorUsuario(authentication.getName(), obraId));
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('VISUALIZAR_GASTOS')")
     public ResponseEntity<Gasto> buscarPorId(@PathVariable Long id, Authentication authentication) {
         return ResponseEntity.ok(gastoService.buscarPorIdComEscopo(id, authentication.getName()));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('REGISTRAR_GASTO') or hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('EDITAR_GASTO')")
     public ResponseEntity<Gasto> atualizar(@PathVariable Long id, @Valid @RequestBody GastoDto dto) {
         return ResponseEntity.ok(gastoService.atualizar(id, dto));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('DELETAR_GASTO')")
     public ResponseEntity<Void> deletar(@PathVariable Long id) {
         gastoService.deletar(id);
         return ResponseEntity.noContent().build();

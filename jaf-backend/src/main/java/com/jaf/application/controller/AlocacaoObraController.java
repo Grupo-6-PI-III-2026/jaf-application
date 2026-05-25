@@ -24,18 +24,19 @@ public class AlocacaoObraController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('CRIAR_ALOCACAO')")
     public ResponseEntity<AlocacaoObra> criar(@Valid @RequestBody AlocacaoObraDto dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(alocacaoObraService.criar(dto));
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('VISUALIZAR_ALOCACOES')")
     public ResponseEntity<List<AlocacaoObra>> listar(Authentication authentication) {
         return ResponseEntity.ok(alocacaoObraService.listarPorUsuario(authentication.getName()));
     }
 
     @GetMapping("/filtro")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('VISUALIZAR_ALOCACOES')")
     public ResponseEntity<List<AlocacaoObra>> listarComFiltro(@RequestParam(required = false) Long obraId,
                                                                @RequestParam(required = false) Long funcionarioId,
                                                                Authentication authentication) {
@@ -49,31 +50,31 @@ public class AlocacaoObraController {
     }
 
     @GetMapping("/obra/{obraId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('VISUALIZAR_ALOCACOES')")
     public ResponseEntity<List<AlocacaoObra>> listarPorObra(@PathVariable Long obraId) {
         return ResponseEntity.ok(alocacaoObraService.listarPorObra(obraId));
     }
 
     @GetMapping("/funcionario/{funcionarioId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('VISUALIZAR_ALOCACOES')")
     public ResponseEntity<List<AlocacaoObra>> listarPorFuncionario(@PathVariable Long funcionarioId) {
         return ResponseEntity.ok(alocacaoObraService.listarPorFuncionario(funcionarioId));
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('VISUALIZAR_ALOCACOES')")
     public ResponseEntity<AlocacaoObra> buscarPorId(@PathVariable Long id) {
         return ResponseEntity.ok(alocacaoObraService.buscarPorId(id));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('EDITAR_ALOCACAO')")
     public ResponseEntity<AlocacaoObra> atualizar(@PathVariable Long id, @Valid @RequestBody AlocacaoObraDto dto) {
         return ResponseEntity.ok(alocacaoObraService.atualizar(id, dto));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('DELETAR_ALOCACAO')")
     public ResponseEntity<Void> deletar(@PathVariable Long id) {
         alocacaoObraService.deletar(id);
         return ResponseEntity.noContent().build();

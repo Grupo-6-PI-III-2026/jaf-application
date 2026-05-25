@@ -7,13 +7,26 @@ public enum Cargo {
     ADMIN(Arrays.asList(Permissao.values())),
 
     GESTOR_OBRA(Arrays.asList(
-            Permissao.GERENCIAR_OBRA,
-            Permissao.REGISTRAR_GASTO,
-            Permissao.GERAR_RELATORIO
+            Permissao.CRIAR_OBRA,
+            Permissao.EDITAR_OBRA,
+            Permissao.VISUALIZAR_OBRA,
+            Permissao.CRIAR_GASTO,
+            Permissao.EDITAR_GASTO,
+            Permissao.VISUALIZAR_GASTOS,
+            Permissao.CRIAR_ALOCACAO,
+            Permissao.EDITAR_ALOCACAO,
+            Permissao.VISUALIZAR_ALOCACOES,
+            Permissao.GERAR_RELATORIO,
+            Permissao.VISUALIZAR_RELATORIO
     )),
 
     OPERADOR_LANCAMENTO(Arrays.asList(
-            Permissao.REGISTRAR_GASTO
+            Permissao.VISUALIZAR_OBRA,
+            Permissao.CRIAR_GASTO,
+            Permissao.EDITAR_GASTO,
+            Permissao.VISUALIZAR_GASTOS,
+            Permissao.VISUALIZAR_ALOCACOES,
+            Permissao.VISUALIZAR_RELATORIO
     ));
 
     private final List<Permissao> permissoes;
