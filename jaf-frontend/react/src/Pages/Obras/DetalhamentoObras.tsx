@@ -35,8 +35,13 @@ const formatarMoeda = (valor: number) =>
 export default function DetalhamentoObras() {
   const [paginaAtual, setPaginaAtual] = useState(1);
   const [controlePresencaAberto, setControlePresencaAberto] = useState(false);
+  const [dataSelecionada, setDataSelecionada] = useState<string>(new Date().toISOString().split('T')[0]);
   const totalPaginas = 3;
   const navegar = useNavigate();
+  
+  // Mock de obraId - em produção isso viria da rota ou API
+  const obraId = 1;
+  const obraTitulo = "Obra Alphaville";
 
   function irParaPaginaAnterior() {
     setPaginaAtual((paginaCorrente) => Math.max(1, paginaCorrente - 1));
@@ -55,6 +60,9 @@ export default function DetalhamentoObras() {
       <ControlePresenca
         aberto={controlePresencaAberto}
         onFechar={() => setControlePresencaAberto(false)}
+        obraId={obraId}
+        obraTitulo={obraTitulo}
+        data={dataSelecionada}
       />
 
       {/* Cabeçalho */}
@@ -72,6 +80,18 @@ export default function DetalhamentoObras() {
           </span>
         </div>
         <div className={styles.cabecalhoAcoes}>
+          <input
+            type="date"
+            value={dataSelecionada}
+            onChange={(e) => setDataSelecionada(e.target.value)}
+            style={{
+              padding: '8px 12px',
+              border: '1px solid #d1d5db',
+              borderRadius: '6px',
+              marginRight: '8px',
+              fontSize: '14px'
+            }}
+          />
           <button
             className={styles.botaoAdicionarGasto}
             onClick={() => setControlePresencaAberto(true)}

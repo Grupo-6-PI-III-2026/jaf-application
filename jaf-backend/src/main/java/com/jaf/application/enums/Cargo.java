@@ -17,7 +17,11 @@ public enum Cargo {
             Permissao.EDITAR_ALOCACAO,
             Permissao.VISUALIZAR_ALOCACOES,
             Permissao.GERAR_RELATORIO,
-            Permissao.VISUALIZAR_RELATORIO
+            Permissao.VISUALIZAR_RELATORIO,
+            Permissao.REGISTRAR_PRESENCA,
+            Permissao.EDITAR_PRESENCA,
+            Permissao.DELETAR_PRESENCA,
+            Permissao.VISUALIZAR_PRESENCAS
     )),
 
     OPERADOR_LANCAMENTO(Arrays.asList(
@@ -26,7 +30,8 @@ public enum Cargo {
             Permissao.EDITAR_GASTO,
             Permissao.VISUALIZAR_GASTOS,
             Permissao.VISUALIZAR_ALOCACOES,
-            Permissao.VISUALIZAR_RELATORIO
+            Permissao.VISUALIZAR_RELATORIO,
+            Permissao.VISUALIZAR_PRESENCAS
     ));
 
     private final List<Permissao> permissoes;

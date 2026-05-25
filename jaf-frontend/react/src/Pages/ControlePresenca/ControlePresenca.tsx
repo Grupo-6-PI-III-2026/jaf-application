@@ -1,71 +1,117 @@
 import { Calendar, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import styles from "./ControlePresenca.module.css";
-
-type Colaborador = {
-  id: number;
-  nome: string;
-  cargo: string;
-  foto: string;
-  presente: boolean;
-  desabilitado?: boolean;
-};
+import { presencaService, Colaborador } from "../../Service/Presencas/presencaService";
+import { toast } from "sonner";
 
 type ControlePresencaProps = {
   aberto: boolean;
   onFechar: () => void;
+  obraId?: number;
+  obraTitulo?: string;
+  data?: string;
 };
 
-const colaboradoresIniciais: Colaborador[] = [
-  {
-    id: 1,
-    nome: "Joao Silva",
-    cargo: "Pintor Especialista",
-    foto: "https://images.unsplash.com/photo-1607746882042-944635dfe10e?w=96&q=80",
-    presente: true,
-  },
-  {
-    id: 2,
-    nome: "Marcos Pereira",
-    cargo: "Gesseiro",
-    foto: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=96&q=80",
-    presente: true,
-  },
-  {
-    id: 3,
-    nome: "Carlos Antunes",
-    cargo: "Mestre de Obras",
-    foto: "https://images.unsplash.com/photo-1521119989659-a83eee488004?w=96&q=80",
-    presente: true,
-  },
-  {
-    id: 4,
-    nome: "Ricardo Mendes",
-    cargo: "Eletricista",
-    foto: "https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=96&q=80",
-    presente: false,
-    desabilitado: true,
-  },
-];
+export default function ControlePresenca({ 
+  aberto, 
+  onFechar, 
+  obraId, 
+  obraTitulo = "Obra", 
+  data 
+}: ControlePresencaProps) {
+  const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
+  const [carregando, setCarregando] = useState(false);
+  const [salvando, setSalvando] = useState(false);
 
-export default function ControlePresenca({ aberto, onFechar }: ControlePresencaProps) {
-  const [colaboradores, setColaboradores] = useState(colaboradoresIniciais);
+  // Carregar colaboradores quando o modal abrir
+  useEffect(() => {
+    if (aberto && obraId && data) {
+      carregarColaboradores();
+    }
+  }, [aberto, obraId, data]);
+
+  async function carregarColaboradores() {
+    if (!obraId || !data) return;
+    
+    try {
+      setCarregando(true);
+      const dados = await presencaService.listarPorObraEData(obraId, data);
+      setColaboradores(dados);
+    } catch (error) {
+      console.error("Erro ao carregar colaboradores:", error);
+      toast.error("Erro ao carregar lista de presença");
+    } finally {
+      setCarregando(false);
+    }
+  }
 
   const totalPresentes = useMemo(
     () => colaboradores.filter((colaborador) => colaborador.presente).length,
     [colaboradores],
   );
 
-  function alternarPresenca(id: number) {
-    setColaboradores((listaAtual) =>
-      listaAtual.map((colaborador) => {
-        if (colaborador.id !== id || colaborador.desabilitado) {
-          return colaborador;
-        }
+  async function alternarPresenca(colaborador: Colaborador) {
+    if (colaborador.desabilitado) return;
 
-        return { ...colaborador, presente: !colaborador.presente };
+    // Atualização otimista da UI
+    setColaboradores((listaAtual) =>
+      listaAtual.map((colab) => {
+        if (colab.funcionarioId !== colaborador.funcionarioId) {
+          return colab;
+        }
+        return { ...colab, presente: !colab.presente };
       }),
     );
+
+    // Se já existe um ID, tenta alternar no backend
+    if (colaborador.id) {
+      try {
+        await presencaService.alternarPresenca(colaborador.id);
+      } catch (error) {
+        console.error("Erro ao alternar presença:", error);
+        toast.error("Erro ao atualizar presença");
+        // Reverter a alteração em caso de erro
+        carregarColaboradores();
+      }
+    }
+  }
+
+  async function registrarPresenca() {
+    if (!obraId || !data) {
+      toast.error("Dados da obra incompletos");
+      return;
+    }
+
+    try {
+      setSalvando(true);
+      
+      // Para cada colaborador presente que não tem ID, criar presença
+      const promessas = colaboradores
+        .filter(colab => colab.presente && !colab.id)
+        .map(colab => 
+          presencaService.criarPresenca({
+            funcionarioId: colab.funcionarioId,
+            obraId: obraId,
+            data: data,
+            presente: colab.presente,
+          })
+        );
+
+      await Promise.all(promessas);
+      toast.success("Presença registrada com sucesso");
+      onFechar();
+    } catch (error) {
+      console.error("Erro ao registrar presença:", error);
+      toast.error("Erro ao registrar presença");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  function formatarData(dataStr?: string): string {
+    if (!dataStr) return "Selecionar data";
+    const data = new Date(dataStr);
+    return data.toLocaleDateString('pt-BR');
   }
 
   if (!aberto) {
@@ -85,12 +131,12 @@ export default function ControlePresenca({ aberto, onFechar }: ControlePresencaP
             <X size={20} />
           </button>
 
-          <h2 className={styles.titulo}>CONTROLE DE PRESENCA</h2>
-          <p className={styles.subtitulo}>Edificio Horizonte</p>
+          <h2 className={styles.titulo}>CONTROLE DE PRESENÇA</h2>
+          <p className={styles.subtitulo}>{obraTitulo}</p>
 
           <button type="button" className={styles.botaoData}>
             <Calendar size={14} className={styles.iconeData} />
-            Data
+            {formatarData(data)}
           </button>
         </header>
 
@@ -100,50 +146,59 @@ export default function ControlePresenca({ aberto, onFechar }: ControlePresencaP
             <span>STATUS</span>
           </div>
 
-          <ul className={styles.lista}>
-            {colaboradores.map((colaborador) => (
-              <li key={colaborador.id} className={styles.itemColaborador}>
-                <div className={styles.infoColaborador}>
-                  <img
-                    src={colaborador.foto}
-                    alt={colaborador.nome}
-                    className={`${styles.avatar} ${colaborador.desabilitado ? styles.avatarCinza : ""}`}
-                  />
-                  <div>
-                    <p className={`${styles.nome} ${colaborador.desabilitado ? styles.textoDesabilitado : ""}`}>
-                      {colaborador.nome}
-                    </p>
-                    <p className={`${styles.cargo} ${colaborador.desabilitado ? styles.cargoDesabilitado : ""}`}>
-                      {colaborador.cargo}
-                    </p>
+          {carregando ? (
+            <div className={styles.carregando}>
+              <p>Carregando...</p>
+            </div>
+          ) : (
+            <ul className={styles.lista}>
+              {colaboradores.map((colaborador) => (
+                <li key={colaborador.funcionarioId} className={styles.itemColaborador}>
+                  <div className={styles.infoColaborador}>
+                    <div className={`${styles.avatar} ${colaborador.desabilitado ? styles.avatarCinza : ""}`}>
+                      {colaborador.funcionarioNome.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <p className={`${styles.nome} ${colaborador.desabilitado ? styles.textoDesabilitado : ""}`}>
+                        {colaborador.funcionarioNome}
+                      </p>
+                      <p className={`${styles.cargo} ${colaborador.desabilitado ? styles.cargoDesabilitado : ""}`}>
+                        {colaborador.funcionarioCargo}
+                      </p>
+                    </div>
                   </div>
-                </div>
 
-                <button
-                  type="button"
-                  onClick={() => alternarPresenca(colaborador.id)}
-                  disabled={colaborador.desabilitado}
-                  className={`${styles.toggle} ${
-                    colaborador.desabilitado
-                      ? styles.toggleDesabilitado
-                      : colaborador.presente
-                        ? styles.toggleAtivo
-                        : styles.toggleInativo
-                  }`}
-                >
-                  <span className={`${styles.bolinhaToggle} ${colaborador.presente ? styles.bolinhaAtiva : ""}`} />
-                </button>
-              </li>
-            ))}
-          </ul>
+                  <button
+                    type="button"
+                    onClick={() => alternarPresenca(colaborador)}
+                    disabled={colaborador.desabilitado}
+                    className={`${styles.toggle} ${
+                      colaborador.desabilitado
+                        ? styles.toggleDesabilitado
+                        : colaborador.presente
+                          ? styles.toggleAtivo
+                          : styles.toggleInativo
+                    }`}
+                  >
+                    <span className={`${styles.bolinhaToggle} ${colaborador.presente ? styles.bolinhaAtiva : ""}`} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         <footer className={styles.rodape}>
           <p className={styles.contador}>
             {totalPresentes} DE {colaboradores.length} PRESENTES
           </p>
-          <button type="button" className={styles.botaoRegistrar}>
-            Registrar Presenca
+          <button 
+            type="button" 
+            className={styles.botaoRegistrar}
+            onClick={registrarPresenca}
+            disabled={salvando || carregando}
+          >
+            {salvando ? "Salvando..." : "Registrar Presença"}
           </button>
         </footer>
       </section>
