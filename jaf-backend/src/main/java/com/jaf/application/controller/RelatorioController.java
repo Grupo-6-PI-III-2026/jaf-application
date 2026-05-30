@@ -41,13 +41,13 @@ public class RelatorioController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('GERAR_RELATORIO')")
     public ResponseEntity<Relatorio> atualizar(@PathVariable Long id, @Valid @RequestBody RelatorioDto dto) {
         return ResponseEntity.ok(relatorioService.atualizar(id, dto));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('GERAR_RELATORIO')")
     public ResponseEntity<Void> deletar(@PathVariable Long id) {
         relatorioService.deletar(id);
         return ResponseEntity.noContent().build();
