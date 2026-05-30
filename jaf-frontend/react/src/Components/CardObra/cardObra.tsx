@@ -7,6 +7,7 @@ type Props = {
   local: string;
   valor: number;
   imagem: string;
+  onClick?: () => void;
 };
 
 const formatarMoeda = (valor: number) =>
@@ -15,8 +16,16 @@ const formatarMoeda = (valor: number) =>
     currency: "BRL",
   });
 
-export default function CardObra({ nome, local, valor, imagem }: Props) {
+export default function CardObra({ nome, local, valor, imagem, onClick }: Props) {
   const navigate = useNavigate();
+
+  const handleDetalhesClick = () => {
+    if (onClick) {
+      onClick();
+    } else {
+      navigate('/obras/detalhamento');
+    }
+  };
 
   return (
     <div className={styles.card}>
@@ -75,7 +84,7 @@ export default function CardObra({ nome, local, valor, imagem }: Props) {
             </div>
           </div>
 
-          <button className={styles.botaoDetalhes} onClick={() => navigate('/obras/detalhamento')}>
+          <button className={styles.botaoDetalhes} onClick={handleDetalhesClick}>
             VISUALIZAR DETALHES
           </button>
         </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ArrowLeft,
   Calendar,
@@ -11,23 +11,13 @@ import {
   ChevronRight,
   Plus,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import styles from "./DetalhamentoObras.module.css";
 import ControlePresenca from "../ControlePresenca/ControlePresenca";
-
-const equipe = [
-  { nome: "Rafael Pereira", cargo: "Mestre de Obras", iniciais: "RP", cor: "#6C63FF" },
-  { nome: "Gabriel Junior", cargo: "Engenheiro Civil", iniciais: "GJ", cor: "#FF6584" },
-  { nome: "Ana Souza", cargo: "Arquiteta", iniciais: "AS", cor: "#43B89C" },
-];
-
-const lancamentos = [
-  { valor: 1000, cor: "#43B89C", funcionario: "Isac Newton", iniciais: "IN", corAvatar: "#6C63FF", tipo: "Débito", descricao: "Pagamento mão de obra", etapa: "Pintura", material: "-", data: "12 Jan 2026" },
-  { valor: 450, cor: "#ffc107", funcionario: "Rafael Pereira", iniciais: "RP", corAvatar: "#FF6584", tipo: "Débito", descricao: "Silicone e acabamentos", etapa: "Pintura", material: "Silicone", data: "10 Jan 2026" },
-  { valor: 2300, cor: "#43B89C", funcionario: "Gabriel Junior", iniciais: "GJ", corAvatar: "#43B89C", tipo: "Débito", descricao: "Compra de insumos", etapa: "Estrutura", material: "Cimento", data: "08 Jan 2026" },
-  { valor: 2300, cor: "#43B89C", funcionario: "Gabriel Junior", iniciais: "GJ", corAvatar: "#43B89C", tipo: "Débito", descricao: "Compra de insumos", etapa: "Estrutura", material: "Cimento", data: "08 Jan 2026" },
-  { valor: 2300, cor: "#43B89C", funcionario: "Gabriel Junior", iniciais: "GJ", corAvatar: "#43B89C", tipo: "Débito", descricao: "Compra de insumos", etapa: "Estrutura", material: "Cimento", data: "08 Jan 2026" },
-];
+import { obraService } from "../../Service/Obras/obraService";
+import { alocacaoService } from "../../Service/Alocacoes/alocacaoService";
+import { gastoService } from "../../Service/Gastos/gastoService";
+import { toast } from "sonner";
 
 const formatarMoeda = (valor: number) =>
   valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -38,10 +28,87 @@ export default function DetalhamentoObras() {
   const [dataSelecionada, setDataSelecionada] = useState<string>(new Date().toISOString().split('T')[0]);
   const totalPaginas = 3;
   const navegar = useNavigate();
+  const { id } = useParams();
   
-  // Mock de obraId - em produção isso viria da rota ou API
-  const obraId = 1;
-  const obraTitulo = "Obra Alphaville";
+  const [obra, setObra] = useState<any>(null);
+  const [alocacoes, setAlocacoes] = useState<any[]>([]);
+  const [gastos, setGastos] = useState<any[]>([]);
+  const [carregando, setCarregando] = useState(true);
+
+  const obraId = id ? parseInt(id) : 1;
+
+  useEffect(() => {
+    async function carregarDados() {
+      try {
+        setCarregando(true);
+        
+        // Carregar dados da obra
+        const obraData = await obraService.buscarPorId(obraId);
+        setObra(obraData);
+
+        // Carregar alocações da obra
+        const alocacoesData = await alocacaoService.listarPorObra(obraId);
+        setAlocacoes(alocacoesData);
+
+        // Carregar gastos da obra
+        const gastosData = await gastoService.listar(obraId);
+        setGastos(gastosData);
+      } catch (error) {
+        console.error("Erro ao carregar dados da obra:", error);
+        toast.error("Erro ao carregar dados da obra");
+      } finally {
+        setCarregando(false);
+      }
+    }
+
+    if (obraId) {
+      carregarDados();
+    }
+  }, [obraId]);
+
+  if (carregando) {
+    return (
+      <div className={styles.pagina}>
+        <div style={{ padding: '2rem', textAlign: 'center' }}>
+          <p>Carregando dados da obra...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!obra) {
+    return (
+      <div className={styles.pagina}>
+        <div style={{ padding: '2rem', textAlign: 'center' }}>
+          <p>Obra não encontrada</p>
+        </div>
+      </div>
+    );
+  }
+
+  const obraTitulo = obra.titulo || "Obra";
+  
+  // Mapear alocações para o formato esperado pelo componente
+  const equipe = alocacoes.map((alocacao: any) => ({
+    nome: alocacao.funcionario?.nome || "Funcionário",
+    cargo: alocacao.cargo || "Cargo",
+    iniciais: alocacao.funcionario?.nome?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || "FC",
+    cor: "#6C63FF" // Cor padrão, pode ser personalizada
+  }));
+
+  // Mapear gastos para o formato esperado
+  const lancamentos = gastos.map((gasto: any) => ({
+    valor: gasto.valor || 0,
+    cor: "#43B89C", // Cor padrão
+    funcionario: gasto.funcionario?.nome || "Funcionário",
+    iniciais: gasto.funcionario?.nome?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || "FC",
+    corAvatar: "#6C63FF", // Cor padrão
+    tipo: "Débito",
+    descricao: gasto.descricao || "Descrição",
+    etapa: gasto.etapa || "Geral",
+    material: gasto.categoria || "-",
+    data: gasto.dtGasto ? new Date(gasto.dtGasto).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: '2-digit' }) : new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: '2-digit' })
+  }));
 
   function irParaPaginaAnterior() {
     setPaginaAtual((paginaCorrente) => Math.max(1, paginaCorrente - 1));
@@ -115,17 +182,19 @@ export default function DetalhamentoObras() {
         <div className={styles.cardObraInformacoes}>
           <div className={styles.badgeStatus}>
             <span className={styles.badgePonto} />
-            EM PROGRESSO
+            {obra.status || "EM PROGRESSO"}
           </div>
           <div className={styles.cardObraTitulo}>
-            <h1>Obra Alphaville</h1>
+            <h1>{obraTitulo}</h1>
             <button className={styles.botaoEditar}>
               <Pencil size={16} />
             </button>
           </div>
           <div className={styles.cardObraData}>
             <Calendar size={14} />
-            <span>01/01/26 - 01/06/26</span>
+            <span>
+              {obra.dtInicio ? new Date(obra.dtInicio).toLocaleDateString('pt-BR') : '01/01/26'} - {obra.dtTerminoPrevisto ? new Date(obra.dtTerminoPrevisto).toLocaleDateString('pt-BR') : '01/06/26'}
+            </span>
           </div>
 
           <div className={styles.equipeRotulo}>EQUIPE RESPONSÁVEL</div>

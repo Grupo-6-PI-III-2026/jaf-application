@@ -13,6 +13,7 @@ export const AppRoutes = () => {
       <Routes>
         {/* Rota pública - Login */}
         <Route path="/" element={<Login />} />
+        <Route path="/login" element={<Login />} />
         <Route path="/obras/gerenciamentofuncionarios" element={<DetalhamentoObras />} />
 
     
@@ -24,6 +25,7 @@ export const AppRoutes = () => {
           <Route path="/home" element={<Home />} />
           <Route path="/funcionarios/novo" element={<NovoFuncionario />} />
           <Route path="/obras/detalhamento" element={<DetalhamentoObras />} />
+          <Route path="/obras/:id" element={<DetalhamentoObras />} />
           <Route path="/obras/criar" element={<NovaObra />} />
         </Route>
 

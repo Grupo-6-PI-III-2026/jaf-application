@@ -1,7 +1,7 @@
 import { Calendar, X } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
 import styles from "./ControlePresenca.module.css";
-import { presencaService, Colaborador } from "../../Service/Presencas/presencaService";
+import { presencaService, type Colaborador } from "../../Service/Presencas/presencaService";
 import { toast } from "sonner";
 
 type ControlePresencaProps = {

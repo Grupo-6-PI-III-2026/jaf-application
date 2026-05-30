@@ -11,6 +11,9 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import styles from "./NovaObra.module.css";
+import { obraService } from "../../../Service/Obras/obraService";
+import { toast } from "sonner";
+import { AxiosError } from "axios";
 
 interface ErrosFormulario {
   nomeObra?: string;
@@ -143,21 +146,15 @@ export default function NovaObra() {
     setIsLoading(true);
 
     try {
-      // Simulação de API call
-      console.log("Dados da nova obra:", {
-        nomeObra,
-        status,
-        responsavel,
-        dataInicio,
-        dataFim,
-        endereco,
-        cidade,
-        estado,
-        orcamento,
-        arquivos: arquivos.map((a) => a.nome),
+      await obraService.criar({
+        titulo: nomeObra,
+        status: status,
+        orcamento: orcamento,
+        dtInicio: dataInicio,
+        dtTerminoPrevisto: dataFim,
       });
 
-      alert("Obra criada com sucesso!");
+      toast.success("Obra criada com sucesso!");
       
       // Limpar formulário
       setNomeObra("");
@@ -173,10 +170,22 @@ export default function NovaObra() {
       setErrors({});
 
       // Redirecionar para lista de obras
-      navigate("/obras");
+      navigate("/home");
     } catch (error) {
       console.error("Erro ao criar obra:", error);
-      alert("Falha ao criar obra. Tente novamente.");
+      if (error instanceof AxiosError) {
+        if (error.code === "ERR_NETWORK") {
+          toast.error("Servidor indisponível. Tente novamente mais tarde.");
+        } else if (error.response?.status === 400) {
+          toast.error("Dados inválidos. Verifique as informações e tente novamente.");
+        } else if (error.response?.status === 409) {
+          toast.error("Já existe uma obra com este título.");
+        } else {
+          toast.error("Erro ao criar obra. Tente novamente.");
+        }
+      } else {
+        toast.error("Falha ao criar obra. Tente novamente.");
+      }
     } finally {
       setIsLoading(false);
     }
