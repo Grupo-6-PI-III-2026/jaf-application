@@ -152,6 +152,10 @@ export default function NovaObra() {
         orcamento: orcamento,
         dtInicio: dataInicio,
         dtTerminoPrevisto: dataFim,
+        responsavel: responsavel,
+        endereco: endereco,
+        cidade: cidade,
+        estado: estado,
       });
 
       toast.success("Obra criada com sucesso!");

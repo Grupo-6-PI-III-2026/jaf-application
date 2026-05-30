@@ -1,6 +1,7 @@
 package com.jaf.application.model;
 
-import com.jaf.application.enums.Cargo;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.jaf.application.enums.CargoNaObra;
 import jakarta.persistence.*;
 
 @Entity
@@ -18,7 +19,16 @@ public class AlocacaoObra {
     private Obra obra;
 
     @Enumerated(EnumType.STRING)
-    private Cargo cargo;
+    private CargoNaObra cargo;
+
+    @JsonProperty("cargo")
+    public CargoNaObra getCargo() {
+        return cargo;
+    }
+
+    public void setCargo(CargoNaObra cargo) {
+        this.cargo = cargo;
+    }
 
     public Long getId() {
         return id;
@@ -42,13 +52,5 @@ public class AlocacaoObra {
 
     public void setObra(Obra obra) {
         this.obra = obra;
-    }
-
-    public Cargo getCargo() {
-        return cargo;
-    }
-
-    public void setCargo(Cargo cargo) {
-        this.cargo = cargo;
     }
 }

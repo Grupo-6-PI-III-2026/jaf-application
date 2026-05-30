@@ -6,6 +6,10 @@ export interface ObraDto {
   status: string;
   dtInicio: string;
   dtTerminoPrevisto: string;
+  responsavel?: string;
+  endereco?: string;
+  cidade?: string;
+  estado?: string;
 }
 
 export interface Obra {
@@ -15,6 +19,10 @@ export interface Obra {
   status: string;
   dtInicio: string;
   dtTerminoPrevisto: string;
+  responsavel?: string;
+  endereco?: string;
+  cidade?: string;
+  estado?: string;
 }
 
 export const obraService = {

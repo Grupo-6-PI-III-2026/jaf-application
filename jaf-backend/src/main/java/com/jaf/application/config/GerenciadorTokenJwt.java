@@ -71,6 +71,8 @@ public class GerenciadorTokenJwt {
     }
 
     private SecretKey parseSecret() {
-        return Keys.hmacShaKeyFor(Decoders.BASE64.decode(this.secret));
+        // Use the secret directly as UTF-8 bytes instead of BASE64 decoding
+        // This allows using plain text secrets in .env files
+        return Keys.hmacShaKeyFor(this.secret.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 }

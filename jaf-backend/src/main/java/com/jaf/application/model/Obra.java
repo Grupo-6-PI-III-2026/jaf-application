@@ -17,6 +17,11 @@ public class Obra {
     private LocalDate dtInicio;
     private LocalDate dtTerminoPrevisto;
 
+    private String responsavel;
+    private String endereco;
+    private String cidade;
+    private String estado;
+
     public Long getId() {
         return id;
     }
@@ -63,5 +68,37 @@ public class Obra {
 
     public void setDtTerminoPrevisto(LocalDate dtTerminoPrevisto) {
         this.dtTerminoPrevisto = dtTerminoPrevisto;
+    }
+
+    public String getResponsavel() {
+        return responsavel;
+    }
+
+    public void setResponsavel(String responsavel) {
+        this.responsavel = responsavel;
+    }
+
+    public String getEndereco() {
+        return endereco;
+    }
+
+    public void setEndereco(String endereco) {
+        this.endereco = endereco;
+    }
+
+    public String getCidade() {
+        return cidade;
+    }
+
+    public void setCidade(String cidade) {
+        this.cidade = cidade;
+    }
+
+    public String getEstado() {
+        return estado;
+    }
+
+    public void setEstado(String estado) {
+        this.estado = estado;
     }
 }

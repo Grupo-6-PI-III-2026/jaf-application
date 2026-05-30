@@ -1,6 +1,6 @@
 //DTO = TRANSPORTAR DADOS
 package com.jaf.application.dto;
-import com.jaf.application.enums.Cargo;
+import com.jaf.application.enums.CargoNaObra;
 import jakarta.validation.constraints.NotNull;
 
 public class AlocacaoObraDto {
@@ -11,7 +11,7 @@ public class AlocacaoObraDto {
     private Long obraId;
 
     @NotNull(message = "O cargo na obra é obrigatório")
-    private Cargo cargoNaObra;
+    private CargoNaObra cargoNaObra;
 
     public Long getFuncionarioId() {
         return funcionarioId;
@@ -29,11 +29,11 @@ public class AlocacaoObraDto {
         this.obraId = obraId;
     }
 
-    public Cargo getCargoNaObra() {
+    public CargoNaObra getCargoNaObra() {
         return cargoNaObra;
     }
 
-    public void setCargoNaObra(Cargo cargoNaObra) {
+    public void setCargoNaObra(CargoNaObra cargoNaObra) {
         this.cargoNaObra = cargoNaObra;
     }
 }

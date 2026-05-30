@@ -42,6 +42,10 @@ public class ObraService {
         obra.setStatus(dto.getStatus());
         obra.setDtInicio(dto.getDtInicio());
         obra.setDtTerminoPrevisto(dto.getDtTerminoPrevisto());
+        obra.setResponsavel(dto.getResponsavel());
+        obra.setEndereco(dto.getEndereco());
+        obra.setCidade(dto.getCidade());
+        obra.setEstado(dto.getEstado());
         return obraRepository.save(obra);
     }
 
@@ -88,10 +92,15 @@ public class ObraService {
         Obra existente = obraRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Obra nao encontrada."));
 
+        existente.setTitulo(dto.getTitulo());
         existente.setOrcamento(dto.getOrcamento());
         existente.setStatus(dto.getStatus());
         existente.setDtInicio(dto.getDtInicio());
         existente.setDtTerminoPrevisto(dto.getDtTerminoPrevisto());
+        existente.setResponsavel(dto.getResponsavel());
+        existente.setEndereco(dto.getEndereco());
+        existente.setCidade(dto.getCidade());
+        existente.setEstado(dto.getEstado());
         return obraRepository.save(existente);
     }
 

@@ -2,6 +2,7 @@ package com.jaf.application.service;
 
 import com.jaf.application.dto.AlocacaoObraDto;
 import com.jaf.application.enums.Cargo;
+import com.jaf.application.enums.CargoNaObra;
 import com.jaf.application.exceptions.Conflict;
 import com.jaf.application.exceptions.NotFoundException;
 import com.jaf.application.model.AlocacaoObra;
@@ -59,12 +60,12 @@ class AlocacaoObraServiceTest {
         alocacao.setId(1L);
         alocacao.setFuncionario(funcionario);
         alocacao.setObra(obra);
-        alocacao.setCargo(Cargo.GESTOR_OBRA);
+        alocacao.setCargo(CargoNaObra.MESTRE_OBRAS);
 
         alocacaoDto = new AlocacaoObraDto();
         alocacaoDto.setFuncionarioId(1L);
         alocacaoDto.setObraId(1L);
-        alocacaoDto.setCargoNaObra(Cargo.GESTOR_OBRA);
+        alocacaoDto.setCargoNaObra(CargoNaObra.MESTRE_OBRAS);
     }
 
     @Test
@@ -77,7 +78,7 @@ class AlocacaoObraServiceTest {
         AlocacaoObra resultado = alocacaoObraService.criar(alocacaoDto);
 
         assertNotNull(resultado);
-        assertEquals(Cargo.GESTOR_OBRA, resultado.getCargo());
+        assertEquals(CargoNaObra.MESTRE_OBRAS, resultado.getCargo());
         verify(alocacaoObraRepository).save(any(AlocacaoObra.class));
     }
 

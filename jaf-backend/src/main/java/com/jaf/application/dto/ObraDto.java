@@ -27,6 +27,11 @@ public class ObraDto {
     @FutureOrPresent(message = "A data de término prevista não pode estar no passado")
     private LocalDate dtTerminoPrevisto;
 
+    private String responsavel;
+    private String endereco;
+    private String cidade;
+    private String estado;
+
     public String getTitulo() {
         return titulo;
     }
@@ -65,5 +70,37 @@ public class ObraDto {
 
     public void setDtTerminoPrevisto(LocalDate dtTerminoPrevisto) {
         this.dtTerminoPrevisto = dtTerminoPrevisto;
+    }
+
+    public String getResponsavel() {
+        return responsavel;
+    }
+
+    public void setResponsavel(String responsavel) {
+        this.responsavel = responsavel;
+    }
+
+    public String getEndereco() {
+        return endereco;
+    }
+
+    public void setEndereco(String endereco) {
+        this.endereco = endereco;
+    }
+
+    public String getCidade() {
+        return cidade;
+    }
+
+    public void setCidade(String cidade) {
+        this.cidade = cidade;
+    }
+
+    public String getEstado() {
+        return estado;
+    }
+
+    public void setEstado(String estado) {
+        this.estado = estado;
     }
 }

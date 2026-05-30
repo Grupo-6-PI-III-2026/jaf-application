@@ -1,6 +1,7 @@
 package com.jaf.application.config;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
@@ -106,16 +107,20 @@ public class SecurityConfiguracao {
         return new BCryptPasswordEncoder();
     }
 
+    @Value("${app.cors.allowed-origins}")
+    private String corsAllowedOrigins;
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuracao = new CorsConfiguration();
 
         // Origens permitidas — deve ser explícita quando allowCredentials=true
-        // Em produção: List.of("https://meuapp.com.br")
-        configuracao.setAllowedOrigins(List.of(
-                "http://localhost:5173",  // Vite dev server
-                "http://localhost:3000"   // Create React App (alternativa)
-        ));
+        // Usa variável de ambiente para flexibilidade em diferentes ambientes
+        String[] origins = corsAllowedOrigins.split(",");
+        
+        // Adiciona suporte para mesmo origem (quando acessado via proxy nginx)
+        configuracao.setAllowedOriginPatterns(List.of("*"));
+        configuracao.setAllowedOrigins(Arrays.asList(origins));
 
         // Necessário para que o browser envie/receba cookies nas requisições cross-origin
         configuracao.setAllowCredentials(true);

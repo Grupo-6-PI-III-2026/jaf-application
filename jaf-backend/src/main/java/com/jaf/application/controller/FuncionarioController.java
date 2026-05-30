@@ -46,7 +46,18 @@ public class FuncionarioController {
         
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String token = gerenciadorTokenJwt.generateToken(authentication);
-                return ResponseEntity.ok(new FuncionarioTokenDto(loginDto.getEmail(), token));
+        
+        // Buscar informações completas do funcionário
+        Funcionario funcionario = funcionarioService.buscarPorEmail(loginDto.getEmail());
+        
+        FuncionarioTokenDto responseDto = new FuncionarioTokenDto();
+        responseDto.setEmail(funcionario.getEmail());
+        responseDto.setToken(token);
+        responseDto.setId(funcionario.getId());
+        responseDto.setNome(funcionario.getNome());
+        responseDto.setCargo(funcionario.getCargoGlobal());
+        
+        return ResponseEntity.ok(responseDto);
     }
 
     @PostMapping

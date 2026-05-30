@@ -51,14 +51,14 @@ public class AlocacaoObraController {
 
     @GetMapping("/obra/{obraId}")
     @PreAuthorize("hasAuthority('VISUALIZAR_ALOCACOES')")
-    public ResponseEntity<List<AlocacaoObra>> listarPorObra(@PathVariable Long obraId) {
-        return ResponseEntity.ok(alocacaoObraService.listarPorObra(obraId));
+    public ResponseEntity<List<AlocacaoObra>> listarPorObra(@PathVariable Long obraId, Authentication authentication) {
+        return ResponseEntity.ok(alocacaoObraService.listarPorObraComEscopo(obraId, authentication.getName()));
     }
 
     @GetMapping("/funcionario/{funcionarioId}")
     @PreAuthorize("hasAuthority('VISUALIZAR_ALOCACOES')")
-    public ResponseEntity<List<AlocacaoObra>> listarPorFuncionario(@PathVariable Long funcionarioId) {
-        return ResponseEntity.ok(alocacaoObraService.listarPorFuncionario(funcionarioId));
+    public ResponseEntity<List<AlocacaoObra>> listarPorFuncionario(@PathVariable Long funcionarioId, Authentication authentication) {
+        return ResponseEntity.ok(alocacaoObraService.listarPorFuncionarioComEscopo(funcionarioId, authentication.getName()));
     }
 
     @GetMapping("/{id}")
