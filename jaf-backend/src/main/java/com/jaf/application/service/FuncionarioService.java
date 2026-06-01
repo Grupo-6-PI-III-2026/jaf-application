@@ -158,6 +158,14 @@ public class FuncionarioService {
         Funcionario existente = funcionarioRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Usuário não encontrado."));
 
+        // Validar email único se estiver sendo alterado
+        if (!existente.getEmail().equals(dto.getEmail())) {
+            funcionarioRepository.findByEmailIgnoreCase(dto.getEmail())
+                    .ifPresent(f -> {
+                        throw new Conflict("E-mail já cadastrado para outro usuário.");
+                    });
+        }
+
         existente.setNome(dto.getNome());
         existente.setEmail(dto.getEmail());
         existente.setCargoGlobal(dto.getCargo());

@@ -1,5 +1,6 @@
 package com.jaf.application.dto;
 
+import com.jaf.application.dto.validation.DateRange;
 import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -7,7 +8,7 @@ import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
 
-
+@DateRange(startDateField = "dtInicio", endDateField = "dtTerminoPrevisto")
 public class ObraDto {
 
     @NotBlank(message = "O título da obra é obrigatório")

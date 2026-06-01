@@ -356,8 +356,8 @@ class SistemaIntegracaoTest {
 
         AlocacaoObra alocacaoObra2 = new AlocacaoObra();
         alocacaoObra2.setId(2L);
-        alocacaoObra1.setFuncionario(gestorObra);
-        alocacaoObra1.setObra(obra2);
+        alocacaoObra2.setFuncionario(gestorObra);
+        alocacaoObra2.setObra(obra2);
 
         when(funcionarioRepository.findByEmailIgnoreCase("gestor@jaf.com")).thenReturn(Optional.of(gestorObra));
 
