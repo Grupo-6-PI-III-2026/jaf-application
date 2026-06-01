@@ -13,7 +13,7 @@ import styles from "./Sidebar.module.css";
 
 // Vetor com os itens do menu da sidebar
 const menuItems = [
-  { icon: LayoutGrid, label: "Dashboard", path: "/home" },
+  { icon: LayoutGrid, label: "Dashboard", path: "/dashboard" },
   { icon: Pickaxe, label: "Obras", path: "/home" },
   { icon: HardHat, label: "Nova Obra", path: "/obras/criar" },
   { icon: UserPlus, label: "Novo Funcionário", path: "/funcionarios/novo" },
