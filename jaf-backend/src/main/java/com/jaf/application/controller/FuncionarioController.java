@@ -2,6 +2,7 @@ package com.jaf.application.controller;
 
 import com.jaf.application.config.GerenciadorTokenJwt;
 import com.jaf.application.dto.FuncionarioDto;
+import com.jaf.application.dto.FuncionarioExternoDto;
 import com.jaf.application.dto.FuncionarioListarDto;
 import com.jaf.application.dto.FuncionarioLoginDto;
 import com.jaf.application.dto.FuncionarioResponseDto;
@@ -89,5 +90,24 @@ public class FuncionarioController {
     public ResponseEntity<Void> deletar(@PathVariable Long id) {
         funcionarioService.deletar(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // Endpoints para funcionários externos (apenas ADMIN)
+    @PostMapping("/externo")
+    @PreAuthorize("hasAuthority('CRIAR_FUNCIONARIO')")
+    public ResponseEntity<FuncionarioResponseDto> criarExterno(@Valid @RequestBody FuncionarioExternoDto dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(funcionarioService.criarExterno(dto));
+    }
+
+    @GetMapping("/externo")
+    @PreAuthorize("hasAuthority('VISUALIZAR_FUNCIONARIOS')")
+    public ResponseEntity<List<FuncionarioListarDto>> listarExternos() {
+        return ResponseEntity.ok(funcionarioService.listarExternos());
+    }
+
+    @GetMapping("/interno")
+    @PreAuthorize("hasAuthority('VISUALIZAR_FUNCIONARIOS')")
+    public ResponseEntity<List<FuncionarioListarDto>> listarInternos() {
+        return ResponseEntity.ok(funcionarioService.listarInternos());
     }
 }

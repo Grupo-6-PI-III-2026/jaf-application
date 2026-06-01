@@ -2,6 +2,7 @@ package com.jaf.application.service;
 
 import com.jaf.application.config.GerenciadorTokenJwt;
 import com.jaf.application.dto.FuncionarioDto;
+import com.jaf.application.dto.FuncionarioExternoDto;
 import com.jaf.application.dto.FuncionarioListarDto;
 import com.jaf.application.dto.FuncionarioMapper;
 import com.jaf.application.dto.FuncionarioResponseDto;
@@ -9,7 +10,9 @@ import com.jaf.application.dto.FuncionarioTokenDto;
 import com.jaf.application.exceptions.Conflict;
 import com.jaf.application.exceptions.NoContent;
 import com.jaf.application.exceptions.NotFoundException;
+import com.jaf.application.enums.TipoFuncionario;
 import com.jaf.application.model.Funcionario;
+import com.jaf.application.repository.AlocacaoObraRepository;
 import com.jaf.application.repository.FuncionarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -35,6 +38,9 @@ public class FuncionarioService {
     @Autowired
     private AuthenticationManager authenticationManager;
 
+    @Autowired
+    private AlocacaoObraRepository alocacaoObraRepository;
+
     public FuncionarioResponseDto criar(FuncionarioDto dto) {
         if (funcionarioRepository.existsByNome(dto.getNome())) {
             throw new Conflict("Usuário já existe.");
@@ -50,6 +56,8 @@ public class FuncionarioService {
         novoFuncionario.setEmail(dto.getEmail());
         novoFuncionario.setSenha(passwordEncoder.encode(dto.getSenha()));
         novoFuncionario.setCargoGlobal(dto.getCargo());
+        novoFuncionario.setDocumento(dto.getDocumento());
+        novoFuncionario.setTipoFuncionario(dto.getTipoFuncionario() != null ? dto.getTipoFuncionario() : TipoFuncionario.INTERNO);
 
         Funcionario salvo = funcionarioRepository.save(novoFuncionario);
         return new FuncionarioResponseDto(salvo);
@@ -87,9 +95,57 @@ public class FuncionarioService {
                     .orElseThrow(() -> new NotFoundException("Usuário não encontrado."));
     }
 
+    public FuncionarioResponseDto criarExterno(FuncionarioExternoDto dto) {
+        if (funcionarioRepository.existsByNome(dto.getNome())) {
+            throw new Conflict("Funcionário já existe.");
+        }
+
+        if (dto.getEmail() != null) {
+            funcionarioRepository.findByEmailIgnoreCase(dto.getEmail())
+                    .ifPresent(f -> {
+                        throw new Conflict("E-mail já cadastrado.");
+                    });
+        }
+
+        Funcionario novoFuncionario = new Funcionario();
+        novoFuncionario.setNome(dto.getNome());
+        novoFuncionario.setEmail(dto.getEmail());
+        novoFuncionario.setDocumento(dto.getDocumento());
+        novoFuncionario.setTipoFuncionario(dto.getTipoFuncionario());
+        novoFuncionario.setSenha(null); // Externos não têm senha
+
+        Funcionario salvo = funcionarioRepository.save(novoFuncionario);
+        return new FuncionarioResponseDto(salvo);
+    }
+
     public List<FuncionarioListarDto> listarTodos() {
         List<Funcionario> funcionariosEncontrados = funcionarioRepository.findAll();
-        return funcionariosEncontrados.stream().map(FuncionarioMapper::of).toList();
+        return funcionariosEncontrados.stream()
+                .map(f -> {
+                    Integer quantidadeAlocacoes = alocacaoObraRepository.findByFuncionarioId(f.getId()).size();
+                    return FuncionarioMapper.of(f, quantidadeAlocacoes);
+                })
+                .toList();
+    }
+
+    public List<FuncionarioListarDto> listarExternos() {
+        List<Funcionario> externos = funcionarioRepository.findByTipoFuncionario(TipoFuncionario.EXTERNO);
+        return externos.stream()
+                .map(f -> {
+                    Integer quantidadeAlocacoes = alocacaoObraRepository.findByFuncionarioId(f.getId()).size();
+                    return FuncionarioMapper.of(f, quantidadeAlocacoes);
+                })
+                .toList();
+    }
+
+    public List<FuncionarioListarDto> listarInternos() {
+        List<Funcionario> internos = funcionarioRepository.findByTipoFuncionario(TipoFuncionario.INTERNO);
+        return internos.stream()
+                .map(f -> {
+                    Integer quantidadeAlocacoes = alocacaoObraRepository.findByFuncionarioId(f.getId()).size();
+                    return FuncionarioMapper.of(f, quantidadeAlocacoes);
+                })
+                .toList();
     }
 
     public FuncionarioResponseDto buscarPorId(Long id) {
@@ -105,6 +161,10 @@ public class FuncionarioService {
         existente.setNome(dto.getNome());
         existente.setEmail(dto.getEmail());
         existente.setCargoGlobal(dto.getCargo());
+        existente.setDocumento(dto.getDocumento());
+        if (dto.getTipoFuncionario() != null) {
+            existente.setTipoFuncionario(dto.getTipoFuncionario());
+        }
 
         return new FuncionarioResponseDto(funcionarioRepository.save(existente));
     }

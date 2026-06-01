@@ -1,6 +1,7 @@
 package com.jaf.application.dto;
 
 import com.jaf.application.enums.Cargo;
+import com.jaf.application.enums.TipoFuncionario;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
 
@@ -16,6 +17,12 @@ public class FuncionarioListarDto {
 
     @Schema(description = "Cargo do funcionário", example = "Administrador")
     private Cargo cargo;
+
+    @Schema(description = "Tipo do funcionário", example = "INTERNO")
+    private TipoFuncionario tipoFuncionario;
+
+    @Schema(description = "Quantidade de alocações ativas", example = "2")
+    private Integer quantidadeAlocacoes;
 
     public Long getId() { return id; }
 
@@ -43,5 +50,21 @@ public class FuncionarioListarDto {
 
     public void setCargo(Cargo cargo) {
         this.cargo = cargo;
+    }
+
+    public TipoFuncionario getTipoFuncionario() {
+        return tipoFuncionario;
+    }
+
+    public void setTipoFuncionario(TipoFuncionario tipoFuncionario) {
+        this.tipoFuncionario = tipoFuncionario;
+    }
+
+    public Integer getQuantidadeAlocacoes() {
+        return quantidadeAlocacoes;
+    }
+
+    public void setQuantidadeAlocacoes(Integer quantidadeAlocacoes) {
+        this.quantidadeAlocacoes = quantidadeAlocacoes;
     }
 }

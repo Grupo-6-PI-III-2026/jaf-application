@@ -1,6 +1,7 @@
 package com.jaf.application.model;
 
 import com.jaf.application.enums.Cargo;
+import com.jaf.application.enums.TipoFuncionario;
 import jakarta.persistence.*;
 
 @Entity
@@ -12,9 +13,13 @@ public class Funcionario {
     private String nome;
     private String email;
     private String senha;
+    private String documento; // CPF/RG para controle de presença
 
     @Enumerated(EnumType.STRING)
     private Cargo cargoGlobal;
+
+    @Enumerated(EnumType.STRING)
+    private TipoFuncionario tipoFuncionario;
 
     public Long getId() {
         return id;
@@ -54,5 +59,21 @@ public class Funcionario {
 
     public void setCargoGlobal(Cargo cargoGlobal) {
         this.cargoGlobal = cargoGlobal;
+    }
+
+    public String getDocumento() {
+        return documento;
+    }
+
+    public void setDocumento(String documento) {
+        this.documento = documento;
+    }
+
+    public TipoFuncionario getTipoFuncionario() {
+        return tipoFuncionario;
+    }
+
+    public void setTipoFuncionario(TipoFuncionario tipoFuncionario) {
+        this.tipoFuncionario = tipoFuncionario;
     }
 }

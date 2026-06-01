@@ -1,5 +1,6 @@
 package com.jaf.application.dto;
 
+import com.jaf.application.enums.TipoFuncionario;
 import com.jaf.application.model.Funcionario;
 
 public class FuncionarioMapper {
@@ -39,7 +40,15 @@ public class FuncionarioMapper {
         funcionarioListarDto.setId(funcionario.getId());
         funcionarioListarDto.setEmail(funcionario.getEmail());
         funcionarioListarDto.setNome(funcionario.getNome());
+        funcionarioListarDto.setCargo(funcionario.getCargoGlobal());
+        funcionarioListarDto.setTipoFuncionario(funcionario.getTipoFuncionario());
 
+        return funcionarioListarDto;
+    }
+
+    public static FuncionarioListarDto of(Funcionario funcionario, Integer quantidadeAlocacoes) {
+        FuncionarioListarDto funcionarioListarDto = of(funcionario);
+        funcionarioListarDto.setQuantidadeAlocacoes(quantidadeAlocacoes);
         return funcionarioListarDto;
     }
 }

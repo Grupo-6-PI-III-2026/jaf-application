@@ -1,6 +1,7 @@
 package com.jaf.application.dto;
 
 import com.jaf.application.enums.Cargo;
+import com.jaf.application.enums.TipoFuncionario;
 import jakarta.validation.constraints.*;
 
 public class FuncionarioDto {
@@ -22,6 +23,10 @@ public class FuncionarioDto {
 
     @NotNull(message = "Cargo é obrigatório")
     private Cargo cargo;
+
+    private String documento; // Opcional para internos
+
+    private TipoFuncionario tipoFuncionario; // Opcional, default será INTERNO
 
     public String getNome() {
         return nome;
@@ -53,5 +58,21 @@ public class FuncionarioDto {
 
     public void setCargo(Cargo cargo) {
         this.cargo = cargo;
+    }
+
+    public String getDocumento() {
+        return documento;
+    }
+
+    public void setDocumento(String documento) {
+        this.documento = documento;
+    }
+
+    public TipoFuncionario getTipoFuncionario() {
+        return tipoFuncionario;
+    }
+
+    public void setTipoFuncionario(TipoFuncionario tipoFuncionario) {
+        this.tipoFuncionario = tipoFuncionario;
     }
 }

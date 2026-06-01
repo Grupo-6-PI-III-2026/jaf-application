@@ -1,6 +1,7 @@
 package com.jaf.application.dto;
 
 import com.jaf.application.enums.Cargo;
+import com.jaf.application.enums.TipoFuncionario;
 import com.jaf.application.model.Funcionario;
 
 public class FuncionarioResponseDto {
@@ -8,12 +9,16 @@ public class FuncionarioResponseDto {
     private String nome;
     private String email;
     private Cargo cargo;
+    private String documento;
+    private TipoFuncionario tipoFuncionario;
 
     public FuncionarioResponseDto(Funcionario funcionario) {
         this.id = funcionario.getId();
         this.nome = funcionario.getNome();
         this.email = funcionario.getEmail();
         this.cargo = funcionario.getCargoGlobal();
+        this.documento = funcionario.getDocumento();
+        this.tipoFuncionario = funcionario.getTipoFuncionario();
     }
 
     public Long getId() {
@@ -46,5 +51,21 @@ public class FuncionarioResponseDto {
 
     public void setCargo(Cargo cargo) {
         this.cargo = cargo;
+    }
+
+    public String getDocumento() {
+        return documento;
+    }
+
+    public void setDocumento(String documento) {
+        this.documento = documento;
+    }
+
+    public TipoFuncionario getTipoFuncionario() {
+        return tipoFuncionario;
+    }
+
+    public void setTipoFuncionario(TipoFuncionario tipoFuncionario) {
+        this.tipoFuncionario = tipoFuncionario;
     }
 }

@@ -2,6 +2,7 @@ package com.jaf.application.service;
 
 import com.jaf.application.dto.AlocacaoObraDto;
 import com.jaf.application.enums.Cargo;
+import com.jaf.application.enums.TipoFuncionario;
 import com.jaf.application.exceptions.Conflict;
 import com.jaf.application.exceptions.Forbidden;
 import com.jaf.application.exceptions.NotFoundException;
@@ -49,6 +50,9 @@ public class AlocacaoObraService {
     public List<AlocacaoObra> listarPorUsuario(String email) {
         Funcionario funcionario = funcionarioRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new NotFoundException("Usuario nao encontrado."));
+        if (funcionario.getTipoFuncionario() == TipoFuncionario.EXTERNO) {
+            throw new Forbidden("Funcionarios externos nao podem visualizar alocacoes.");
+        }
         if (funcionario.getCargoGlobal() == Cargo.ADMIN) {
             return alocacaoObraRepository.findAll();
         }
@@ -62,17 +66,21 @@ public class AlocacaoObraService {
     public List<AlocacaoObra> listarPorObraComEscopo(Long obraId, String email) {
         Funcionario funcionario = funcionarioRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new NotFoundException("Usuario nao encontrado."));
-        
+
+        if (funcionario.getTipoFuncionario() == TipoFuncionario.EXTERNO) {
+            throw new Forbidden("Funcionarios externos nao podem visualizar alocacoes.");
+        }
+
         if (funcionario.getCargoGlobal() == Cargo.ADMIN) {
             return alocacaoObraRepository.findByObraId(obraId);
         }
-        
+
         // Verifica se o funcionário está alocado nesta obra
         boolean alocado = alocacaoObraRepository.existsByFuncionarioIdAndObraId(funcionario.getId(), obraId);
         if (!alocado) {
             throw new Forbidden("Funcionario nao esta alocado nesta obra.");
         }
-        
+
         return alocacaoObraRepository.findByObraId(obraId);
     }
 
@@ -83,16 +91,20 @@ public class AlocacaoObraService {
     public List<AlocacaoObra> listarPorFuncionarioComEscopo(Long funcionarioId, String email) {
         Funcionario funcionario = funcionarioRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new NotFoundException("Usuario nao encontrado."));
-        
+
+        if (funcionario.getTipoFuncionario() == TipoFuncionario.EXTERNO) {
+            throw new Forbidden("Funcionarios externos nao podem visualizar alocacoes.");
+        }
+
         if (funcionario.getCargoGlobal() == Cargo.ADMIN) {
             return alocacaoObraRepository.findByFuncionarioId(funcionarioId);
         }
-        
+
         // Usuário só pode ver suas próprias alocações
         if (!funcionario.getId().equals(funcionarioId)) {
             throw new Forbidden("Funcionario so pode ver suas proprias alocacoes.");
         }
-        
+
         return alocacaoObraRepository.findByFuncionarioId(funcionarioId);
     }
 

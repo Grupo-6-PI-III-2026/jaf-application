@@ -2,6 +2,7 @@ package com.jaf.application.service;
 
 import com.jaf.application.dto.GastoDto;
 import com.jaf.application.enums.Cargo;
+import com.jaf.application.enums.TipoFuncionario;
 import com.jaf.application.exceptions.Forbidden;
 import com.jaf.application.exceptions.NotFoundException;
 import com.jaf.application.model.AlocacaoObra;
@@ -42,8 +43,11 @@ public class GastoService {
         Obra obra = obraRepository.findById(dto.getObraId())
                 .orElseThrow(() -> new NotFoundException("Obra nao encontrada."));
 
-        if (!alocacaoObraRepository.existsByFuncionarioIdAndObraId(funcionario.getId(), obra.getId())) {
-            throw new Forbidden("Funcionario nao esta alocado nesta obra e nao pode registrar gastos.");
+        // Funcionários externos não precisam estar alocados para ter gastos registrados
+        if (funcionario.getTipoFuncionario() != TipoFuncionario.EXTERNO) {
+            if (!alocacaoObraRepository.existsByFuncionarioIdAndObraId(funcionario.getId(), obra.getId())) {
+                throw new Forbidden("Funcionario nao esta alocado nesta obra e nao pode registrar gastos.");
+            }
         }
 
         Gasto gasto = new Gasto();
@@ -61,6 +65,10 @@ public class GastoService {
     public List<Gasto> listarPorUsuario(String email, Long obraId) {
         Funcionario funcionario = funcionarioRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new NotFoundException("Usuario nao encontrado."));
+
+        if (funcionario.getTipoFuncionario() == TipoFuncionario.EXTERNO) {
+            throw new Forbidden("Funcionarios externos nao podem visualizar gastos.");
+        }
 
         if (funcionario.getCargoGlobal() == Cargo.ADMIN) {
             if (obraId != null) {
@@ -95,6 +103,10 @@ public class GastoService {
                 .orElseThrow(() -> new NotFoundException("Usuario nao encontrado."));
         Gasto gasto = buscarPorId(id);
 
+        if (funcionario.getTipoFuncionario() == TipoFuncionario.EXTERNO) {
+            throw new Forbidden("Funcionarios externos nao podem visualizar gastos.");
+        }
+
         if (funcionario.getCargoGlobal() == Cargo.ADMIN) {
             return gasto;
         }
@@ -113,8 +125,11 @@ public class GastoService {
         Obra obra = obraRepository.findById(dto.getObraId())
                 .orElseThrow(() -> new NotFoundException("Obra nao encontrada."));
 
-        if (!alocacaoObraRepository.existsByFuncionarioIdAndObraId(funcionario.getId(), obra.getId())) {
-            throw new Forbidden("Funcionario nao esta alocado nesta obra.");
+        // Funcionários externos não precisam estar alocados para ter gastos registrados
+        if (funcionario.getTipoFuncionario() != TipoFuncionario.EXTERNO) {
+            if (!alocacaoObraRepository.existsByFuncionarioIdAndObraId(funcionario.getId(), obra.getId())) {
+                throw new Forbidden("Funcionario nao esta alocado nesta obra.");
+            }
         }
 
         existente.setDescricao(dto.getDescricao());
