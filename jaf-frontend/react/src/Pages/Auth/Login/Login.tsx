@@ -2,17 +2,18 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import styles from "./Login.module.css";
 import { authService } from "../../../Service/Auth/Login/authService";
+import { useUser } from "../../../Context/UserContext";
 import { toast } from "sonner";
 import { AxiosError } from "axios";
 
 function Login() {
   const navigate = useNavigate();
+  const { refreshUser } = useUser();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [errorMessage, setErrorMessage] = useState<string | null>(null); 
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
 
   const emailRegex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
 
@@ -39,6 +40,7 @@ function Login() {
     setLoading(true);
     try {
       await authService.login({ email, senha: password });
+      await refreshUser();
       toast.success("Login realizado com sucesso!");
       setTimeout(() => {
         navigate("/home");
@@ -70,7 +72,6 @@ function Login() {
         <div className={styles.loginLeftBg} />
 
         <div className={styles.logo}>
-        
           <img src="/assets/Geral/Logo.png" alt="JAF Construtora" />
           <span className={styles.logoName}>JAF Construtora</span>
         </div>
@@ -102,8 +103,6 @@ function Login() {
               Entre com suas credenciais para acessar o painel.
             </p>
 
-            
-          
             {errorMessage && (
               <div className={styles.errorBanner}>{errorMessage}</div>
             )}
@@ -189,7 +188,8 @@ function Login() {
               type="button"
               disabled={loading}
             >
-              {loading ? "Entrando..." : "Entrar"} <span className={styles.btnArrow}>→</span>
+              {loading ? "Entrando..." : "Entrar"}{" "}
+              <span className={styles.btnArrow}>→</span>
             </button>
 
             <p className={styles.noAccess}>
@@ -197,8 +197,6 @@ function Login() {
               <br />
               <a href="#">Solicite aqui</a>
             </p>
-            
-          
           </div>
         </div>
       </div>

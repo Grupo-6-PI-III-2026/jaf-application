@@ -13,6 +13,9 @@ public class Funcionario {
     private String email;
     private String senha;
 
+    @Column(name = "foto_url", length = 512)
+    private String fotoUrl;
+
     @Enumerated(EnumType.STRING)
     private Cargo cargoGlobal;
 
@@ -46,6 +49,14 @@ public class Funcionario {
 
     public void setSenha(String senha) {
         this.senha = senha;
+    }
+
+    public String getFotoUrl() {
+        return fotoUrl;
+    }
+
+    public void setFotoUrl(String fotoUrl) {
+        this.fotoUrl = fotoUrl;
     }
 
     public Cargo getCargoGlobal() {
