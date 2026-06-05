@@ -34,6 +34,8 @@ services:
       - .env
     environment:
       JAVA_TOOL_OPTIONS: -Xms256m -Xmx512m
+    volumes:
+      - ./data/uploads:/app/uploads
     depends_on:
       jaf-db:
         condition: service_healthy

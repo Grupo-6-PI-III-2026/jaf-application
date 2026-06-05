@@ -2,13 +2,16 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, LogOut, User } from "lucide-react";
 import styles from "./Navbar.module.css";
 import { authService } from "../../../Service/Auth/Login/authService";
+import { useUser } from "../../../Context/UserContext";
 
 export default function Navbar() {
   const navigate = useNavigate();
-  const userEmail = authService.getUserEmail();
+  const { user, clearUser } = useUser();
+  const userEmail = user?.email ?? authService.getUserEmail() ?? "Usuario";
 
   const handleLogout = () => {
     if (confirm("Deseja realmente sair?")) {
+      clearUser();
       authService.logout();
     }
   };
@@ -20,27 +23,34 @@ export default function Navbar() {
       </button>
 
       <div className={styles.spacer}></div>
-      
+
       {/* Informações do usuário */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#666' }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            color: "#666",
+          }}
+        >
           <User size={18} />
-          <span style={{ fontSize: '14px' }}>{userEmail}</span>
+          <span style={{ fontSize: "14px" }}>{userEmail}</span>
         </div>
-        
-        <button 
+
+        <button
           onClick={handleLogout}
-          style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '8px',
-            padding: '8px 12px',
-            background: '#ff4444',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            fontSize: '14px'
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            padding: "8px 12px",
+            background: "#ff4444",
+            color: "white",
+            border: "none",
+            borderRadius: "6px",
+            cursor: "pointer",
+            fontSize: "14px",
           }}
           title="Sair"
         >

@@ -1,6 +1,9 @@
 import { type LoginCredentials, type LoginResponse } from "../../../Types/auth";
+import type { Cargo, JwtPayload } from "../../../Types/user";
 import api from "./Api/Api";
 import axios from "axios";
+
+const TOKEN_KEYS = ["token", "auth_token"];
 
 export const authService = {
   // endpoint de login
@@ -14,44 +17,63 @@ export const authService = {
       const { token } = response.data;
 
       localStorage.setItem("token", token);
+      localStorage.setItem("userEmail", credentials.email);
 
       return response.data;
-    }  catch (error: unknown) {
-  console.error("Erro ao fazer login:", error);
+    } catch (error: unknown) {
+      console.error("Erro ao fazer login:", error);
 
-  if (axios.isAxiosError(error) && error.response?.status === 401) {
-    throw new Error('Email ou senha inválidos');
-  }
-  throw new Error('Erro ao fazer login');
-}
-  },
-
-  logout: () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('userEmail');
-    window.location.href = '/';
-  },
-
-  isAuthenticated: (): boolean => {
-    const token = localStorage.getItem('token');
-    
-    if (!token) return false;
-    
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const expiry = payload.exp * 1000;
-      
-      return Date.now() < expiry;
-    } catch {
-      return false;
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        throw new Error("Email ou senha inválidos");
+      }
+      throw new Error("Erro ao fazer login");
     }
   },
 
+  logout: () => {
+    TOKEN_KEYS.forEach((key) => localStorage.removeItem(key));
+    localStorage.removeItem("userEmail");
+    window.location.href = "/";
+  },
+
+  isAuthenticated: (): boolean => {
+    const payload = authService.decodeToken();
+    if (!payload?.exp) return false;
+    return payload.exp * 1000 > Date.now();
+  },
+
   getUserEmail: (): string | null => {
-    return localStorage.getItem('userEmail');
+    return authService.getEmail() ?? localStorage.getItem("userEmail");
   },
 
   getToken: (): string | null => {
-    return localStorage.getItem('token');
-  }
+    for (const key of TOKEN_KEYS) {
+      const token = localStorage.getItem(key);
+      if (token) return token;
+    }
+    return null;
+  },
+
+  decodeToken: (): JwtPayload | null => {
+    const token = authService.getToken();
+    if (!token) return null;
+    try {
+      const payload = token.split(".")[1];
+      return JSON.parse(atob(payload)) as JwtPayload;
+    } catch {
+      return null;
+    }
+  },
+
+  getEmail: (): string | null => {
+    return authService.decodeToken()?.sub ?? null;
+  },
+
+  getId: (): number | null => {
+    return authService.decodeToken()?.id ?? null;
+  },
+
+  getCargo: (): Cargo | null => {
+    return authService.decodeToken()?.cargo ?? null;
+  },
 };

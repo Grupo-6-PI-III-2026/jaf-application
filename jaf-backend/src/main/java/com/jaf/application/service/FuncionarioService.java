@@ -1,12 +1,16 @@
 package com.jaf.application.service;
 
 import com.jaf.application.config.GerenciadorTokenJwt;
+import com.jaf.application.dto.AlterarSenhaDto;
 import com.jaf.application.dto.FuncionarioDto;
 import com.jaf.application.dto.FuncionarioListarDto;
 import com.jaf.application.dto.FuncionarioMapper;
+import com.jaf.application.dto.FuncionarioPerfilUpdateDto;
 import com.jaf.application.dto.FuncionarioResponseDto;
 import com.jaf.application.dto.FuncionarioTokenDto;
+import com.jaf.application.exceptions.BadRequest;
 import com.jaf.application.exceptions.Conflict;
+import com.jaf.application.exceptions.Forbidden;
 import com.jaf.application.exceptions.NoContent;
 import com.jaf.application.exceptions.NotFoundException;
 import com.jaf.application.model.Funcionario;
@@ -107,6 +111,49 @@ public class FuncionarioService {
         existente.setCargoGlobal(dto.getCargo());
 
         return new FuncionarioResponseDto(funcionarioRepository.save(existente));
+    }
+
+    public FuncionarioResponseDto atualizarPerfil(String emailAtual, FuncionarioPerfilUpdateDto dto) {
+        Funcionario existente = buscarPorEmail(emailAtual);
+
+        if (dto.getEmail() != null && !dto.getEmail().equalsIgnoreCase(existente.getEmail())) {
+            funcionarioRepository.findByEmailIgnoreCase(dto.getEmail())
+                    .filter(f -> !f.getId().equals(existente.getId()))
+                    .ifPresent(f -> {
+                        throw new Conflict("E-mail ja cadastrado.");
+                    });
+        }
+
+        existente.setNome(dto.getNome());
+        existente.setEmail(dto.getEmail());
+
+        if (dto.getFotoUrl() != null) {
+            String fotoUrl = dto.getFotoUrl().isBlank() ? null : dto.getFotoUrl();
+            existente.setFotoUrl(fotoUrl);
+        }
+
+        Funcionario salvo = funcionarioRepository.save(existente);
+        return new FuncionarioResponseDto(salvo);
+    }
+
+    public void alterarSenha(String email, AlterarSenhaDto dto) {
+        Funcionario existente = buscarPorEmail(email);
+
+        if (!dto.getNovaSenha().equals(dto.getConfirmacaoSenha())) {
+            throw new BadRequest("Nova senha e confirmacao nao conferem.");
+        }
+
+        if (!passwordEncoder.matches(dto.getSenhaAtual(), existente.getSenha())) {
+            throw new Forbidden("Senha atual invalida.");
+        }
+
+        existente.setSenha(passwordEncoder.encode(dto.getNovaSenha()));
+        funcionarioRepository.save(existente);
+    }
+
+    public void excluirConta(String email) {
+        Funcionario existente = buscarPorEmail(email);
+        funcionarioRepository.delete(existente);
     }
 
     public void deletar(Long id) {

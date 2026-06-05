@@ -72,6 +72,8 @@ public class SecurityConfiguracao {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(URLS_PERMITIDAS).permitAll()  // rotas públicas
                         .requestMatchers(HttpMethod.POST, "/funcionarios/login").permitAll()  // login público
+                        .requestMatchers(HttpMethod.POST, "/funcionarios").permitAll()  // cadastro público
+                        .requestMatchers("/uploads/**").permitAll()  // fotos públicas
                         .anyRequest().authenticated()                  // todas as outras exigem token
                 )
 
