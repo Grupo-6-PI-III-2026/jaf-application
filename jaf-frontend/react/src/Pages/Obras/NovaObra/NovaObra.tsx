@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import styles from "./NovaObra.module.css";
+import { obraService, type ObraCriarDto } from "../../../Service/Obras/obraService";
 
 interface ErrosFormulario {
   nomeObra?: string;
@@ -39,10 +40,10 @@ const ESTADOS = [
 ];
 
 const STATUS_OPCOES = [
-  "Em Planejamento",
-  "Em Progresso",
-  "Pausada",
-  "Finalizada",
+  { label: "Em Planejamento", value: "PLANEJAMENTO" },
+  { label: "Em Andamento", value: "EM_ANDAMENTO" },
+  { label: "Pausada", value: "PAUSADA" },
+  { label: "Concluída", value: "CONCLUIDA" },
 ];
 
 export default function NovaObra() {
@@ -52,9 +53,8 @@ export default function NovaObra() {
   const [errors, setErrors] = useState<ErrosFormulario>({});
   const [arquivos, setArquivos] = useState<ArquivoUpload[]>([]);
 
-  // Form states
   const [nomeObra, setNomeObra] = useState("");
-  const [status, setStatus] = useState("Em Planejamento");
+  const [status, setStatus] = useState("PLANEJAMENTO");
   const [responsavel, setResponsavel] = useState("");
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
@@ -143,25 +143,24 @@ export default function NovaObra() {
     setIsLoading(true);
 
     try {
-      // Simulação de API call
-      console.log("Dados da nova obra:", {
-        nomeObra,
-        status,
-        responsavel,
-        dataInicio,
-        dataFim,
-        endereco,
-        cidade,
-        estado,
-        orcamento,
-        arquivos: arquivos.map((a) => a.nome),
-      });
+      
+      const obraDto: ObraCriarDto = {
+        titulo: nomeObra,
+        orcamento: orcamento.replace(/[^\d,]/g, '').replace(',', '.'), // Remove formatação
+        status: status,
+        dtInicio: dataInicio,
+        dtTerminoPrevisto: dataFim,
+      };
 
-      alert("Obra criada com sucesso!");
+      
+      const obraCriada = await obraService.criar(obraDto);
+      
+      console.log("Obra criada com sucesso:", obraCriada);
+      alert(`Obra "${obraCriada.titulo}" criada com sucesso!`);
       
       // Limpar formulário
       setNomeObra("");
-      setStatus("Em Planejamento");
+      setStatus("PLANEJAMENTO");
       setResponsavel("");
       setDataInicio("");
       setDataFim("");
@@ -172,11 +171,21 @@ export default function NovaObra() {
       setArquivos([]);
       setErrors({});
 
-      // Redirecionar para lista de obras
-      navigate("/obras");
-    } catch (error) {
+      // Redirecionar para home (lista de obras)
+      navigate("/home");
+    } catch (error: any) {
       console.error("Erro ao criar obra:", error);
-      alert("Falha ao criar obra. Tente novamente.");
+      
+      if (error.response?.data?.message) {
+        alert(`Erro: ${error.response.data.message}`);
+      } else if (error.response?.status === 401) {
+        alert("Sessão expirada. Faça login novamente.");
+        navigate("/");
+      } else if (error.response?.status === 403) {
+        alert("Você não tem permissão para criar obras. Apenas ADMINs podem criar obras.");
+      } else {
+        alert("Falha ao criar obra. Tente novamente.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -249,8 +258,8 @@ export default function NovaObra() {
                         disabled={isLoading}
                       >
                         {STATUS_OPCOES.map((opt) => (
-                          <option key={opt} value={opt}>
-                            {opt}
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
                           </option>
                         ))}
                       </select>

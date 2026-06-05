@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import styles from "./CardObra.module.css";
 
 type Props = {
+  id?: number;
   nome: string;
   local: string;
   valor: number;
@@ -15,7 +16,7 @@ const formatarMoeda = (valor: number) =>
     currency: "BRL",
   });
 
-export default function CardObra({ nome, local, valor, imagem }: Props) {
+export default function CardObra({ id, nome, local, valor, imagem }: Props) {
   const navigate = useNavigate();
 
   return (
@@ -75,7 +76,7 @@ export default function CardObra({ nome, local, valor, imagem }: Props) {
             </div>
           </div>
 
-          <button className={styles.botaoDetalhes} onClick={() => navigate('/obras/detalhamento')}>
+          <button className={styles.botaoDetalhes} onClick={() => navigate(id ? `/obras/detalhamento/${id}` : '/obras/detalhamento')}>
             VISUALIZAR DETALHES
           </button>
         </div>
