@@ -12,6 +12,18 @@ import styles from "./Dashboard.module.css";
 
 const etapas = ["ETAPA 1", "ETAPA 2", "TODAS"];
 
+const formatarPercentual = ({ value }: { value?: number | string }) => `${value ?? 0}%`;
+
+const formatarEixoMoeda = (valor: number) => `R$${(valor / 1000).toFixed(0)}.000,00`;
+
+const formatarTooltipMoeda = (valor: unknown) => formatBRL(Number(valor ?? 0));
+
+const formatarLegenda = (valor: string | number) => (
+  <span style={{ fontSize: 12, textTransform: "uppercase", color: "#fff" }}>
+    {valor}
+  </span>
+);
+
 export default function Dashboard() {
   const [etapa, setEtapa] = useState("ETAPA 1");
 
@@ -71,7 +83,7 @@ export default function Dashboard() {
                   cx="45%"
                   cy="50%"
                   outerRadius={100}
-                  label={({ value }) => `${value}%`}
+                  label={formatarPercentual}
                   labelLine={false}
                 >
                   {pieData.map((_, i) => (
@@ -83,11 +95,7 @@ export default function Dashboard() {
                   align="right"
                   layout="vertical"
                   iconType="square"
-                  formatter={(v) => (
-                    <span style={{ fontSize: 12, textTransform: "uppercase", color: "#fff" }}>
-                      {v}
-                    </span>
-                  )}
+                  formatter={formatarLegenda}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -109,11 +117,11 @@ export default function Dashboard() {
                 />
                 <YAxis
                   tick={{ fill: "rgba(255,255,255,0.6)", fontSize: 10 }}
-                  tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}.000,00`}
+                  tickFormatter={formatarEixoMoeda}
                 />
                 <Tooltip
                   contentStyle={{ background: "#1a1a1a", border: "none" }}
-                  formatter={(v) => formatBRL(v as number)}
+                  formatter={formatarTooltipMoeda}
                 />
                 <Line
                   type="monotone"
@@ -160,11 +168,11 @@ export default function Dashboard() {
                 />
                 <YAxis
                   tick={{ fill: "rgba(255,255,255,0.6)", fontSize: 10 }}
-                  tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}.000,00`}
+                  tickFormatter={formatarEixoMoeda}
                 />
                 <Tooltip
                   contentStyle={{ background: "#1a1a1a", border: "none" }}
-                  formatter={(v) => formatBRL(v as number)}
+                  formatter={formatarTooltipMoeda}
                 />
                 <Bar dataKey="valor" fill="#e5e7eb" radius={[2, 2, 0, 0]} />
               </BarChart>

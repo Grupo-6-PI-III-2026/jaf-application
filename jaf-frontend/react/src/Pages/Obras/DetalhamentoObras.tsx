@@ -38,6 +38,7 @@ const cores = ["#6C63FF", "#FF6584", "#43B89C", "#ffc107", "#9c27b0"];
 export default function DetalhamentoObras() {
   const [paginaAtual, setPaginaAtual] = useState(1);
   const [controlePresencaAberto, setControlePresencaAberto] = useState(false);
+  const [dataSelecionada, setDataSelecionada] = useState<string>(new Date().toISOString().split("T")[0]);
   const [obra, setObra] = useState<Obra | null>(null);
   const [gastos, setGastos] = useState<Gasto[]>([]);
   const [alocacoes, setAlocacoes] = useState<AlocacaoObra[]>([]);
@@ -143,6 +144,9 @@ export default function DetalhamentoObras() {
       <ControlePresenca
         aberto={controlePresencaAberto}
         onFechar={() => setControlePresencaAberto(false)}
+        obraId={obra.id}
+        obraTitulo={obra.titulo}
+        data={dataSelecionada}
       />
 
       {/* Cabeçalho */}
@@ -160,6 +164,18 @@ export default function DetalhamentoObras() {
           </span>
         </div>
         <div className={styles.cabecalhoAcoes}>
+          <input
+            type="date"
+            value={dataSelecionada}
+            onChange={(e) => setDataSelecionada(e.target.value)}
+            style={{
+              padding: '8px 12px',
+              border: '1px solid #d1d5db',
+              borderRadius: '6px',
+              marginRight: '8px',
+              fontSize: '14px'
+            }}
+          />
           <button
             className={styles.botaoAdicionarGasto}
             onClick={() => setControlePresencaAberto(true)}

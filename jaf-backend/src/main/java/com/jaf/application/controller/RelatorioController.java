@@ -6,6 +6,7 @@ import com.jaf.application.service.RelatorioService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -22,26 +23,31 @@ public class RelatorioController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('GERAR_RELATORIO')")
     public ResponseEntity<Relatorio> criar(@Valid @RequestBody RelatorioDto dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(relatorioService.criar(dto));
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('VISUALIZAR_RELATORIO')")
     public ResponseEntity<List<Relatorio>> listar() {
         return ResponseEntity.ok(relatorioService.listar());
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('VISUALIZAR_RELATORIO')")
     public ResponseEntity<Relatorio> buscarPorId(@PathVariable Long id) {
         return ResponseEntity.ok(relatorioService.buscarPorId(id));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Relatorio> atualizar(@PathVariable Long id, @Valid @RequestBody RelatorioDto dto) {
         return ResponseEntity.ok(relatorioService.atualizar(id, dto));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deletar(@PathVariable Long id) {
         relatorioService.deletar(id);
         return ResponseEntity.noContent().build();
