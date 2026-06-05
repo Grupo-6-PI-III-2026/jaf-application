@@ -5,7 +5,7 @@ import NovoFuncionario from "./Pages/Funcionarios/NovoFuncionario/NovoFuncionari
 import DetalhamentoObras from "./Pages/Obras/DetalhamentoObras";
 import NovaObra from "./Pages/Obras/NovaObra/NovaObra";
 import Home from "./Pages/Home/Home";
-import Dashboard from "./Pages/Dashboard/Dashboard";
+import Permissoes from "./Pages/Permissoes/Permissoes";
 import PrivateRoute from "./Components/PrivateRoute/PrivateRoute";
 
 export const AppRoutes = () => {
@@ -23,11 +23,10 @@ export const AppRoutes = () => {
           </PrivateRoute>
         }>
           <Route path="/home" element={<Home />} />
-          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/funcionarios/novo" element={<NovoFuncionario />} />
-          <Route path="/obras/detalhamento/:id" element={<DetalhamentoObras />} />
           <Route path="/obras/detalhamento" element={<DetalhamentoObras />} />
           <Route path="/obras/criar" element={<NovaObra />} />
+          <Route path="/permissoes" element={<Permissoes />} />
         </Route>
 
      

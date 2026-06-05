@@ -7,18 +7,20 @@ import {
   Bell,
   UserPlus,
   HardHat,
+  Shield,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import styles from "./Sidebar.module.css";
 
 // Vetor com os itens do menu da sidebar
 const menuItems = [
-  { icon: LayoutGrid, label: "Dashboard", path: "/dashboard" },
+  { icon: LayoutGrid, label: "Dashboard", path: "/home" },
   { icon: Pickaxe, label: "Obras", path: "/home" },
   { icon: HardHat, label: "Nova Obra", path: "/obras/criar" },
   { icon: UserPlus, label: "Novo Funcionário", path: "/funcionarios/novo" },
   { icon: Wallet, label: "Financeiro", path: "/financeiro" },
   { icon: ChartNoAxesCombined, label: "Relatórios", path: "/relatorios" },
+  { icon: Shield, label: "Permissões", path: "/permissoes" },
   { icon: Settings, label: "Configurações", path: "/configuracoes" },
 ];
 

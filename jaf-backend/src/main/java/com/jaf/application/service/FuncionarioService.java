@@ -116,5 +116,20 @@ public class FuncionarioService {
         funcionarioRepository.deleteById(id);
     }
 
+    public FuncionarioResponseDto atualizarCargo(Long id, String novoCargo) {
+        Funcionario existente = funcionarioRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Usuário não encontrado."));
+
+        com.jaf.application.enums.Cargo cargo;
+        try {
+            cargo = com.jaf.application.enums.Cargo.valueOf(novoCargo);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Cargo inválido: " + novoCargo);
+        }
+
+        existente.setCargoGlobal(cargo);
+        return new FuncionarioResponseDto(funcionarioRepository.save(existente));
+    }
+
   
 }

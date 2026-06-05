@@ -79,4 +79,13 @@ public class FuncionarioController {
         funcionarioService.deletar(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PatchMapping("/{id}/cargo")
+    @PreAuthorize("hasAuthority('EDITAR_FUNCIONARIO')")
+    public ResponseEntity<FuncionarioResponseDto> atualizarCargo(
+            @PathVariable Long id,
+            @RequestBody java.util.Map<String, String> body) {
+        String novoCargo = body.get("cargo");
+        return ResponseEntity.ok(funcionarioService.atualizarCargo(id, novoCargo));
+    }
 }
