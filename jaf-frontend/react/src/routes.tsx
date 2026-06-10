@@ -8,6 +8,8 @@ import Home from "./Pages/Home/Home";
 import Permissoes from "./Pages/Permissoes/Permissoes";
 import PrivateRoute from "./Components/PrivateRoute/PrivateRoute";
 import Profile from "./Pages/Profile/Profile";
+import AlocacaoFuncionario from "./Pages/Alocacoes/AlocacaoFuncionario";
+import Dashboard from "./Pages/Dashboard/Dashboard";
 
 export const AppRoutes = () => {
   return (
@@ -31,8 +33,11 @@ export const AppRoutes = () => {
           <Route path="/perfil" element={<Profile />} />
           <Route path="/funcionarios/novo" element={<NovoFuncionario />} />
           <Route path="/obras/detalhamento" element={<DetalhamentoObras />} />
+          <Route path="/obras/detalhamento/:id" element={<DetalhamentoObras />} />
+          <Route path="/obras/detalhamento/:id/financeiro" element={<Dashboard />} />
           <Route path="/obras/criar" element={<NovaObra />} />
           <Route path="/permissoes" element={<Permissoes />} />
+          <Route path="/alocacoes" element={<AlocacaoFuncionario />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" />} />

@@ -9,4 +9,6 @@ import java.util.List;
 public interface GastoRepository extends JpaRepository<Gasto, Long> {
     List<Gasto> findByObraId(Long obraId);
     List<Gasto> findByObraIdIn(Collection<Long> obraIds);
+    List<Gasto> findByObraIdAndEtapa(Long obraId, String etapa);
+    List<Gasto> findByObraIdAndMetodoPagamento(Long obraId, String metodoPagamento);
 }

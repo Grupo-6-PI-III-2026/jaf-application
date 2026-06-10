@@ -8,6 +8,7 @@ import {
   UserPlus,
   HardHat,
   Shield,
+  Users,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import styles from "./Sidebar.module.css";
@@ -23,6 +24,7 @@ const menuItems = [
   { icon: Wallet, label: "Financeiro", path: "/financeiro" },
   { icon: ChartNoAxesCombined, label: "Relatórios", path: "/relatorios" },
   { icon: Shield, label: "Permissões", path: "/permissoes" },
+  { icon: Users, label: "Alocações", path: "/alocacoes" },
   { icon: Settings, label: "Configurações", path: "/perfil" },
 ];
 
