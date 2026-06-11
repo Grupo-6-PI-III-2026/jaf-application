@@ -1,23 +1,26 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowLeft, Plus, Search, Calendar, ChevronDown } from "lucide-react";
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Legend,
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   BarChart, Bar,
 } from "recharts";
+import { useParams } from "react-router-dom";
 import ChartCard from "../../Components/ChartCard/ChartCard";
 import StatCard from "../../Components/StatCard/StatCard";
-import { pieData, PIE_COLORS, lineData, barData, formatBRL } from "./data";
+import { dashboardService, type DashboardStats } from "../../Service/Dashboard/dashboardService";
 import styles from "./Dashboard.module.css";
+
+const PIE_COLORS = ["#F5C518", "#5A6B7B"];
+
+const formatBRL = (v: number) =>
+  `R$${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
 const etapas = ["ETAPA 1", "ETAPA 2", "TODAS"];
 
 const formatarPercentual = ({ value }: { value?: number | string }) => `${value ?? 0}%`;
-
 const formatarEixoMoeda = (valor: number) => `R$${(valor / 1000).toFixed(0)}.000,00`;
-
 const formatarTooltipMoeda = (valor: unknown) => formatBRL(Number(valor ?? 0));
-
 const formatarLegenda = (valor: string | number) => (
   <span style={{ fontSize: 12, textTransform: "uppercase", color: "#fff" }}>
     {valor}
@@ -25,7 +28,46 @@ const formatarLegenda = (valor: string | number) => (
 );
 
 export default function Dashboard() {
+  const { id } = useParams<{ id: string }>();
+  const obraId = id ? parseInt(id) : 1;
+
   const [etapa, setEtapa] = useState("ETAPA 1");
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState<string | null>(null);
+
+  useEffect(() => {
+    const carregarStats = async () => {
+      try {
+        setCarregando(true);
+        setErro(null);
+        const data = await dashboardService.buscarStats(obraId, etapa);
+        setStats(data);
+      } catch {
+        setErro("Erro ao carregar dados do dashboard.");
+      } finally {
+        setCarregando(false);
+      }
+    };
+
+    carregarStats();
+  }, [obraId, etapa]);
+
+  if (carregando) {
+    return (
+      <div className={styles.dashboard}>
+        <div style={{ textAlign: "center", padding: "2rem" }}>Carregando...</div>
+      </div>
+    );
+  }
+
+  if (erro || !stats) {
+    return (
+      <div className={styles.dashboard}>
+        <div style={{ textAlign: "center", padding: "2rem" }}>{erro ?? "Sem dados."}</div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.dashboard}>
@@ -61,13 +103,20 @@ export default function Dashboard() {
       {/* Stats */}
       <div className={styles.statsRow}>
         <StatCard
-          label="Gastos da primeira etapa"
-          value="R$ 29.857,00"
-          progress={65}
+          label={`Gastos da ${etapa === "TODAS" ? "obra" : etapa.toLowerCase()}`}
+          value={formatBRL(stats.gastosEtapa)}
+          progress={stats.progressoEtapa}
           action={<button className={styles.etapaBtn}>Trocar etapa</button>}
         />
-        <StatCard label="Total de reembolsos pendentes" value="R$ 5.600,00" />
-        <StatCard label="Saldo restante do orçamento" value="R$ 1.955,00" progress={85} />
+        <StatCard
+          label="Total de reembolsos pendentes"
+          value={formatBRL(stats.reembolsosPendentes)}
+        />
+        <StatCard
+          label="Saldo restante do orçamento"
+          value={formatBRL(stats.saldoRestante)}
+          progress={stats.progressoSaldo}
+        />
       </div>
 
       {/* Charts row */}
@@ -78,7 +127,7 @@ export default function Dashboard() {
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={pieData}
+                  data={stats.reembolsosPizza}
                   dataKey="value"
                   cx="45%"
                   cy="50%"
@@ -86,7 +135,7 @@ export default function Dashboard() {
                   label={formatarPercentual}
                   labelLine={false}
                 >
-                  {pieData.map((_, i) => (
+                  {stats.reembolsosPizza.map((_, i) => (
                     <Cell key={i} fill={PIE_COLORS[i]} />
                   ))}
                 </Pie>
@@ -106,7 +155,7 @@ export default function Dashboard() {
         <ChartCard title="Gastos imprevistos">
           <div className={styles.chartContainer}>
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={lineData} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
+              <LineChart data={stats.gastosImprevistos} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
                 <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
                 <XAxis
                   dataKey="mes"
@@ -158,7 +207,7 @@ export default function Dashboard() {
         >
           <div className={styles.chartContainerLarge}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={barData} margin={{ top: 10, right: 20, left: 10, bottom: 30 }}>
+              <BarChart data={stats.gastosPorCategoria} margin={{ top: 10, right: 20, left: 10, bottom: 30 }}>
                 <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
                 <XAxis
                   dataKey="categoria"

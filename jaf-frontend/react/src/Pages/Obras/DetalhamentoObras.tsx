@@ -236,7 +236,10 @@ export default function DetalhamentoObras() {
             ) : (
               <p style={{ fontSize: "14px", color: "#666" }}>Nenhum funcionário alocado</p>
             )}
-            <button className={styles.botaoAdicionarMembro}>
+            <button
+              className={styles.botaoAdicionarMembro}
+              onClick={() => navegar(`/obras/${obra.id}/alocacoes`)}
+            >
               <Plus size={18} />
             </button>
           </div>

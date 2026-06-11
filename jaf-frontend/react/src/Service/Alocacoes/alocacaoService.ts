@@ -6,11 +6,16 @@ export interface AlocacaoObra {
     id: number;
     nome: string;
     email: string;
+    fotoUrl: string | null;
     cargoGlobal: string;
   };
   obra: {
     id: number;
     titulo: string;
+    status: string;
+    dtInicio: string;
+    dtTerminoPrevisto: string;
+    orcamento: string;
   };
   cargo: string;
 }
@@ -18,6 +23,11 @@ export interface AlocacaoObra {
 export const alocacaoService = {
   listar: async (): Promise<AlocacaoObra[]> => {
     const response = await api.get("/alocacoes");
+    return response.data;
+  },
+
+  listarPorObra: async (obraId: number): Promise<AlocacaoObra[]> => {
+    const response = await api.get(`/alocacoes/obra/${obraId}`);
     return response.data;
   },
 
