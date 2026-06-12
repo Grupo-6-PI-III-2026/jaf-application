@@ -20,6 +20,12 @@ export interface AlocacaoObra {
   cargo: string;
 }
 
+export interface AlocacaoCriarDto {
+  funcionarioId: number;
+  obraId: number;
+  cargoNaObra: string;
+}
+
 export const alocacaoService = {
   listar: async (): Promise<AlocacaoObra[]> => {
     const response = await api.get("/alocacoes");
@@ -28,6 +34,11 @@ export const alocacaoService = {
 
   listarPorObra: async (obraId: number): Promise<AlocacaoObra[]> => {
     const response = await api.get(`/alocacoes/obra/${obraId}`);
+    return response.data;
+  },
+
+  criar: async (dto: AlocacaoCriarDto): Promise<AlocacaoObra> => {
+    const response = await api.post("/alocacoes", dto);
     return response.data;
   },
 

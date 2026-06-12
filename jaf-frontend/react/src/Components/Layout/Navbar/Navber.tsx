@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, LogOut, User } from "lucide-react";
 import styles from "./Navbar.module.css";
 import { authService } from "../../../Service/Auth/Login/authService";
-import { useUser } from "../../../Context/UserContext";
+import { useUser } from "../../../Context/useUser";
 
 export default function Navbar() {
   const navigate = useNavigate();

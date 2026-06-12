@@ -34,10 +34,13 @@ export default function Home() {
     const carregarDados = async () => {
       try {
         setCarregando(true);
-        const [obrasData, gastosData] = await Promise.all([
-          obraService.listar(),
-          gastoService.listar(),
-        ]);
+        const obrasData = await obraService.listar();
+        const gastosPorObra = await Promise.allSettled(
+          obrasData.map((obra) => gastoService.listarPorObra(obra.id))
+        );
+        const gastosData = gastosPorObra.flatMap((resultado) =>
+          resultado.status === "fulfilled" ? resultado.value : []
+        );
         setObras(obrasData);
         setGastos(gastosData);
       } catch (error) {
@@ -63,6 +66,7 @@ export default function Home() {
 
   // Pegar as obras mais recentes (últimas 2)
   const obrasRecentes = obras
+    .slice()
     .sort((a, b) => new Date(b.dtInicio).getTime() - new Date(a.dtInicio).getTime())
     .slice(0, 2);
 

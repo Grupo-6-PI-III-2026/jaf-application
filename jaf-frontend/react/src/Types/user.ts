@@ -1,13 +1,31 @@
-export type Cargo = "ADMIN" | "GESTOR_OBRA" | "OPERADOR_LANCAMENTO";
+export type Cargo =
+  | "ADMIN"
+  | "GESTOR_OBRA"
+  | "OPERADOR_LANCAMENTO"
+  | "MESTRE_DE_OBRAS"
+  | "ENGENHEIRO"
+  | "ARQUITETO"
+  | "PEDREIRO";
 
 export const CargoLabel: Record<Cargo, string> = {
   ADMIN: "Administrador",
   GESTOR_OBRA: "Gestor de Obra",
   OPERADOR_LANCAMENTO: "Operador de Lancamento",
+  MESTRE_DE_OBRAS: "Mestre de Obras",
+  ENGENHEIRO: "Engenheiro",
+  ARQUITETO: "Arquiteto",
+  PEDREIRO: "Pedreiro",
 };
 
-export const DEFAULT_AVATAR_URL =
-  "https://tse1.mm.bing.net/th/id/OIP.l3waMeOdc8D_y_odZx2IcwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3";
+export const GENERIC_AVATARS = [
+  { label: "Administrador", value: "/assets/Geral/avatar-admin.svg" },
+  { label: "Gestor", value: "/assets/Geral/avatar-gestor.svg" },
+  { label: "Operador", value: "/assets/Geral/avatar-operador.svg" },
+  { label: "Equipe", value: "/assets/Geral/avatar-equipe.svg" },
+  { label: "JAF", value: "/assets/Geral/avatar-jaf.svg" },
+] as const;
+
+export const DEFAULT_AVATAR_URL = GENERIC_AVATARS[0].value;
 
 export interface FuncionarioResponseDto {
   id: number;

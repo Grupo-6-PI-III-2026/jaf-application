@@ -34,7 +34,11 @@ export default function CardObra({ id, nome, local, valor, imagem }: Props) {
         <div className={styles.topo}>
           <span className={styles.status}>EM PROGRESSO</span>
 
-          <button className={styles.botaoEditar}>
+          <button
+            className={styles.botaoEditar}
+            onClick={() => navigate(id ? `/obras/detalhamento/${id}?editar=1` : "/obras/detalhamento?editar=1")}
+            aria-label="Editar obra"
+          >
             <Pencil size={16} />
           </button>
         </div>
@@ -58,7 +62,7 @@ export default function CardObra({ id, nome, local, valor, imagem }: Props) {
               <span className={styles.cargo}>Mestre de Obras</span>
             </div>
 
-            <button className={styles.botaoAdd}>
+            <button className={styles.botaoAdd} onClick={() => id && navigate(`/obras/${id}/alocacoes`)} aria-label="Alocar funcionário">
               <Plus size={14} />
             </button>
           </div>

@@ -76,4 +76,9 @@ export const authService = {
   getCargo: (): Cargo | null => {
     return authService.decodeToken()?.cargo ?? null;
   },
+
+  hasAuthority: (authority: string): boolean => {
+    const payload = authService.decodeToken();
+    return payload?.authorities?.split(",").includes(authority) ?? false;
+  },
 };

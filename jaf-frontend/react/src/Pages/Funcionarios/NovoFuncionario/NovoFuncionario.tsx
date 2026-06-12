@@ -41,6 +41,10 @@ export default function NovoFuncionario() {
     { label: "Administrador do Sistema", value: "ADMIN" },
     { label: "Gestor de Obra", value: "GESTOR_OBRA" },
     { label: "Operador de Lançamento", value: "OPERADOR_LANCAMENTO" },
+    { label: "Engenheiro", value: "ENGENHEIRO" },
+    { label: "Arquiteto", value: "ARQUITETO" },
+    { label: "Mestre de Obras", value: "MESTRE_DE_OBRAS" },
+    { label: "Pedreiro", value: "PEDREIRO" },
   ];
 
   const emailRegex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;

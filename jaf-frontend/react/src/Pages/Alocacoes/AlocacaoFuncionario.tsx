@@ -1,19 +1,21 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import {
   ArrowLeft,
   Calendar,
-  Filter,
-  Pencil,
-  Plus,
   ChevronLeft,
   ChevronRight,
   UserCheck,
+  Search,
+  X,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import styles from "./AlocacaoFuncionario.module.css";
 import { obraService, type Obra } from "../../Service/Obras/obraService";
 import { alocacaoService, type AlocacaoObra } from "../../Service/Alocacoes/alocacaoService";
+import { funcionarioService } from "../../Service/Funcionarios/funcionarioService";
+import type { FuncionarioPermissoes } from "../../Types/permissoes";
 import { CargoLabel, type Cargo } from "../../Types/user";
+import { toast } from "sonner";
 
 const IMAGEM_PLACEHOLDER =
   "https://s2.glbimg.com/YgImWrcpJX6FAHRJOlZtEnTaHYc=/e.glbimg.com/og/ed/f/original/2020/12/23/apartamento-sao-paulo-260-m2-atemporal3.jpg";
@@ -36,11 +38,23 @@ const cargoLabel = (cargo: string) =>
 
 const cores = ["#6C63FF", "#FF6584", "#43B89C", "#ffc107", "#9c27b0"];
 
+const cargosObra = [
+  { value: "GESTOR_OBRA", label: "Gestor de Obra" },
+  { value: "ENGENHEIRO", label: "Engenheiro" },
+  { value: "ARQUITETO", label: "Arquiteto" },
+  { value: "MESTRE_DE_OBRAS", label: "Mestre de Obras" },
+  { value: "OPERADOR_LANCAMENTO", label: "Operador de Lançamento" },
+  { value: "PEDREIRO", label: "Pedreiro" },
+];
+
 export default function AlocacaoFuncionario() {
   const [paginaAtual, setPaginaAtual] = useState(1);
-  const [dataSelecionada, setDataSelecionada] = useState<string>(
-    new Date().toISOString().split("T")[0]
-  );
+  const [busca, setBusca] = useState("");
+  const [cargoFiltro, setCargoFiltro] = useState("TODOS");
+  const [modalAberto, setModalAberto] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+  const [funcionarios, setFuncionarios] = useState<FuncionarioPermissoes[]>([]);
+  const [novaAlocacao, setNovaAlocacao] = useState({ funcionarioId: "", cargoNaObra: "OPERADOR_LANCAMENTO" });
   const [obra, setObra] = useState<Obra | null>(null);
   const [alocacoes, setAlocacoes] = useState<AlocacaoObra[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -53,15 +67,18 @@ export default function AlocacaoFuncionario() {
       if (!id) return;
       try {
         setCarregando(true);
-        const [obraData, alocacoesData] = await Promise.all([
+        const [obraData, alocacoesData, funcionariosData] = await Promise.all([
           obraService.buscarPorId(parseInt(id)),
           alocacaoService.listarPorObra(parseInt(id)),
+          funcionarioService.listar(),
         ]);
         setObra(obraData);
         setAlocacoes(alocacoesData);
+        setFuncionarios(funcionariosData);
         setPaginaAtual(1);
       } catch (error) {
         console.error("Erro ao carregar dados:", error);
+        toast.error("Erro ao carregar alocações da obra");
       } finally {
         setCarregando(false);
       }
@@ -69,11 +86,72 @@ export default function AlocacaoFuncionario() {
     carregarDados();
   }, [id]);
 
-  const totalPaginas = Math.ceil(alocacoes.length / ITENS_POR_PAGINA);
-  const alocacoesExibidas = alocacoes.slice(
+  useEffect(() => {
+    setPaginaAtual(1);
+  }, [busca, cargoFiltro]);
+
+  const funcionariosDisponiveis = funcionarios.filter(
+    (funcionario) => !alocacoes.some((alocacao) => alocacao.funcionario.id === funcionario.id),
+  );
+
+  function abrirModalAlocacao() {
+    setNovaAlocacao((valorAtual) => ({
+      ...valorAtual,
+      funcionarioId: valorAtual.funcionarioId || String(funcionariosDisponiveis[0]?.id ?? ""),
+    }));
+    setModalAberto(true);
+  }
+
+  const alocacoesFiltradas = alocacoes.filter((alocacao) => {
+    const termo = busca.trim().toLowerCase();
+    const correspondeBusca = !termo || [
+      alocacao.funcionario.nome,
+      alocacao.funcionario.email,
+      cargoLabel(alocacao.funcionario.cargoGlobal),
+      cargoLabel(alocacao.cargo),
+    ].some((campo) => campo.toLowerCase().includes(termo));
+
+    const correspondeCargo = cargoFiltro === "TODOS" || alocacao.cargo === cargoFiltro;
+    return correspondeBusca && correspondeCargo;
+  });
+
+  const totalPaginas = Math.ceil(alocacoesFiltradas.length / ITENS_POR_PAGINA);
+  const alocacoesExibidas = alocacoesFiltradas.slice(
     (paginaAtual - 1) * ITENS_POR_PAGINA,
     paginaAtual * ITENS_POR_PAGINA
   );
+
+  async function carregarAlocacoes() {
+    if (!id) return;
+    const alocacoesAtualizadas = await alocacaoService.listarPorObra(parseInt(id));
+    setAlocacoes(alocacoesAtualizadas);
+  }
+
+  async function criarAlocacao(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    if (!id || !novaAlocacao.funcionarioId) {
+      toast.error("Selecione um funcionário para alocar");
+      return;
+    }
+
+    try {
+      setSalvando(true);
+      await alocacaoService.criar({
+        funcionarioId: Number(novaAlocacao.funcionarioId),
+        obraId: Number(id),
+        cargoNaObra: novaAlocacao.cargoNaObra,
+      });
+      await carregarAlocacoes();
+      setNovaAlocacao({ funcionarioId: "", cargoNaObra: "OPERADOR_LANCAMENTO" });
+      setModalAberto(false);
+      toast.success("Funcionário alocado com sucesso");
+    } catch (error) {
+      console.error("Erro ao alocar funcionário:", error);
+      toast.error("Não foi possível alocar o funcionário");
+    } finally {
+      setSalvando(false);
+    }
+  }
 
   function irParaPaginaAnterior() {
     setPaginaAtual((p) => Math.max(1, p - 1));
@@ -107,6 +185,52 @@ export default function AlocacaoFuncionario() {
 
   return (
     <div className={styles.pagina}>
+      {modalAberto && (
+        <div className={styles.modalOverlay} onClick={() => setModalAberto(false)}>
+          <form className={styles.modalAlocacao} onSubmit={criarAlocacao} onClick={(evento) => evento.stopPropagation()}>
+            <header className={styles.modalHeader}>
+              <div>
+                <h2>Alocar funcionário</h2>
+                <p>{obra.titulo}</p>
+              </div>
+              <button type="button" className={styles.botaoFecharModal} onClick={() => setModalAberto(false)} aria-label="Fechar modal de alocação">
+                <X size={20} />
+              </button>
+            </header>
+            <div className={styles.modalGrid}>
+              <label>
+                Funcionário
+                <select value={novaAlocacao.funcionarioId} onChange={(evento) => setNovaAlocacao((valorAtual) => ({ ...valorAtual, funcionarioId: evento.target.value }))} required>
+                  <option value="" disabled>Selecione</option>
+                  {funcionariosDisponiveis.map((funcionario) => (
+                    <option key={funcionario.id} value={funcionario.id}>
+                      {funcionario.nome} - {cargoLabel(funcionario.cargo)}
+                    </option>
+                  ))}
+                </select>
+                {funcionariosDisponiveis.length === 0 && (
+                  <span className={styles.modalAviso}>Todos os funcionários disponíveis já estão alocados nesta obra.</span>
+                )}
+              </label>
+              <label>
+                Cargo na obra
+                <select value={novaAlocacao.cargoNaObra} onChange={(evento) => setNovaAlocacao((valorAtual) => ({ ...valorAtual, cargoNaObra: evento.target.value }))}>
+                  {cargosObra.map((cargo) => (
+                    <option key={cargo.value} value={cargo.value}>{cargo.label}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <footer className={styles.modalFooter}>
+              <button type="button" className={styles.botaoSecundario} onClick={() => setModalAberto(false)}>Cancelar</button>
+              <button type="submit" className={styles.botaoAdicionarGasto} disabled={salvando || funcionariosDisponiveis.length === 0}>
+                {salvando ? "Salvando..." : "Alocar"}
+              </button>
+            </footer>
+          </form>
+        </div>
+      )}
+
       {/* Cabeçalho */}
       <div className={styles.cabecalho}>
         <div className={styles.cabecalhoEsquerda}>
@@ -135,7 +259,7 @@ export default function AlocacaoFuncionario() {
           </span>
         </div>
         <div className={styles.cabecalhoAcoes}>
-          <button className={styles.botaoAdicionarGasto}>
+          <button className={styles.botaoAdicionarGasto} onClick={abrirModalAlocacao}>
             <UserCheck size={16} />
             Alocar funcionário
           </button>
@@ -154,9 +278,6 @@ export default function AlocacaoFuncionario() {
           </div>
           <div className={styles.cardObraTitulo}>
             <h1>{obra.titulo}</h1>
-            <button className={styles.botaoEditar}>
-              <Pencil size={16} />
-            </button>
           </div>
           <div className={styles.cardObraData}>
             <Calendar size={14} />
@@ -192,9 +313,6 @@ export default function AlocacaoFuncionario() {
                 Nenhum funcionário alocado
               </p>
             )}
-            <button className={styles.botaoAdicionarMembro}>
-              <Plus size={18} />
-            </button>
           </div>
         </div>
       </div>
@@ -204,16 +322,16 @@ export default function AlocacaoFuncionario() {
         <div className={styles.equipeTopo}>
           <h2 className={styles.equipeTitulo}>Status da equipe ativa</h2>
           <div className={styles.equipeControles}>
-            <input
-              type="date"
-              value={dataSelecionada}
-              onChange={(e) => setDataSelecionada(e.target.value)}
-              className={styles.inputData}
-            />
-            <button className={styles.botaoFiltro}>
-              <Filter size={14} />
-              Filtrar por obra
-            </button>
+            <div className={styles.campoBusca}>
+              <Search size={15} className={styles.iconeBusca} />
+              <input value={busca} onChange={(evento) => setBusca(evento.target.value)} className={styles.inputBusca} placeholder="Buscar funcionário..." />
+            </div>
+            <select className={styles.inputData} value={cargoFiltro} onChange={(evento) => setCargoFiltro(evento.target.value)}>
+              <option value="TODOS">Todos os cargos</option>
+              {cargosObra.map((cargo) => (
+                <option key={cargo.value} value={cargo.value}>{cargo.label}</option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -225,7 +343,6 @@ export default function AlocacaoFuncionario() {
                 <th>NOME</th>
                 <th>FUNÇÃO GLOBAL</th>
                 <th>CARGO NA OBRA</th>
-                <th>AÇÕES</th>
               </tr>
             </thead>
             <tbody>
@@ -247,18 +364,15 @@ export default function AlocacaoFuncionario() {
                     </td>
                     <td>{cargoLabel(alocacao.funcionario.cargoGlobal)}</td>
                     <td>{cargoLabel(alocacao.cargo)}</td>
-                    <td>
-                      <button className={styles.botaoAcao}>Editar perfil</button>
-                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
                   <td
-                    colSpan={4}
+                    colSpan={3}
                     style={{ textAlign: "center", padding: "2rem" }}
                   >
-                    Nenhum funcionário alocado nesta obra.
+                    {busca || cargoFiltro !== "TODOS" ? "Nenhum funcionário encontrado para os filtros." : "Nenhum funcionário alocado nesta obra."}
                   </td>
                 </tr>
               )}
@@ -268,7 +382,7 @@ export default function AlocacaoFuncionario() {
           {/* Paginação */}
           <div className={styles.paginacao}>
             <span className={styles.paginacaoInfo}>
-              Mostrando {alocacoesExibidas.length} de {alocacoes.length}{" "}
+              Mostrando {alocacoesExibidas.length} de {alocacoesFiltradas.length}{" "}
               funcionários
             </span>
             <div className={styles.paginacaoBotoes}>

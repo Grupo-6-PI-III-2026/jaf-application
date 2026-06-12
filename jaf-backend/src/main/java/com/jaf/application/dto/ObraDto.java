@@ -1,6 +1,5 @@
 package com.jaf.application.dto;
 
-import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -24,7 +23,6 @@ public class ObraDto {
     private LocalDate dtInicio;
 
     @NotNull(message = "A data de término prevista é obrigatória")
-    @FutureOrPresent(message = "A data de término prevista não pode estar no passado")
     private LocalDate dtTerminoPrevisto;
 
     public String getTitulo() {

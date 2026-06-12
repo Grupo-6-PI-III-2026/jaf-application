@@ -10,6 +10,7 @@ public enum Cargo {
             Permissao.CRIAR_OBRA,
             Permissao.EDITAR_OBRA,
             Permissao.VISUALIZAR_OBRA,
+            Permissao.VISUALIZAR_FUNCIONARIOS,
             Permissao.CRIAR_GASTO,
             Permissao.EDITAR_GASTO,
             Permissao.VISUALIZAR_GASTOS,
@@ -32,7 +33,61 @@ public enum Cargo {
             Permissao.VISUALIZAR_ALOCACOES,
             Permissao.VISUALIZAR_RELATORIO,
             Permissao.VISUALIZAR_PRESENCAS
-    ));
+        )),
+
+        MESTRE_DE_OBRAS(Arrays.asList(
+            Permissao.VISUALIZAR_OBRA,
+            Permissao.CRIAR_GASTO,
+            Permissao.EDITAR_GASTO,
+            Permissao.VISUALIZAR_GASTOS,
+            Permissao.VISUALIZAR_ALOCACOES,
+            Permissao.VISUALIZAR_PRESENCAS,
+            Permissao.REGISTRAR_PRESENCA,
+            Permissao.EDITAR_PRESENCA
+        )),
+
+        ENGENHEIRO(Arrays.asList(
+            Permissao.VISUALIZAR_OBRA,
+            Permissao.CRIAR_OBRA,
+            Permissao.EDITAR_OBRA,
+            Permissao.VISUALIZAR_FUNCIONARIOS,
+            Permissao.CRIAR_GASTO,
+            Permissao.EDITAR_GASTO,
+            Permissao.VISUALIZAR_GASTOS,
+            Permissao.CRIAR_ALOCACAO,
+            Permissao.EDITAR_ALOCACAO,
+            Permissao.VISUALIZAR_ALOCACOES,
+            Permissao.VISUALIZAR_RELATORIO,
+            Permissao.GERAR_RELATORIO,
+            Permissao.VISUALIZAR_PRESENCAS,
+            Permissao.REGISTRAR_PRESENCA,
+            Permissao.EDITAR_PRESENCA
+        )),
+
+            ARQUITETO(Arrays.asList(
+                Permissao.VISUALIZAR_OBRA,
+                Permissao.CRIAR_OBRA,
+                Permissao.EDITAR_OBRA,
+                Permissao.VISUALIZAR_FUNCIONARIOS,
+                Permissao.CRIAR_GASTO,
+                Permissao.EDITAR_GASTO,
+                Permissao.VISUALIZAR_GASTOS,
+                Permissao.CRIAR_ALOCACAO,
+                Permissao.EDITAR_ALOCACAO,
+                Permissao.VISUALIZAR_ALOCACOES,
+                Permissao.VISUALIZAR_RELATORIO,
+                Permissao.GERAR_RELATORIO,
+                Permissao.VISUALIZAR_PRESENCAS,
+                Permissao.REGISTRAR_PRESENCA,
+                Permissao.EDITAR_PRESENCA
+            )),
+
+        PEDREIRO(Arrays.asList(
+            Permissao.VISUALIZAR_OBRA,
+            Permissao.VISUALIZAR_ALOCACOES,
+            Permissao.VISUALIZAR_PRESENCAS,
+            Permissao.REGISTRAR_PRESENCA
+        ));
 
     private final List<Permissao> permissoes;
 

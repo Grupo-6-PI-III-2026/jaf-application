@@ -1,8 +1,5 @@
 import {
-  LayoutGrid,
   Pickaxe,
-  Wallet,
-  ChartNoAxesCombined,
   Settings,
   Bell,
   UserPlus,
@@ -11,18 +8,16 @@ import {
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import styles from "./Sidebar.module.css";
-import { useUser } from "../../../Context/UserContext";
+import { useUser } from "../../../Context/useUser";
 import { CargoLabel, DEFAULT_AVATAR_URL } from "../../../Types/user";
+import { authService } from "../../../Service/Auth/Login/authService";
 
 // Vetor com os itens do menu da sidebar
 const menuItems = [
-  { icon: LayoutGrid, label: "Dashboard", path: "/home" },
   { icon: Pickaxe, label: "Obras", path: "/home" },
-  { icon: HardHat, label: "Nova Obra", path: "/obras/criar" },
-  { icon: UserPlus, label: "Novo Funcionário", path: "/funcionarios/novo" },
-  { icon: Wallet, label: "Financeiro", path: "/financeiro" },
-  { icon: ChartNoAxesCombined, label: "Relatórios", path: "/relatorios" },
-  { icon: Shield, label: "Permissões", path: "/permissoes" },
+  { icon: HardHat, label: "Nova Obra", path: "/obras/criar", permissao: "CRIAR_OBRA" },
+  { icon: UserPlus, label: "Novo Funcionário", path: "/funcionarios/novo", permissao: "CRIAR_FUNCIONARIO" },
+  { icon: Shield, label: "Permissões", path: "/permissoes", permissao: "EDITAR_FUNCIONARIO" },
   { icon: Settings, label: "Configurações", path: "/perfil" },
 ];
 
@@ -31,6 +26,9 @@ export function Sidebar() {
   const avatarUrl = user?.fotoUrl || DEFAULT_AVATAR_URL;
   const userName = user?.nome ?? "Usuario";
   const userCargo = user ? CargoLabel[user.cargo] : "Sem cargo";
+  const visibleMenuItems = menuItems.filter(
+    (item) => !item.permissao || authService.hasAuthority(item.permissao)
+  );
 
   return (
     <div className={styles.sidebar}>
@@ -48,7 +46,7 @@ export function Sidebar() {
       </div>
       {/* Menu de navegação */}
       <div className={styles.nav}>
-        {menuItems.map((item) => (
+        {visibleMenuItems.map((item) => (
           <div key={item.label} className={styles.menuItem}>
             <NavLink to={item.path}>
               <item.icon />

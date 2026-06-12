@@ -1,11 +1,6 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, Plus, Search, Calendar, ChevronDown } from "lucide-react";
-import {
-  PieChart, Pie, Cell, ResponsiveContainer, Legend,
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  BarChart, Bar,
-} from "recharts";
-import { useParams } from "react-router-dom";
+import { ArrowLeft, Plus, Search, Tag, ChevronDown } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
 import ChartCard from "../../Components/ChartCard/ChartCard";
 import StatCard from "../../Components/StatCard/StatCard";
 import { dashboardService, type DashboardStats } from "../../Service/Dashboard/dashboardService";
@@ -18,26 +13,28 @@ const formatBRL = (v: number) =>
 
 const etapas = ["ETAPA 1", "ETAPA 2", "TODAS"];
 
-const formatarPercentual = ({ value }: { value?: number | string }) => `${value ?? 0}%`;
-const formatarEixoMoeda = (valor: number) => `R$${(valor / 1000).toFixed(0)}.000,00`;
-const formatarTooltipMoeda = (valor: unknown) => formatBRL(Number(valor ?? 0));
-const formatarLegenda = (valor: string | number) => (
-  <span style={{ fontSize: 12, textTransform: "uppercase", color: "#fff" }}>
-    {valor}
-  </span>
-);
+const limitarPercentual = (valor: number) => Math.min(100, Math.max(0, valor));
 
 export default function Dashboard() {
   const { id } = useParams<{ id: string }>();
-  const obraId = id ? parseInt(id) : 1;
+  const navegar = useNavigate();
+  const obraId = id ? parseInt(id) : NaN;
 
   const [etapa, setEtapa] = useState("ETAPA 1");
+  const [busca, setBusca] = useState("");
+  const [ordenacao, setOrdenacao] = useState<"valor" | "categoria">("valor");
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => {
     const carregarStats = async () => {
+      if (!Number.isFinite(obraId)) {
+        setErro("Obra não informada para o dashboard financeiro.");
+        setCarregando(false);
+        return;
+      }
+
       try {
         setCarregando(true);
         setErro(null);
@@ -52,6 +49,34 @@ export default function Dashboard() {
 
     carregarStats();
   }, [obraId, etapa]);
+
+  const categoriasExibidas = (stats?.gastosPorCategoria ?? [])
+    .filter((item) => item.categoria.toLowerCase().includes(busca.trim().toLowerCase()))
+    .sort((a, b) => {
+      if (ordenacao === "categoria") {
+        return a.categoria.localeCompare(b.categoria);
+      }
+      return b.valor - a.valor;
+    });
+
+  const totalReembolsos = stats?.reembolsosPizza.reduce((total, item) => total + item.value, 0) ?? 0;
+  const percentualPendente = totalReembolsos
+    ? limitarPercentual(((stats?.reembolsosPizza[0]?.value ?? 0) / totalReembolsos) * 100)
+    : 0;
+  const maxImprevisto = Math.max(...(stats?.gastosImprevistos.map((item) => item.valor) ?? [0]), 1);
+  const pontosLinha = (stats?.gastosImprevistos ?? [])
+    .map((item, index, lista) => {
+      const x = lista.length <= 1 ? 50 : (index / (lista.length - 1)) * 100;
+      const y = 90 - (item.valor / maxImprevisto) * 70;
+      return `${x},${y}`;
+    })
+    .join(" ");
+  const maxCategoria = Math.max(...categoriasExibidas.map((item) => item.valor), 1);
+
+  function trocarEtapa() {
+    const indiceAtual = etapas.indexOf(etapa);
+    setEtapa(etapas[(indiceAtual + 1) % etapas.length]);
+  }
 
   if (carregando) {
     return (
@@ -74,14 +99,16 @@ export default function Dashboard() {
       {/* Header / Breadcrumb */}
       <div className={styles.header}>
         <div className={styles.breadcrumb}>
-          <ArrowLeft size={16} />
+          <button className={styles.botaoVoltarBreadcrumb} onClick={() => navegar(`/obras/detalhamento/${obraId}`)} aria-label="Voltar para detalhes da obra">
+            <ArrowLeft size={16} />
+          </button>
           <span>Obras</span>
           <span className={styles.separator}>›</span>
           <span>Detalhes da Obra</span>
           <span className={styles.separator}>›</span>
           <span>Financeiro da Obra</span>
         </div>
-        <button className={styles.addBtn}>
+        <button className={styles.addBtn} onClick={() => navegar(`/obras/detalhamento/${obraId}`)}>
           <Plus size={16} /> Adicionar gasto
         </button>
       </div>
@@ -90,13 +117,13 @@ export default function Dashboard() {
       <div className={styles.filters}>
         <div className={styles.searchWrapper}>
           <Search className={styles.searchIcon} />
-          <input placeholder="Buscar lançamentos..." className={styles.searchInput} />
+          <input placeholder="Buscar categoria..." className={styles.searchInput} value={busca} onChange={(evento) => setBusca(evento.target.value)} />
         </div>
-        <button className={styles.filterBtn}>
+        <button className={`${styles.filterBtn} ${ordenacao === "valor" ? styles.filterBtnActive : ""}`} onClick={() => setOrdenacao("valor")}>
           <ChevronDown size={16} color="#F5C518" /> Valor
         </button>
-        <button className={styles.filterBtn}>
-          <Calendar size={16} /> Data
+        <button className={`${styles.filterBtn} ${ordenacao === "categoria" ? styles.filterBtnActive : ""}`} onClick={() => setOrdenacao("categoria")}>
+          <Tag size={16} /> Categoria
         </button>
       </div>
 
@@ -106,7 +133,7 @@ export default function Dashboard() {
           label={`Gastos da ${etapa === "TODAS" ? "obra" : etapa.toLowerCase()}`}
           value={formatBRL(stats.gastosEtapa)}
           progress={stats.progressoEtapa}
-          action={<button className={styles.etapaBtn}>Trocar etapa</button>}
+          action={<button className={styles.etapaBtn} onClick={trocarEtapa}>Trocar etapa</button>}
         />
         <StatCard
           label="Total de reembolsos pendentes"
@@ -124,63 +151,47 @@ export default function Dashboard() {
         {/* Pie */}
         <ChartCard title="Reembolsos pendentes x concluídos">
           <div className={styles.chartContainer}>
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={stats.reembolsosPizza}
-                  dataKey="value"
-                  cx="45%"
-                  cy="50%"
-                  outerRadius={100}
-                  label={formatarPercentual}
-                  labelLine={false}
-                >
-                  {stats.reembolsosPizza.map((_, i) => (
-                    <Cell key={i} fill={PIE_COLORS[i]} />
-                  ))}
-                </Pie>
-                <Legend
-                  verticalAlign="middle"
-                  align="right"
-                  layout="vertical"
-                  iconType="square"
-                  formatter={formatarLegenda}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            <div className={styles.pieLayout}>
+              <div
+                className={styles.pieChart}
+                style={{
+                  background: `conic-gradient(${PIE_COLORS[0]} 0 ${percentualPendente}%, ${PIE_COLORS[1]} ${percentualPendente}% 100%)`,
+                }}
+                aria-label={`Reembolsos pendentes ${percentualPendente.toFixed(0)}%`}
+              >
+                <span>{percentualPendente.toFixed(0)}%</span>
+              </div>
+              <div className={styles.chartLegend}>
+                {stats.reembolsosPizza.map((item, index) => (
+                  <div key={item.name} className={styles.legendItem}>
+                    <span style={{ background: PIE_COLORS[index] }} />
+                    <strong>{item.name}</strong>
+                    <small>{item.value}%</small>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </ChartCard>
 
         {/* Line */}
         <ChartCard title="Gastos imprevistos">
           <div className={styles.chartContainer}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={stats.gastosImprevistos} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
-                <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
-                <XAxis
-                  dataKey="mes"
-                  tick={{ fill: "rgba(255,255,255,0.6)", fontSize: 10 }}
-                  angle={-25}
-                  textAnchor="end"
-                  height={50}
-                />
-                <YAxis
-                  tick={{ fill: "rgba(255,255,255,0.6)", fontSize: 10 }}
-                  tickFormatter={formatarEixoMoeda}
-                />
-                <Tooltip
-                  contentStyle={{ background: "#1a1a1a", border: "none" }}
-                  formatter={formatarTooltipMoeda}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="valor"
-                  stroke="#ffffff"
-                  strokeWidth={2}
-                  dot={{ fill: "#fff", r: 3 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            <div className={styles.lineChartWrap}>
+              <svg className={styles.lineChart} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                <polyline points={pontosLinha} />
+              </svg>
+              <div className={styles.lineLabels}>
+                {stats.gastosImprevistos.map((item) => (
+                  <span key={item.mes}>{item.mes}</span>
+                ))}
+              </div>
+              <div className={styles.lineValues}>
+                {stats.gastosImprevistos.map((item) => (
+                  <span key={`${item.mes}-${item.valor}`}>{formatBRL(item.valor)}</span>
+                ))}
+              </div>
+            </div>
           </div>
         </ChartCard>
       </div>
@@ -206,26 +217,25 @@ export default function Dashboard() {
           }
         >
           <div className={styles.chartContainerLarge}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.gastosPorCategoria} margin={{ top: 10, right: 20, left: 10, bottom: 30 }}>
-                <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
-                <XAxis
-                  dataKey="categoria"
-                  tick={{ fill: "rgba(255,255,255,0.7)", fontSize: 11 }}
-                  angle={-25}
-                  textAnchor="end"
-                />
-                <YAxis
-                  tick={{ fill: "rgba(255,255,255,0.6)", fontSize: 10 }}
-                  tickFormatter={formatarEixoMoeda}
-                />
-                <Tooltip
-                  contentStyle={{ background: "#1a1a1a", border: "none" }}
-                  formatter={formatarTooltipMoeda}
-                />
-                <Bar dataKey="valor" fill="#e5e7eb" radius={[2, 2, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <div className={styles.barList}>
+              {categoriasExibidas.map((item) => (
+                <div key={item.categoria} className={styles.barItem}>
+                  <div className={styles.barHeader}>
+                    <span>{item.categoria}</span>
+                    <strong>{formatBRL(item.valor)}</strong>
+                  </div>
+                  <div className={styles.barTrack}>
+                    <div
+                      className={styles.barFill}
+                      style={{ width: `${limitarPercentual((item.valor / maxCategoria) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+              {categoriasExibidas.length === 0 && (
+                <div className={styles.emptyChart}>Nenhuma categoria encontrada.</div>
+              )}
+            </div>
           </div>
         </ChartCard>
       </div>

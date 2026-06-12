@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { isAxiosError } from "axios";
 import {
   FileText,
   MapPin,
@@ -173,15 +174,15 @@ export default function NovaObra() {
 
       // Redirecionar para home (lista de obras)
       navigate("/home");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Erro ao criar obra:", error);
       
-      if (error.response?.data?.message) {
+      if (isAxiosError<{ message?: string }>(error) && error.response?.data?.message) {
         alert(`Erro: ${error.response.data.message}`);
-      } else if (error.response?.status === 401) {
+      } else if (isAxiosError(error) && error.response?.status === 401) {
         alert("Sessão expirada. Faça login novamente.");
         navigate("/");
-      } else if (error.response?.status === 403) {
+      } else if (isAxiosError(error) && error.response?.status === 403) {
         alert("Você não tem permissão para criar obras. Apenas ADMINs podem criar obras.");
       } else {
         alert("Falha ao criar obra. Tente novamente.");

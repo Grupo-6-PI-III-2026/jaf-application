@@ -88,6 +88,7 @@ public class ObraService {
         Obra existente = obraRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Obra nao encontrada."));
 
+        existente.setTitulo(dto.getTitulo());
         existente.setOrcamento(dto.getOrcamento());
         existente.setStatus(dto.getStatus());
         existente.setDtInicio(dto.getDtInicio());

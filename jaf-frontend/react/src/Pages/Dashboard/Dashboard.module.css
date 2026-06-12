@@ -19,6 +19,23 @@
   color: #1F2A33;
 }
 
+.botaoVoltarBreadcrumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+  color: #1F2A33;
+  cursor: pointer;
+}
+
+.botaoVoltarBreadcrumb:hover {
+  background: #f3f4f6;
+}
+
 .separator {
   color: #9ca3af;
 }
@@ -98,6 +115,11 @@
   background: #f3f4f6;
 }
 
+.filterBtnActive {
+  border-color: #F5C518;
+  background: #fff8d7;
+}
+
 /* Stats Row */
 .statsRow {
   display: grid;
@@ -149,6 +171,154 @@
   height: 320px;
 }
 
+.pieLayout {
+  height: 100%;
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) minmax(140px, 180px);
+  align-items: center;
+  gap: 24px;
+}
+
+.pieChart {
+  width: 190px;
+  height: 190px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  justify-self: center;
+  position: relative;
+}
+
+.pieChart::after {
+  content: "";
+  position: absolute;
+  width: 108px;
+  height: 108px;
+  border-radius: 50%;
+  background: #1f2a33;
+}
+
+.pieChart span {
+  position: relative;
+  z-index: 1;
+  color: #fff;
+  font-weight: 800;
+  font-size: 24px;
+}
+
+.chartLegend {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.legendItem {
+  display: grid;
+  grid-template-columns: 12px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.legendItem span {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.legendItem small {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.lineChartWrap {
+  height: 100%;
+  display: grid;
+  grid-template-rows: 1fr auto auto;
+  gap: 10px;
+}
+
+.lineChart {
+  width: 100%;
+  height: 190px;
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  background-image: linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 100% 25%;
+}
+
+.lineChart polyline {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.lineLabels,
+.lineValues {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 10px;
+}
+
+.lineValues {
+  color: #fff;
+  font-weight: 700;
+}
+
+.barList {
+  height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-right: 6px;
+}
+
+.barItem {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.barHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 12px;
+}
+
+.barHeader strong {
+  color: #fff;
+}
+
+.barTrack {
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  min-width: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #F5C518, #f7dc72);
+}
+
+.emptyChart {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 13px;
+  text-align: center;
+  padding: 48px 0;
+}
+
 /* Etapa Tabs */
 .etapaTabs {
   display: flex;
@@ -178,4 +348,20 @@
 
 .etapaTabInactive:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+@media (max-width: 640px) {
+  .pieLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .pieChart {
+    width: 160px;
+    height: 160px;
+  }
+
+  .pieChart::after {
+    width: 92px;
+    height: 92px;
+  }
 }

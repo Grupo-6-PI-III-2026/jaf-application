@@ -304,6 +304,35 @@
   border-color: #ffc107;
 }
 
+.campoBusca {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.iconeBusca {
+  position: absolute;
+  left: 12px;
+  color: #6c757d;
+  pointer-events: none;
+}
+
+.inputBusca {
+  padding: 9px 14px 9px 36px;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #495057;
+  background: #fff;
+  outline: none;
+  width: 230px;
+  transition: border-color 0.2s;
+}
+
+.inputBusca:focus {
+  border-color: #ffc107;
+}
+
 .botaoFiltro {
   display: flex;
   align-items: center;
@@ -455,4 +484,152 @@
   background: #ffc107 !important;
   border-color: #ffc107 !important;
   color: #333 !important;
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(31, 42, 51, 0.45);
+  padding: 24px;
+}
+
+.modalAlocacao {
+  width: min(560px, 100%);
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e9ecef;
+  box-shadow: 0 24px 60px rgba(31, 42, 51, 0.24);
+  overflow: hidden;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 24px;
+  background: #333;
+  color: #fff;
+}
+
+.modalHeader h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.modalHeader p {
+  margin: 4px 0 0;
+  color: #dee2e6;
+  font-size: 13px;
+}
+
+.botaoFecharModal {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.botaoFecharModal:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.modalGrid {
+  display: grid;
+  gap: 16px;
+  padding: 22px 24px;
+}
+
+.modalGrid label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: #495057;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.modalGrid select {
+  min-height: 40px;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  background: #fff;
+  color: #333;
+  font-size: 14px;
+  padding: 9px 12px;
+  outline: none;
+}
+
+.modalGrid select:focus {
+  border-color: #ffc107;
+  box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.16);
+}
+
+.modalAviso {
+  color: #6c757d;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 0 24px 24px;
+}
+
+.botaoSecundario {
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  background: #fff;
+  color: #495057;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 18px;
+  cursor: pointer;
+}
+
+.botaoSecundario:hover {
+  background: #f8f9fa;
+}
+
+@media (max-width: 900px) {
+  .cabecalho,
+  .equipeTopo,
+  .paginacao {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .cardObra {
+    flex-direction: column;
+  }
+
+  .cardObraImagem {
+    width: 100%;
+    height: 190px;
+  }
+
+  .equipeControles,
+  .cabecalhoAcoes {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .campoBusca,
+  .inputBusca,
+  .inputData {
+    width: 100%;
+  }
 }

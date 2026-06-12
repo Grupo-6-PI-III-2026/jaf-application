@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Shield,
   Search,
@@ -16,10 +16,11 @@ import {
   ClipboardCheck,
   UserCog,
 } from "lucide-react";
-import styles from "./Permissoes.module.css";
 import { toast } from "sonner";
+import styles from "./Permissoes.module.css";
 import { permissaoService } from "../../Service/Permissoes/permissaoService";
 import type { FuncionarioPermissoes, ModuloPermissao } from "../../Types/permissoes";
+import type { Cargo } from "../../Types/user";
 
 const MODULOS: ModuloPermissao[] = [
   {
@@ -27,30 +28,10 @@ const MODULOS: ModuloPermissao[] = [
     nome: "Obras",
     icon: "Pickaxe",
     permissoes: [
-      {
-        chave: "VISUALIZAR_OBRA",
-        label: "Visualizar Lista de Obras",
-        descricao: "Permite ver o painel geral e o status resumido de todas as obras ativas.",
-        nivel: null,
-      },
-      {
-        chave: "CRIAR_OBRA",
-        label: "Criar Nova Obra",
-        descricao: "Permite cadastrar novos empreendimentos no sistema.",
-        nivel: null,
-      },
-      {
-        chave: "EDITAR_OBRA",
-        label: "Editar Detalhes da Obra",
-        descricao: "Modificar cronograma, responsáveis e escopo do projeto.",
-        nivel: null,
-      },
-      {
-        chave: "DELETAR_OBRA",
-        label: "Excluir Obra",
-        descricao: "Remover permanentemente registros de obras do banco de dados.",
-        nivel: "critico",
-      },
+      { chave: "VISUALIZAR_OBRA", label: "Visualizar Lista de Obras", descricao: "Permite ver o painel geral e o status resumido de todas as obras ativas.", nivel: null },
+      { chave: "CRIAR_OBRA", label: "Criar Nova Obra", descricao: "Permite cadastrar novos empreendimentos no sistema.", nivel: null },
+      { chave: "EDITAR_OBRA", label: "Editar Detalhes da Obra", descricao: "Modificar cronograma, responsáveis e escopo do projeto.", nivel: null },
+      { chave: "DELETAR_OBRA", label: "Excluir Obra", descricao: "Remover permanentemente registros de obras do banco de dados.", nivel: "critico" },
     ],
   },
   {
@@ -58,30 +39,10 @@ const MODULOS: ModuloPermissao[] = [
     nome: "Funcionários",
     icon: "Users",
     permissoes: [
-      {
-        chave: "VISUALIZAR_FUNCIONARIOS",
-        label: "Visualizar Funcionários",
-        descricao: "Ver a lista de todos os funcionários cadastrados no sistema.",
-        nivel: null,
-      },
-      {
-        chave: "CRIAR_FUNCIONARIO",
-        label: "Cadastrar Funcionário",
-        descricao: "Adicionar novos funcionários ao sistema com definição de cargo.",
-        nivel: "restrito",
-      },
-      {
-        chave: "EDITAR_FUNCIONARIO",
-        label: "Editar Funcionário",
-        descricao: "Alterar dados cadastrais, cargo e informações dos funcionários.",
-        nivel: "restrito",
-      },
-      {
-        chave: "DELETAR_FUNCIONARIO",
-        label: "Excluir Funcionário",
-        descricao: "Remover permanentemente um funcionário do sistema.",
-        nivel: "critico",
-      },
+      { chave: "VISUALIZAR_FUNCIONARIOS", label: "Visualizar Funcionários", descricao: "Ver a lista de todos os funcionários cadastrados no sistema.", nivel: null },
+      { chave: "CRIAR_FUNCIONARIO", label: "Cadastrar Funcionário", descricao: "Adicionar novos funcionários ao sistema com definição de cargo.", nivel: "restrito" },
+      { chave: "EDITAR_FUNCIONARIO", label: "Editar Funcionário", descricao: "Alterar dados cadastrais, cargo e informações dos funcionários.", nivel: "restrito" },
+      { chave: "DELETAR_FUNCIONARIO", label: "Excluir Funcionário", descricao: "Remover permanentemente um funcionário do sistema.", nivel: "critico" },
     ],
   },
   {
@@ -89,30 +50,10 @@ const MODULOS: ModuloPermissao[] = [
     nome: "Financeiro / Gastos",
     icon: "Wallet",
     permissoes: [
-      {
-        chave: "VISUALIZAR_GASTOS",
-        label: "Visualizar Gastos",
-        descricao: "Acessar orçamentos, custos alocados e notas fiscais das obras.",
-        nivel: null,
-      },
-      {
-        chave: "CRIAR_GASTO",
-        label: "Registrar Gasto",
-        descricao: "Lançar novas despesas e notas fiscais vinculadas às obras.",
-        nivel: null,
-      },
-      {
-        chave: "EDITAR_GASTO",
-        label: "Editar Gasto",
-        descricao: "Alterar informações de gastos já registrados no sistema.",
-        nivel: "restrito",
-      },
-      {
-        chave: "DELETAR_GASTO",
-        label: "Excluir Gasto",
-        descricao: "Remover permanentemente registros de gastos e notas fiscais.",
-        nivel: "critico",
-      },
+      { chave: "VISUALIZAR_GASTOS", label: "Visualizar Gastos", descricao: "Acessar orçamentos, custos alocados e notas fiscais das obras.", nivel: null },
+      { chave: "CRIAR_GASTO", label: "Registrar Gasto", descricao: "Lançar novas despesas e notas fiscais vinculadas às obras.", nivel: null },
+      { chave: "EDITAR_GASTO", label: "Editar Gasto", descricao: "Alterar informações de gastos já registrados no sistema.", nivel: "restrito" },
+      { chave: "DELETAR_GASTO", label: "Excluir Gasto", descricao: "Remover permanentemente registros de gastos e notas fiscais.", nivel: "critico" },
     ],
   },
   {
@@ -120,30 +61,10 @@ const MODULOS: ModuloPermissao[] = [
     nome: "Alocações",
     icon: "Link2",
     permissoes: [
-      {
-        chave: "VISUALIZAR_ALOCACOES",
-        label: "Visualizar Alocações",
-        descricao: "Ver quais funcionários estão vinculados a cada obra.",
-        nivel: null,
-      },
-      {
-        chave: "CRIAR_ALOCACAO",
-        label: "Alocar Funcionário",
-        descricao: "Vincular um funcionário a uma obra com cargo específico.",
-        nivel: null,
-      },
-      {
-        chave: "EDITAR_ALOCACAO",
-        label: "Editar Alocação",
-        descricao: "Alterar o cargo ou detalhes da alocação de um funcionário.",
-        nivel: "restrito",
-      },
-      {
-        chave: "DELETAR_ALOCACAO",
-        label: "Remover Alocação",
-        descricao: "Desvincular um funcionário de uma obra.",
-        nivel: "restrito",
-      },
+      { chave: "VISUALIZAR_ALOCACOES", label: "Visualizar Alocações", descricao: "Ver quais funcionários estão vinculados a cada obra.", nivel: null },
+      { chave: "CRIAR_ALOCACAO", label: "Alocar Funcionário", descricao: "Vincular um funcionário a uma obra com cargo específico.", nivel: null },
+      { chave: "EDITAR_ALOCACAO", label: "Editar Alocação", descricao: "Alterar o cargo ou detalhes da alocação de um funcionário.", nivel: "restrito" },
+      { chave: "DELETAR_ALOCACAO", label: "Remover Alocação", descricao: "Desvincular um funcionário de uma obra.", nivel: "restrito" },
     ],
   },
   {
@@ -151,18 +72,8 @@ const MODULOS: ModuloPermissao[] = [
     nome: "Relatórios",
     icon: "FileBarChart",
     permissoes: [
-      {
-        chave: "VISUALIZAR_RELATORIO",
-        label: "Visualizar Relatórios",
-        descricao: "Acessar relatórios financeiros gerados pelo sistema.",
-        nivel: null,
-      },
-      {
-        chave: "GERAR_RELATORIO",
-        label: "Gerar Relatório",
-        descricao: "Criar e exportar relatórios financeiros das obras.",
-        nivel: "restrito",
-      },
+      { chave: "VISUALIZAR_RELATORIO", label: "Visualizar Relatórios", descricao: "Acessar relatórios financeiros gerados pelo sistema.", nivel: null },
+      { chave: "GERAR_RELATORIO", label: "Gerar Relatório", descricao: "Criar e exportar relatórios financeiros das obras.", nivel: "restrito" },
     ],
   },
   {
@@ -170,30 +81,10 @@ const MODULOS: ModuloPermissao[] = [
     nome: "Controle de Presença",
     icon: "ClipboardCheck",
     permissoes: [
-      {
-        chave: "VISUALIZAR_PRESENCAS",
-        label: "Visualizar Presenças",
-        descricao: "Consultar o registro de presença dos funcionários nas obras.",
-        nivel: null,
-      },
-      {
-        chave: "REGISTRAR_PRESENCA",
-        label: "Registrar Presença",
-        descricao: "Marcar presença ou ausência de funcionários em uma obra.",
-        nivel: null,
-      },
-      {
-        chave: "EDITAR_PRESENCA",
-        label: "Editar Presença",
-        descricao: "Alterar registros de presença já lançados.",
-        nivel: "restrito",
-      },
-      {
-        chave: "DELETAR_PRESENCA",
-        label: "Excluir Presença",
-        descricao: "Remover registros de presença do sistema.",
-        nivel: "critico",
-      },
+      { chave: "VISUALIZAR_PRESENCAS", label: "Visualizar Presenças", descricao: "Consultar o registro de presença dos funcionários nas obras.", nivel: null },
+      { chave: "REGISTRAR_PRESENCA", label: "Registrar Presença", descricao: "Marcar presença ou ausência de funcionários em uma obra.", nivel: null },
+      { chave: "EDITAR_PRESENCA", label: "Editar Presença", descricao: "Alterar registros de presença já lançados.", nivel: "restrito" },
+      { chave: "DELETAR_PRESENCA", label: "Excluir Presença", descricao: "Remover registros de presença do sistema.", nivel: "critico" },
     ],
   },
 ];
@@ -207,28 +98,39 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   ClipboardCheck,
 };
 
-const CARGO_LABELS: Record<string, string> = {
+const CARGO_LABELS: Record<Cargo, string> = {
   ADMIN: "Administrador",
   GESTOR_OBRA: "Gestor de Obras",
   OPERADOR_LANCAMENTO: "Operador de Lançamento",
+  MESTRE_DE_OBRAS: "Mestre de Obras",
+  ENGENHEIRO: "Engenheiro",
+  ARQUITETO: "Arquiteto",
+  PEDREIRO: "Pedreiro",
 };
+
+const CARGO_BADGES: Record<Cargo, string> = {
+  ADMIN: "ADM",
+  GESTOR_OBRA: "GES",
+  OPERADOR_LANCAMENTO: "OPR",
+  MESTRE_DE_OBRAS: "MST",
+  ENGENHEIRO: "ENG",
+  ARQUITETO: "ARQ",
+  PEDREIRO: "PED",
+};
+
+const CARGOS = Object.keys(CARGO_LABELS) as Cargo[];
 
 export default function Permissoes() {
   const [funcionarios, setFuncionarios] = useState<FuncionarioPermissoes[]>([]);
   const [selectedUser, setSelectedUser] = useState<FuncionarioPermissoes | null>(null);
   const [busca, setBusca] = useState("");
   const [permissoesAtivas, setPermissoesAtivas] = useState<Set<string>>(new Set());
-  const [cargoSelecionado, setCargoSelecionado] = useState<string>("");
+  const [cargoSelecionado, setCargoSelecionado] = useState<Cargo | "">("");
   const [modulosAbertos, setModulosAbertos] = useState<Set<string>>(new Set(["obras"]));
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [permissoesOriginais, setPermissoesOriginais] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    carregarFuncionarios();
-  }, []);
-
-  const carregarFuncionarios = async () => {
+  const carregarFuncionarios = useCallback(async () => {
     try {
       setIsLoading(true);
       const data = await permissaoService.listarFuncionarios();
@@ -238,32 +140,21 @@ export default function Permissoes() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    carregarFuncionarios();
+  }, [carregarFuncionarios]);
 
   const selecionarUsuario = useCallback((user: FuncionarioPermissoes) => {
     setSelectedUser(user);
     setCargoSelecionado(user.cargo);
-    const permissoes = permissaoService.getPermissoesPorCargo(user.cargo);
-    setPermissoesAtivas(new Set(permissoes));
-    setPermissoesOriginais(new Set(permissoes));
+    setPermissoesAtivas(new Set(permissaoService.getPermissoesPorCargo(user.cargo)));
   }, []);
 
-  const handleCargoChange = (cargo: string) => {
+  const handleCargoChange = (cargo: Cargo) => {
     setCargoSelecionado(cargo);
-    const permissoes = permissaoService.getPermissoesPorCargo(cargo);
-    setPermissoesAtivas(new Set(permissoes));
-  };
-
-  const togglePermissao = (chave: string) => {
-    setPermissoesAtivas((prev) => {
-      const next = new Set(prev);
-      if (next.has(chave)) {
-        next.delete(chave);
-      } else {
-        next.add(chave);
-      }
-      return next;
-    });
+    setPermissoesAtivas(new Set(permissaoService.getPermissoesPorCargo(cargo)));
   };
 
   const toggleModulo = (moduloId: string) => {
@@ -278,47 +169,26 @@ export default function Permissoes() {
     });
   };
 
-  const toggleTodosModulo = (modulo: ModuloPermissao, ativar: boolean) => {
-    setPermissoesAtivas((prev) => {
-      const next = new Set(prev);
-      modulo.permissoes.forEach((p) => {
-        if (ativar) {
-          next.add(p.chave);
-        } else {
-          next.delete(p.chave);
-        }
-      });
-      return next;
-    });
-  };
-
   const hasChanges = (): boolean => {
-    if (!selectedUser) return false;
-    if (cargoSelecionado !== selectedUser.cargo) return true;
-    if (permissoesAtivas.size !== permissoesOriginais.size) return true;
-    for (const p of permissoesAtivas) {
-      if (!permissoesOriginais.has(p)) return true;
-    }
-    return false;
+    return Boolean(selectedUser && cargoSelecionado && cargoSelecionado !== selectedUser.cargo);
   };
 
   const handleSalvar = async () => {
-    if (!selectedUser) return;
+    if (!selectedUser || !cargoSelecionado) return;
 
     try {
       setIsSaving(true);
       await permissaoService.atualizarCargo(selectedUser.id, cargoSelecionado);
-      toast.success(`Permissões de ${selectedUser.nome} atualizadas com sucesso!`);
+      toast.success(`Cargo de ${selectedUser.nome} atualizado com sucesso!`);
 
       setFuncionarios((prev) =>
-        prev.map((f) =>
-          f.id === selectedUser.id ? { ...f, cargo: cargoSelecionado } : f
+        prev.map((funcionario) =>
+          funcionario.id === selectedUser.id ? { ...funcionario, cargo: cargoSelecionado } : funcionario
         )
       );
       setSelectedUser({ ...selectedUser, cargo: cargoSelecionado });
-      setPermissoesOriginais(new Set(permissoesAtivas));
     } catch {
-      toast.error("Erro ao salvar permissões");
+      toast.error("Erro ao salvar cargo");
     } finally {
       setIsSaving(false);
     }
@@ -331,9 +201,9 @@ export default function Permissoes() {
   };
 
   const funcionariosFiltrados = funcionarios.filter(
-    (f) =>
-      f.nome.toLowerCase().includes(busca.toLowerCase()) ||
-      f.email.toLowerCase().includes(busca.toLowerCase())
+    (funcionario) =>
+      funcionario.nome.toLowerCase().includes(busca.toLowerCase()) ||
+      funcionario.email.toLowerCase().includes(busca.toLowerCase())
   );
 
   const getModuloIcon = (iconName: string) => {
@@ -342,12 +212,11 @@ export default function Permissoes() {
   };
 
   const getPermissoesAtivasModulo = (modulo: ModuloPermissao): number => {
-    return modulo.permissoes.filter((p) => permissoesAtivas.has(p.chave)).length;
+    return modulo.permissoes.filter((permissao) => permissoesAtivas.has(permissao.chave)).length;
   };
 
   return (
     <div className={styles.container}>
-      {/* Lista de Usuários */}
       <div className={styles.listaUsuarios}>
         <h2>Gerenciar Permissões</h2>
         <p>Selecione um usuário para configurar</p>
@@ -358,7 +227,7 @@ export default function Permissoes() {
             type="text"
             placeholder="Buscar funcionário..."
             value={busca}
-            onChange={(e) => setBusca(e.target.value)}
+            onChange={(event) => setBusca(event.target.value)}
           />
         </div>
 
@@ -368,39 +237,30 @@ export default function Permissoes() {
           funcionariosFiltrados.map((user) => (
             <div
               key={user.id}
-              className={`${styles.usuarioCard} ${
-                selectedUser?.id === user.id ? styles.usuarioCardAtivo : ""
-              }`}
+              className={`${styles.usuarioCard} ${selectedUser?.id === user.id ? styles.usuarioCardAtivo : ""}`}
               onClick={() => selecionarUsuario(user)}
             >
-              <div className={styles.avatarUsuario}>
-                {user.nome.charAt(0).toUpperCase()}
-              </div>
+              <div className={styles.avatarUsuario}>{user.nome.charAt(0).toUpperCase()}</div>
               <div className={styles.infoUsuario}>
                 <h4>{user.nome}</h4>
-                <span>{CARGO_LABELS[user.cargo] || user.cargo}</span>
+                <span>{CARGO_LABELS[user.cargo]}</span>
               </div>
               <span
                 className={`${styles.badgeCargo} ${
                   user.cargo === "ADMIN"
                     ? styles.badgeAdmin
                     : user.cargo === "GESTOR_OBRA"
-                    ? styles.badgeGestor
-                    : styles.badgeOperador
+                      ? styles.badgeGestor
+                      : styles.badgeOperador
                 }`}
               >
-                {user.cargo === "ADMIN"
-                  ? "ADM"
-                  : user.cargo === "GESTOR_OBRA"
-                  ? "GES"
-                  : "OPR"}
+                {CARGO_BADGES[user.cargo]}
               </span>
             </div>
           ))
         )}
       </div>
 
-      {/* Perfil do Usuário Selecionado */}
       {selectedUser ? (
         <>
           <div className={styles.perfilUsuario}>
@@ -409,9 +269,7 @@ export default function Permissoes() {
               <div className={styles.statusOnline}></div>
             </div>
             <h3 className={styles.perfilNome}>{selectedUser.nome}</h3>
-            <p className={styles.perfilCargo}>
-              {CARGO_LABELS[cargoSelecionado] || cargoSelecionado}
-            </p>
+            <p className={styles.perfilCargo}>{cargoSelecionado ? CARGO_LABELS[cargoSelecionado] : "Sem cargo"}</p>
 
             <div className={styles.divider}></div>
 
@@ -434,16 +292,11 @@ export default function Permissoes() {
               <Info />
               <div>
                 <h4>Impacto das Permissões</h4>
-                <p>
-                  Alterações salvas entrarão em vigor no próximo login do
-                  usuário. Recomendamos notificar o colaborador sobre novos
-                  acessos concedidos.
-                </p>
+                <p>O acesso é herdado do cargo. Alterações salvas entram em vigor no próximo login do colaborador.</p>
               </div>
             </div>
           </div>
 
-          {/* Painel de Permissões */}
           <div className={styles.painelPermissoes}>
             <div className={styles.headerPermissoes}>
               <div>
@@ -451,99 +304,54 @@ export default function Permissoes() {
                   <Shield />
                   Configurações de Acesso
                 </h2>
-                <p>
-                  Defina níveis de leitura, escrita e exclusão por módulo.
-                </p>
+                <p>Revise os acessos concedidos pela role selecionada.</p>
               </div>
             </div>
 
-            {/* Seletor de Cargo */}
             <div className={styles.seletorCargo}>
-              {Object.entries(CARGO_LABELS).map(([key, label]) => (
+              {CARGOS.map((cargo) => (
                 <button
-                  key={key}
-                  className={cargoSelecionado === key ? styles.seletorCargoAtivo : ""}
-                  onClick={() => handleCargoChange(key)}
+                  key={cargo}
+                  className={cargoSelecionado === cargo ? styles.seletorCargoAtivo : ""}
+                  onClick={() => handleCargoChange(cargo)}
                 >
                   <UserCog size={14} style={{ marginRight: 6, verticalAlign: "middle" }} />
-                  {label}
+                  {CARGO_LABELS[cargo]}
                 </button>
               ))}
             </div>
 
-            {/* Módulos de Permissão */}
             {MODULOS.map((modulo) => {
               const isAberto = modulosAbertos.has(modulo.id);
               const ativasModulo = getPermissoesAtivasModulo(modulo);
-              const todasAtivas = ativasModulo === modulo.permissoes.length;
 
               return (
                 <div key={modulo.id} className={styles.moduloContainer}>
-                  <div
-                    className={styles.moduloHeader}
-                    onClick={() => toggleModulo(modulo.id)}
-                  >
+                  <div className={styles.moduloHeader} onClick={() => toggleModulo(modulo.id)}>
                     <div className={styles.moduloHeaderEsquerda}>
                       {getModuloIcon(modulo.icon)}
                       <h3>Módulo: {modulo.nome}</h3>
                     </div>
                     <div className={styles.moduloHeaderDireita}>
-                      <span className={styles.contadorPermissoes}>
-                        {ativasModulo}/{modulo.permissoes.length}
-                      </span>
-                      <label
-                        className={styles.toggleAll}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <span>Todos</span>
-                        <span className={styles.toggle}>
-                          <input
-                            type="checkbox"
-                            checked={todasAtivas}
-                            onChange={(e) =>
-                              toggleTodosModulo(modulo, e.target.checked)
-                            }
-                          />
-                          <span className={styles.toggleSlider}></span>
-                        </span>
-                      </label>
-                      <ChevronDown
-                        className={`${styles.chevron} ${
-                          isAberto ? styles.chevronAberto : ""
-                        }`}
-                      />
+                      <span className={styles.contadorPermissoes}>{ativasModulo}/{modulo.permissoes.length}</span>
+                      <ChevronDown className={`${styles.chevron} ${isAberto ? styles.chevronAberto : ""}`} />
                     </div>
                   </div>
 
                   {isAberto && (
                     <div className={styles.moduloBody}>
                       {modulo.permissoes.map((permissao) => (
-                        <div
-                          key={permissao.chave}
-                          className={styles.permissaoItem}
-                        >
+                        <div key={permissao.chave} className={styles.permissaoItem}>
                           <div className={styles.permissaoInfo}>
                             <h4>
                               {permissao.label}
-                              {permissao.nivel === "restrito" && (
-                                <span className={styles.badgeRestrito}>
-                                  RESTRITO
-                                </span>
-                              )}
-                              {permissao.nivel === "critico" && (
-                                <span className={styles.badgeCritico}>
-                                  CRÍTICO
-                                </span>
-                              )}
+                              {permissao.nivel === "restrito" && <span className={styles.badgeRestrito}>RESTRITO</span>}
+                              {permissao.nivel === "critico" && <span className={styles.badgeCritico}>CRÍTICO</span>}
                             </h4>
                             <p>{permissao.descricao}</p>
                           </div>
                           <label className={styles.toggle}>
-                            <input
-                              type="checkbox"
-                              checked={permissoesAtivas.has(permissao.chave)}
-                              onChange={() => togglePermissao(permissao.chave)}
-                            />
+                            <input type="checkbox" checked={permissoesAtivas.has(permissao.chave)} disabled readOnly />
                             <span className={styles.toggleSlider}></span>
                           </label>
                         </div>
@@ -554,20 +362,11 @@ export default function Permissoes() {
               );
             })}
 
-            {/* Ações */}
             <div className={styles.acoes}>
-              <button
-                className={styles.btnCancelar}
-                onClick={handleCancelar}
-                disabled={!hasChanges()}
-              >
+              <button className={styles.btnCancelar} onClick={handleCancelar} disabled={!hasChanges()}>
                 Cancelar
               </button>
-              <button
-                className={styles.btnSalvar}
-                onClick={handleSalvar}
-                disabled={!hasChanges() || isSaving}
-              >
+              <button className={styles.btnSalvar} onClick={handleSalvar} disabled={!hasChanges() || isSaving}>
                 <Save size={16} />
                 {isSaving ? "Salvando..." : "Salvar Alterações"}
               </button>
@@ -578,10 +377,7 @@ export default function Permissoes() {
         <div className={styles.estadoVazio}>
           <UserCog />
           <h3>Selecione um usuário</h3>
-          <p>
-            Escolha um funcionário na lista ao lado para visualizar e
-            configurar suas permissões de acesso.
-          </p>
+          <p>Escolha um funcionário na lista ao lado para visualizar e configurar suas permissões de acesso.</p>
         </div>
       )}
     </div>

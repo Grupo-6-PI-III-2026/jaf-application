@@ -1,7 +1,5 @@
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useState,
   type ReactNode,
@@ -9,16 +7,7 @@ import {
 import { funcionarioService } from "../Service/Funcionarios/funcionarioService";
 import { authService } from "../Service/Auth/Login/authService";
 import type { FuncionarioResponseDto } from "../Types/user";
-
-interface UserContextValue {
-  user: FuncionarioResponseDto | null;
-  isLoading: boolean;
-  error: string | null;
-  refreshUser: () => Promise<void>;
-  clearUser: () => void;
-}
-
-const UserContext = createContext<UserContextValue | undefined>(undefined);
+import { UserContext } from "./UserContextDefinition";
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<FuncionarioResponseDto | null>(null);
@@ -63,12 +52,4 @@ export function UserProvider({ children }: { children: ReactNode }) {
       {children}
     </UserContext.Provider>
   );
-}
-
-export function useUser(): UserContextValue {
-  const ctx = useContext(UserContext);
-  if (!ctx) {
-    throw new Error("useUser deve ser usado dentro de <UserProvider>");
-  }
-  return ctx;
 }

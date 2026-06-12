@@ -32,4 +32,9 @@ export const obraService = {
     const response = await api.post("/obras", dto);
     return response.data;
   },
+
+  atualizar: async (id: number, dto: ObraCriarDto): Promise<Obra> => {
+    const response = await api.put(`/obras/${id}`, dto);
+    return response.data;
+  },
 };

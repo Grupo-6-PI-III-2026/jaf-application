@@ -56,7 +56,7 @@ public class FuncionarioController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('VISUALIZAR_FUNCIONARIOS')")
+    @PreAuthorize("hasAnyAuthority('VISUALIZAR_FUNCIONARIOS', 'CRIAR_ALOCACAO')")
     public ResponseEntity<List<FuncionarioListarDto>> listar() {
         return ResponseEntity.ok(funcionarioService.listarTodos());
     }

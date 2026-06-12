@@ -1,5 +1,5 @@
 import { Calendar, X } from "lucide-react";
-import { useMemo, useState, useEffect } from "react";
+import { useCallback, useMemo, useState, useEffect } from "react";
 import styles from "./ControlePresenca.module.css";
 import { presencaService } from "../../Service/Presencas/presencaService";
 import type { Colaborador } from "../../Service/Presencas/presencaService";
@@ -24,14 +24,7 @@ export default function ControlePresenca({
   const [carregando, setCarregando] = useState(false);
   const [salvando, setSalvando] = useState(false);
 
-  // Carregar colaboradores quando o modal abrir
-  useEffect(() => {
-    if (aberto && obraId && data) {
-      carregarColaboradores();
-    }
-  }, [aberto, obraId, data]);
-
-  async function carregarColaboradores() {
+  const carregarColaboradores = useCallback(async () => {
     if (!obraId || !data) return;
     
     try {
@@ -44,7 +37,14 @@ export default function ControlePresenca({
     } finally {
       setCarregando(false);
     }
-  }
+  }, [obraId, data]);
+
+  // Carregar colaboradores quando o modal abrir
+  useEffect(() => {
+    if (aberto && obraId && data) {
+      carregarColaboradores();
+    }
+  }, [aberto, obraId, data, carregarColaboradores]);
 
   const totalPresentes = useMemo(
     () => colaboradores.filter((colaborador) => colaborador.presente).length,

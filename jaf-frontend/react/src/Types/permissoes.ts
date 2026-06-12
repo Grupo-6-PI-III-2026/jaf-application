@@ -1,8 +1,10 @@
+import type { Cargo } from "./user";
+
 export interface FuncionarioPermissoes {
   id: number;
   nome: string;
   email: string;
-  cargo: string;
+  cargo: Cargo;
 }
 
 export interface Permissao {

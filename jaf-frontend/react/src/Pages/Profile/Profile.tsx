@@ -1,10 +1,11 @@
-import { useRef, useState } from "react";
-import { useUser } from "../../Context/UserContext";
+import { useState } from "react";
+import { useUser } from "../../Context/useUser";
 import { funcionarioService } from "../../Service/Funcionarios/funcionarioService";
 import { authService } from "../../Service/Auth/Login/authService";
 import {
   CargoLabel,
   DEFAULT_AVATAR_URL,
+  GENERIC_AVATARS,
   type AlterarSenhaDto,
 } from "../../Types/user";
 import styles from "./Profile.module.css";
@@ -117,14 +118,12 @@ type Tab = "info" | "seguranca" | "excluir";
 
 export default function Profile() {
   const { user, isLoading, refreshUser, clearUser, error } = useUser();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [activeTab, setActiveTab] = useState<Tab>("info");
   const [isEditing, setIsEditing] = useState(false);
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
-  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
-  const [fotoFile, setFotoFile] = useState<File | null>(null);
+  const [fotoSelecionada, setFotoSelecionada] = useState<string>(DEFAULT_AVATAR_URL);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -144,8 +143,7 @@ export default function Profile() {
     if (!user) return;
     setNome(user.nome);
     setEmail(user.email);
-    setFotoPreview(null);
-    setFotoFile(null);
+    setFotoSelecionada(user.fotoUrl || DEFAULT_AVATAR_URL);
     setSaveError(null);
     setSaveSuccess(false);
     setIsEditing(true);
@@ -156,19 +154,6 @@ export default function Profile() {
     setSaveError(null);
   };
 
-  const handleFotoClick = () => {
-    if (isEditing) fileInputRef.current?.click();
-  };
-
-  const handleFotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setFotoFile(file);
-    const reader = new FileReader();
-    reader.onload = (ev) => setFotoPreview(ev.target?.result as string);
-    reader.readAsDataURL(file);
-  };
-
   const handleSaveProfile = async () => {
     if (!user) return;
     setIsSaving(true);
@@ -176,13 +161,9 @@ export default function Profile() {
     setSaveSuccess(false);
 
     try {
-      let fotoUrl: string | null = user.fotoUrl;
+      const fotoUrl = fotoSelecionada || DEFAULT_AVATAR_URL;
       const emailChanged =
         email.trim().toLowerCase() !== user.email.toLowerCase();
-
-      if (fotoFile) {
-        fotoUrl = await funcionarioService.uploadFoto(fotoFile);
-      }
 
       await funcionarioService.atualizarPerfil({ nome, email, fotoUrl });
       if (emailChanged) {
@@ -250,7 +231,9 @@ export default function Profile() {
     }
   };
 
-  const avatarSrc = fotoPreview ?? user?.fotoUrl ?? DEFAULT_AVATAR_URL;
+  const avatarSrc = isEditing
+    ? fotoSelecionada
+    : user?.fotoUrl || DEFAULT_AVATAR_URL;
 
   if (isLoading) {
     return (
@@ -286,18 +269,7 @@ export default function Profile() {
         <aside className={styles.sideCard}>
           <div className={styles.avatarSection}>
             <div
-              className={`${styles.avatarWrapper} ${
-                isEditing ? styles.avatarEditable : ""
-              }`}
-              onClick={handleFotoClick}
-              role={isEditing ? "button" : undefined}
-              tabIndex={isEditing ? 0 : undefined}
-              onKeyDown={
-                isEditing
-                  ? (e) => e.key === "Enter" && handleFotoClick()
-                  : undefined
-              }
-              aria-label={isEditing ? "Alterar foto de perfil" : undefined}
+              className={styles.avatarWrapper}
             >
               {avatarSrc ? (
                 <img
@@ -310,19 +282,7 @@ export default function Profile() {
                   {user.nome.charAt(0).toUpperCase()}
                 </div>
               )}
-              {isEditing && (
-                <div className={styles.avatarEditOverlay}>
-                  <IconEdit />
-                </div>
-              )}
             </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className={styles.hiddenInput}
-              onChange={handleFotoChange}
-            />
             <h2 className={styles.userName}>{user.nome}</h2>
             <p className={styles.userCargo}>{CargoLabel[user.cargo]}</p>
           </div>
@@ -406,6 +366,29 @@ export default function Profile() {
               {saveSuccess && (
                 <div className={styles.alertSuccess}>
                   Perfil atualizado com sucesso!
+                </div>
+              )}
+
+              {isEditing && (
+                <div className={styles.formGroup}>
+                  <label className={styles.fieldLabel}>ICONE DE PERFIL</label>
+                  <div className={styles.avatarOptions}>
+                    {GENERIC_AVATARS.map((avatar) => (
+                      <button
+                        key={avatar.value}
+                        type="button"
+                        className={`${styles.avatarOption} ${
+                          fotoSelecionada === avatar.value
+                            ? styles.avatarOptionActive
+                            : ""
+                        }`}
+                        onClick={() => setFotoSelecionada(avatar.value)}
+                        aria-label={`Selecionar avatar ${avatar.label}`}
+                      >
+                        <img src={avatar.value} alt="" />
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 
