@@ -40,6 +40,20 @@ services:
       jaf-db:
         condition: service_healthy
 
+  backend-test:
+    build:
+      context: ./jaf-backend
+      target: build
+    container_name: jaf-backend-test
+    command: ./mvnw clean test
+    env_file:
+      - .env
+    environment:
+      JAVA_TOOL_OPTIONS: -Xms256m -Xmx512m
+    depends_on:
+      jaf-db:
+        condition: service_healthy
+
   frontend:
     build:
       context: ./jaf-frontend/react

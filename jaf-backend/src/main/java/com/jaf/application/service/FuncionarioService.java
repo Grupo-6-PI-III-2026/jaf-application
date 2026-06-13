@@ -15,6 +15,8 @@ import com.jaf.application.exceptions.NoContent;
 import com.jaf.application.exceptions.NotFoundException;
 import com.jaf.application.model.Funcionario;
 import com.jaf.application.repository.FuncionarioRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -27,6 +29,8 @@ import java.util.List;
 
 @Service
 public class FuncionarioService {
+    private static final Logger logger = LoggerFactory.getLogger(FuncionarioService.class);
+
     @Autowired
     private PasswordEncoder passwordEncoder;
 
@@ -40,12 +44,16 @@ public class FuncionarioService {
     private AuthenticationManager authenticationManager;
 
     public FuncionarioResponseDto criar(FuncionarioDto dto) {
+        logger.info("Tentando criar novo funcionário: {}", dto.getEmail());
+
         if (funcionarioRepository.existsByNome(dto.getNome())) {
+            logger.warn("Tentativa de criar funcionário com nome duplicado: {}", dto.getNome());
             throw new Conflict("Usuário já existe.");
         }
 
         funcionarioRepository.findByEmailIgnoreCase(dto.getEmail())
                 .ifPresent(f -> {
+                    logger.warn("Tentativa de criar funcionário com email duplicato: {}", dto.getEmail());
                     throw new Conflict("E-mail já cadastrado.");
                 });
 
@@ -56,6 +64,7 @@ public class FuncionarioService {
         novoFuncionario.setCargoGlobal(dto.getCargo());
 
         Funcionario salvo = funcionarioRepository.save(novoFuncionario);
+        logger.info("Funcionário criado com sucesso: ID={}, Email={}", salvo.getId(), salvo.getEmail());
         return new FuncionarioResponseDto(salvo);
     }
 
@@ -71,6 +80,8 @@ public class FuncionarioService {
     }
 
     public FuncionarioTokenDto autenticar(Funcionario funcionario) {
+        logger.info("Tentativa de autenticação: {}", funcionario.getEmail());
+
         UsernamePasswordAuthenticationToken credentials = new UsernamePasswordAuthenticationToken(
                 funcionario.getEmail(), funcionario.getSenha());
 
@@ -83,6 +94,7 @@ public class FuncionarioService {
 
         String token = gerenciadorTokenJwt.generateToken(authentication);
 
+        logger.info("Autenticação bem-sucedida: Email={}, Cargo={}", funcionarioAutenticado.getEmail(), funcionarioAutenticado.getCargoGlobal());
         return FuncionarioMapper.of(funcionarioAutenticado, token);
     }
 
@@ -137,18 +149,23 @@ public class FuncionarioService {
     }
 
     public void alterarSenha(String email, AlterarSenhaDto dto) {
+        logger.info("Tentativa de alteração de senha: {}", email);
+
         Funcionario existente = buscarPorEmail(email);
 
         if (!dto.getNovaSenha().equals(dto.getConfirmacaoSenha())) {
+            logger.warn("Alteração de senha falhou: senhas não conferem para o usuário {}", email);
             throw new BadRequest("Nova senha e confirmacao nao conferem.");
         }
 
         if (!passwordEncoder.matches(dto.getSenhaAtual(), existente.getSenha())) {
+            logger.warn("Alteração de senha falhou: senha atual inválida para o usuário {}", email);
             throw new Forbidden("Senha atual invalida.");
         }
 
         existente.setSenha(passwordEncoder.encode(dto.getNovaSenha()));
         funcionarioRepository.save(existente);
+        logger.info("Senha alterada com sucesso para o usuário: {}", email);
     }
 
     public void excluirConta(String email) {
