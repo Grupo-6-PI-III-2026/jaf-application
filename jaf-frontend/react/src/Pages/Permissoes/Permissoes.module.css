@@ -6,12 +6,17 @@
   background-color: #f5f5f5;
 }
 
-/* Painel esquerdo - Lista de usuários */
+.listaUsuarios,
+.perfilUsuario,
+.painelPermissoes,
+.estadoVazio {
+  background: #2d2d2d;
+  border-radius: 16px;
+}
+
 .listaUsuarios {
   width: 320px;
   min-width: 320px;
-  background: #1a1a2e;
-  border-radius: 12px;
   padding: 20px;
   display: flex;
   flex-direction: column;
@@ -24,13 +29,13 @@
   color: #fff;
   font-size: 16px;
   font-weight: 600;
-  margin: 0 0 4px 0;
+  margin: 0 0 4px;
 }
 
 .listaUsuarios p {
-  color: #aaa;
+  color: #adb5bd;
   font-size: 13px;
-  margin: 0 0 12px 0;
+  margin: 0 0 12px;
 }
 
 .buscaUsuarios {
@@ -42,8 +47,8 @@
   width: 100%;
   padding: 10px 12px 10px 36px;
   border-radius: 8px;
-  border: 1px solid #333;
-  background-color: #2a2a3e;
+  border: 1px solid #4d4d4d;
+  background-color: #3d3d3d;
   color: #fff;
   font-size: 14px;
   outline: none;
@@ -51,7 +56,7 @@
 }
 
 .buscaUsuarios input::placeholder {
-  color: #666;
+  color: #6c757d;
 }
 
 .buscaUsuarios input:focus {
@@ -63,7 +68,7 @@
   left: 10px;
   top: 50%;
   transform: translateY(-50%);
-  color: #666;
+  color: #6c757d;
   width: 16px;
   height: 16px;
 }
@@ -75,31 +80,36 @@
   padding: 12px;
   border-radius: 8px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, border-color 0.2s;
   border: 2px solid transparent;
 }
 
-.usuarioCard:hover {
-  background-color: #2a2a3e;
+.usuarioCard:hover,
+.usuarioCardAtivo {
+  background-color: #3d3d3d;
 }
 
 .usuarioCardAtivo {
-  background-color: #2a2a3e;
   border-color: #ffc107;
 }
 
-.avatarUsuario {
-  width: 40px;
-  height: 40px;
+.avatarUsuario,
+.avatarGrande {
   border-radius: 50%;
   background: linear-gradient(135deg, #ffc107, #ff9800);
   display: flex;
   align-items: center;
   justify-content: center;
+  font-weight: 700;
+  color: #212529;
+  flex-shrink: 0;
+}
+
+.avatarUsuario {
+  width: 40px;
+  height: 40px;
   font-size: 16px;
   font-weight: 600;
-  color: #1a1a2e;
-  flex-shrink: 0;
 }
 
 .infoUsuario {
@@ -118,7 +128,7 @@
 }
 
 .infoUsuario span {
-  color: #888;
+  color: #adb5bd;
   font-size: 12px;
 }
 
@@ -145,12 +155,9 @@
   color: #22c55e;
 }
 
-/* Painel central - Perfil do usuário */
 .perfilUsuario {
   width: 280px;
   min-width: 280px;
-  background: #1a1a2e;
-  border-radius: 12px;
   padding: 24px;
   display: flex;
   flex-direction: column;
@@ -162,14 +169,7 @@
 .avatarGrande {
   width: 80px;
   height: 80px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #ffc107, #ff9800);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   font-size: 28px;
-  font-weight: 700;
-  color: #1a1a2e;
   position: relative;
 }
 
@@ -181,7 +181,7 @@
   height: 14px;
   background-color: #22c55e;
   border-radius: 50%;
-  border: 3px solid #1a1a2e;
+  border: 3px solid #2d2d2d;
 }
 
 .perfilNome {
@@ -193,15 +193,15 @@
 }
 
 .perfilCargo {
-  color: #aaa;
+  color: #adb5bd;
   font-size: 13px;
-  margin: -8px 0 0 0;
+  margin: -8px 0 0;
 }
 
 .divider {
   width: 100%;
   height: 1px;
-  background: #333;
+  background: #4d4d4d;
   margin: 4px 0;
 }
 
@@ -216,22 +216,26 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #ccc;
+  color: #dee2e6;
   font-size: 13px;
 }
 
 .detalheItem svg {
   width: 16px;
   height: 16px;
-  color: #888;
+  color: #adb5bd;
   flex-shrink: 0;
+}
+
+.alertaImpacto,
+.avisoNovoLogin {
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  border-radius: 8px;
+  background: rgba(255, 193, 7, 0.08);
 }
 
 .alertaImpacto {
   width: 100%;
-  background: rgba(255, 193, 7, 0.08);
-  border: 1px solid rgba(255, 193, 7, 0.3);
-  border-radius: 8px;
   padding: 12px;
   display: flex;
   gap: 10px;
@@ -246,25 +250,24 @@
   margin-top: 2px;
 }
 
-.alertaImpacto div h4 {
+.alertaImpacto div h4,
+.avisoNovoLogin strong {
   color: #ffc107;
   font-size: 12px;
   font-weight: 600;
-  margin: 0 0 4px 0;
+  margin: 0 0 4px;
 }
 
-.alertaImpacto div p {
-  color: #aaa;
+.alertaImpacto div p,
+.avisoNovoLogin p {
+  color: #adb5bd;
   font-size: 11px;
   margin: 0;
   line-height: 1.4;
 }
 
-/* Painel direito - Configurações de Permissões */
 .painelPermissoes {
   flex: 1;
-  background: #1a1a2e;
-  border-radius: 12px;
   padding: 24px;
   overflow-y: auto;
   max-height: calc(100vh - 128px);
@@ -293,9 +296,9 @@
 }
 
 .headerPermissoes p {
-  color: #aaa;
+  color: #adb5bd;
   font-size: 13px;
-  margin: 4px 0 20px 0;
+  margin: 4px 0 20px;
 }
 
 .avisoNovoLogin {
@@ -304,24 +307,6 @@
   gap: 12px;
   max-width: 360px;
   padding: 10px 12px;
-  border: 1px solid rgba(255, 193, 7, 0.32);
-  border-radius: 8px;
-  background: rgba(255, 193, 7, 0.08);
-}
-
-.avisoNovoLogin strong {
-  display: block;
-  color: #ffc107;
-  font-size: 12px;
-  font-weight: 700;
-  margin-bottom: 2px;
-}
-
-.avisoNovoLogin p {
-  color: #c9c9d6;
-  font-size: 11px;
-  line-height: 1.35;
-  margin: 0;
 }
 
 .avisoToggle {
@@ -353,9 +338,9 @@
 .seletorCargo button {
   padding: 8px 16px;
   border-radius: 8px;
-  border: 1px solid #333;
-  background-color: #2a2a3e;
-  color: #ccc;
+  border: 1px solid #4d4d4d;
+  background-color: #3d3d3d;
+  color: #dee2e6;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -370,13 +355,13 @@
 .seletorCargoAtivo {
   background-color: #ffc107 !important;
   border-color: #ffc107 !important;
-  color: #1a1a2e !important;
+  color: #212529 !important;
   font-weight: 600 !important;
 }
 
 .moduloContainer {
   margin-bottom: 20px;
-  border: 1px solid #2a2a3e;
+  border: 1px solid #4d4d4d;
   border-radius: 10px;
   overflow: hidden;
 }
@@ -386,19 +371,24 @@
   align-items: center;
   justify-content: space-between;
   padding: 14px 16px;
-  background-color: #2a2a3e;
+  background-color: #3d3d3d;
   cursor: pointer;
   transition: background-color 0.2s;
 }
 
 .moduloHeader:hover {
-  background-color: #333;
+  background-color: #444;
 }
 
-.moduloHeaderEsquerda {
+.moduloHeaderEsquerda,
+.moduloHeaderDireita {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.moduloHeaderDireita {
+  gap: 12px;
 }
 
 .moduloHeaderEsquerda svg {
@@ -414,16 +404,10 @@
   margin: 0;
 }
 
-.moduloHeaderDireita {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
 .contadorPermissoes {
   font-size: 11px;
-  color: #888;
-  background: #1a1a2e;
+  color: #adb5bd;
+  background: #2d2d2d;
   padding: 3px 8px;
   border-radius: 10px;
 }
@@ -433,12 +417,12 @@
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #888;
+  color: #adb5bd;
   cursor: pointer;
 }
 
 .chevron {
-  color: #888;
+  color: #adb5bd;
   width: 16px;
   height: 16px;
   transition: transform 0.2s;
@@ -457,7 +441,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 14px 16px;
-  border-bottom: 1px solid #2a2a3e;
+  border-bottom: 1px solid #4d4d4d;
   transition: background-color 0.2s;
 }
 
@@ -477,39 +461,37 @@
   color: #fff;
   font-size: 13px;
   font-weight: 500;
-  margin: 0 0 3px 0;
+  margin: 0 0 3px;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
 .permissaoInfo p {
-  color: #888;
+  color: #adb5bd;
   font-size: 12px;
   margin: 0;
 }
 
-.badgeRestrito {
-  font-size: 9px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-weight: 700;
-  text-transform: uppercase;
-  background-color: rgba(251, 191, 36, 0.15);
-  color: #fbbf24;
-}
-
+.badgeRestrito,
 .badgeCritico {
   font-size: 9px;
   padding: 2px 6px;
   border-radius: 4px;
   font-weight: 700;
   text-transform: uppercase;
+}
+
+.badgeRestrito {
+  background-color: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+}
+
+.badgeCritico {
   background-color: rgba(239, 68, 68, 0.15);
   color: #ef4444;
 }
 
-/* Toggle Switch */
 .toggle {
   position: relative;
   width: 42px;
@@ -526,10 +508,7 @@
 .toggleSlider {
   position: absolute;
   cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background-color: #444;
   transition: 0.3s;
   border-radius: 24px;
@@ -560,26 +539,29 @@
   cursor: default;
 }
 
-/* Botões de ação */
 .acoes {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
   margin-top: 24px;
   padding-top: 20px;
-  border-top: 1px solid #2a2a3e;
+  border-top: 1px solid #4d4d4d;
+}
+
+.btnCancelar,
+.btnSalvar {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
 .btnCancelar {
-  padding: 10px 20px;
-  border-radius: 8px;
-  border: 1px solid #444;
+  border: 1px solid #4d4d4d;
   background-color: transparent;
-  color: #ccc;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
+  color: #dee2e6;
 }
 
 .btnCancelar:hover {
@@ -588,18 +570,12 @@
 }
 
 .btnSalvar {
-  padding: 10px 24px;
-  border-radius: 8px;
   border: none;
   background-color: #ffc107;
-  color: #1a1a2e;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
+  color: #212529;
   display: flex;
   align-items: center;
   gap: 8px;
-  transition: all 0.2s;
 }
 
 .btnSalvar:hover {
@@ -613,7 +589,6 @@
   transform: none;
 }
 
-/* Estado vazio */
 .estadoVazio {
   flex: 1;
   display: flex;
@@ -621,20 +596,18 @@
   align-items: center;
   justify-content: center;
   gap: 16px;
-  color: #888;
-  background: #1a1a2e;
-  border-radius: 12px;
+  color: #adb5bd;
   padding: 40px;
 }
 
 .estadoVazio svg {
   width: 48px;
   height: 48px;
-  color: #444;
+  color: #6c757d;
 }
 
 .estadoVazio h3 {
-  color: #ccc;
+  color: #dee2e6;
   font-size: 16px;
   margin: 0;
 }
@@ -645,17 +618,15 @@
   text-align: center;
 }
 
-/* Loading */
 .loading {
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 40px;
-  color: #888;
+  color: #adb5bd;
   font-size: 14px;
 }
 
-/* Responsividade */
 @media (max-width: 1200px) {
   .container {
     flex-direction: column;
