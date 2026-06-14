@@ -19,13 +19,7 @@ function Login() {
 
   const validateInputs = () => {
     if (!emailRegex.test(email)) return false;
-
-    const hasMinLength = password.length >= 8;
-    const hasUpper = /[A-Z]/.test(password);
-    const hasLower = /[a-z]/.test(password);
-    const hasSpecial = /[^A-Za-z0-9]/.test(password);
-
-    return hasMinLength && hasUpper && hasLower && hasSpecial;
+    return password.trim().length > 0;
   };
 
   const funcLogin = async (evento: React.MouseEvent) => {

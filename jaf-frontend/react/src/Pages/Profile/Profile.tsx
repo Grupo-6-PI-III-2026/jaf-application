@@ -190,6 +190,11 @@ export default function Profile() {
 
   const handleSaveProfile = async () => {
     if (!user) return;
+    if (fotoFile) {
+      setSaveError("Envie a foto selecionada antes de salvar o perfil.");
+      return;
+    }
+
     setIsSaving(true);
     setSaveError(null);
     setSaveSuccess(false);
@@ -484,7 +489,7 @@ export default function Profile() {
                               await funcionarioService.atualizarPerfil({ nome: user.nome, email: user.email, fotoUrl: null });
                               await refreshUser();
                               toast.success("Foto removida com sucesso!");
-                            } catch (error) {
+                            } catch {
                               toast.error("Erro ao remover foto");
                             }
                           }}

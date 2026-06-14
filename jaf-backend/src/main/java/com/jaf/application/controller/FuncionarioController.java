@@ -5,8 +5,11 @@ import com.jaf.application.dto.FuncionarioDto;
 import com.jaf.application.dto.FuncionarioListarDto;
 import com.jaf.application.dto.FuncionarioLoginDto;
 import com.jaf.application.dto.FuncionarioResponseDto;
+import com.jaf.application.dto.AtualizarCargoPermissoesDto;
+import com.jaf.application.dto.FuncionarioPermissoesAcessoDto;
 import com.jaf.application.repository.FuncionarioRepository;
 import com.jaf.application.dto.FuncionarioTokenDto;
+import com.jaf.application.service.FuncionarioPermissaoService;
 import com.jaf.application.service.FuncionarioService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -26,14 +29,17 @@ import java.util.List;
 @SecurityRequirement(name = "Bearer")
 public class FuncionarioController {
     private final FuncionarioService funcionarioService;
+    private final FuncionarioPermissaoService funcionarioPermissaoService;
     private final AuthenticationManager authenticationManager;
     private final GerenciadorTokenJwt gerenciadorTokenJwt;
 
     public FuncionarioController(
             FuncionarioService funcionarioService,
+            FuncionarioPermissaoService funcionarioPermissaoService,
             AuthenticationManager authenticationManager,
             GerenciadorTokenJwt gerenciadorTokenJwt) {
         this.funcionarioService = funcionarioService;
+        this.funcionarioPermissaoService = funcionarioPermissaoService;
         this.authenticationManager = authenticationManager;
         this.gerenciadorTokenJwt = gerenciadorTokenJwt;
     }
@@ -87,5 +93,19 @@ public class FuncionarioController {
             @RequestBody java.util.Map<String, String> body) {
         String novoCargo = body.get("cargo");
         return ResponseEntity.ok(funcionarioService.atualizarCargo(id, novoCargo));
+    }
+
+    @GetMapping("/{id}/permissoes")
+    @PreAuthorize("hasAuthority('EDITAR_FUNCIONARIO')")
+    public ResponseEntity<FuncionarioPermissoesAcessoDto> buscarPermissoes(@PathVariable Long id) {
+        return ResponseEntity.ok(funcionarioPermissaoService.buscar(id));
+    }
+
+    @PutMapping("/{id}/permissoes")
+    @PreAuthorize("hasAuthority('EDITAR_FUNCIONARIO')")
+    public ResponseEntity<FuncionarioPermissoesAcessoDto> atualizarPermissoes(
+            @PathVariable Long id,
+            @RequestBody AtualizarCargoPermissoesDto dto) {
+        return ResponseEntity.ok(funcionarioPermissaoService.atualizar(id, dto.getPermissoes()));
     }
 }

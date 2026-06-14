@@ -49,7 +49,7 @@ public class DashboardService {
         int progressoSaldo = calcularPercentual(totalGastosObra, orcamento);
 
         // StatCard 2: reembolsos pendentes (escopo da obra inteira)
-        List<Gasto> reembolsos = gastoRepository.findByObraIdAndMetodoPagamento(obraId, "REEMBOLSO");
+        List<Gasto> reembolsos = gastoRepository.findByObraIdAndReembolsoConcluidoIsNotNull(obraId);
 
         BigDecimal reembolsosPendentes = reembolsos.stream()
                 .filter(g -> !Boolean.TRUE.equals(g.getReembolsoConcluido()))
@@ -81,7 +81,7 @@ public class DashboardService {
         if (reembolsos.isEmpty()) {
             return List.of(
                     new DashboardResponseDto.PieItemDto("Concluídos", 0),
-                    new DashboardResponseDto.PieItemDto("Pendentes", 100)
+                    new DashboardResponseDto.PieItemDto("Pendentes", 0)
             );
         }
         long total = reembolsos.size();

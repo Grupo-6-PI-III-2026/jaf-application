@@ -1,4 +1,5 @@
 import {
+  CalendarCheck,
   Pickaxe,
   Settings,
   Bell,
@@ -12,13 +13,28 @@ import { useUser } from "../../../Context/useUser";
 import { CargoLabel, DEFAULT_AVATAR_URL } from "../../../Types/user";
 import { authService } from "../../../Service/Auth/Login/authService";
 
-// Vetor com os itens do menu da sidebar
-const menuItems = [
-  { icon: Pickaxe, label: "Obras", path: "/home" },
-  { icon: HardHat, label: "Nova Obra", path: "/obras/criar", permissao: "CRIAR_OBRA" },
-  { icon: UserPlus, label: "Novo Funcionário", path: "/funcionarios/novo", permissao: "CRIAR_FUNCIONARIO" },
-  { icon: Shield, label: "Permissões", path: "/permissoes", permissao: "EDITAR_FUNCIONARIO" },
-  { icon: Settings, label: "Configurações", path: "/perfil" },
+const menuSections = [
+  {
+    title: "Operação",
+    items: [
+      { icon: Pickaxe, label: "Obras", path: "/home" },
+      { icon: CalendarCheck, label: "Presenças", path: "/presencas", permissao: "VISUALIZAR_PRESENCAS" },
+    ],
+  },
+  {
+    title: "Administração",
+    items: [
+      { icon: HardHat, label: "Nova Obra", path: "/obras/criar", permissao: "CRIAR_OBRA" },
+      { icon: UserPlus, label: "Novo Usuário", path: "/funcionarios/novo", permissao: "CRIAR_FUNCIONARIO" },
+      { icon: Shield, label: "Perfis de Acesso", path: "/permissoes", permissao: "EDITAR_FUNCIONARIO" },
+    ],
+  },
+  {
+    title: "Conta",
+    items: [
+      { icon: Settings, label: "Perfil", path: "/perfil" },
+    ],
+  },
 ];
 
 export function Sidebar() {
@@ -26,9 +42,12 @@ export function Sidebar() {
   const avatarUrl = user?.fotoUrl || DEFAULT_AVATAR_URL;
   const userName = user?.nome ?? "Usuario";
   const userCargo = user ? CargoLabel[user.cargo] : "Sem cargo";
-  const visibleMenuItems = menuItems.filter(
-    (item) => !item.permissao || authService.hasAuthority(item.permissao)
-  );
+  const visibleMenuSections = menuSections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => !item.permissao || authService.hasAuthority(item.permissao)),
+    }))
+    .filter((section) => section.items.length > 0);
 
   return (
     <div className={styles.sidebar}>
@@ -46,12 +65,17 @@ export function Sidebar() {
       </div>
       {/* Menu de navegação */}
       <div className={styles.nav}>
-        {visibleMenuItems.map((item) => (
-          <div key={item.label} className={styles.menuItem}>
-            <NavLink to={item.path}>
-              <item.icon />
-              <span>{item.label}</span>
-            </NavLink>
+        {visibleMenuSections.map((section) => (
+          <div key={section.title} className={styles.navSection}>
+            <span className={styles.navSectionTitle}>{section.title}</span>
+            {section.items.map((item) => (
+              <div key={item.label} className={styles.menuItem}>
+                <NavLink to={item.path}>
+                  <item.icon />
+                  <span>{item.label}</span>
+                </NavLink>
+              </div>
+            ))}
           </div>
         ))}
       </div>

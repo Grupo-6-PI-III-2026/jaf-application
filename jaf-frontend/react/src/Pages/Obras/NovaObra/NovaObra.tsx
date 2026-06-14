@@ -13,6 +13,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import styles from "./NovaObra.module.css";
 import { obraService, type ObraCriarDto } from "../../../Service/Obras/obraService";
+import { toast } from "sonner";
 
 interface ErrosFormulario {
   nomeObra?: string;
@@ -41,10 +42,10 @@ const ESTADOS = [
 ];
 
 const STATUS_OPCOES = [
-  { label: "Em Planejamento", value: "PLANEJAMENTO" },
+  { label: "Planejada", value: "PLANEJADA" },
   { label: "Em Andamento", value: "EM_ANDAMENTO" },
-  { label: "Pausada", value: "PAUSADA" },
   { label: "Concluída", value: "CONCLUIDA" },
+  { label: "Cancelada", value: "CANCELADA" },
 ];
 
 export default function NovaObra() {
@@ -55,7 +56,7 @@ export default function NovaObra() {
   const [arquivos, setArquivos] = useState<ArquivoUpload[]>([]);
 
   const [nomeObra, setNomeObra] = useState("");
-  const [status, setStatus] = useState("PLANEJAMENTO");
+  const [status, setStatus] = useState("PLANEJADA");
   const [responsavel, setResponsavel] = useState("");
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
@@ -71,10 +72,6 @@ export default function NovaObra() {
       nextErrors.nomeObra = "O nome da obra é obrigatório.";
     }
 
-    if (!responsavel.trim()) {
-      nextErrors.responsavel = "Selecione um responsável.";
-    }
-
     if (!dataInicio) {
       nextErrors.dataInicio = "A data de início é obrigatória.";
     }
@@ -85,18 +82,6 @@ export default function NovaObra() {
 
     if (dataInicio && dataFim && new Date(dataInicio) > new Date(dataFim)) {
       nextErrors.dataFim = "A data de término deve ser após a data de início.";
-    }
-
-    if (!endereco.trim()) {
-      nextErrors.endereco = "O endereço é obrigatório.";
-    }
-
-    if (!cidade.trim()) {
-      nextErrors.cidade = "A cidade é obrigatória.";
-    }
-
-    if (!estado) {
-      nextErrors.estado = "Selecione um estado.";
     }
 
     if (!orcamento.trim()) {
@@ -156,12 +141,11 @@ export default function NovaObra() {
       
       const obraCriada = await obraService.criar(obraDto);
       
-      console.log("Obra criada com sucesso:", obraCriada);
-      alert(`Obra "${obraCriada.titulo}" criada com sucesso!`);
+      toast.success(`Obra "${obraCriada.titulo}" criada com sucesso!`);
       
       // Limpar formulário
       setNomeObra("");
-      setStatus("PLANEJAMENTO");
+      setStatus("PLANEJADA");
       setResponsavel("");
       setDataInicio("");
       setDataFim("");
@@ -178,14 +162,14 @@ export default function NovaObra() {
       console.error("Erro ao criar obra:", error);
       
       if (isAxiosError<{ message?: string }>(error) && error.response?.data?.message) {
-        alert(`Erro: ${error.response.data.message}`);
+        toast.error(error.response.data.message);
       } else if (isAxiosError(error) && error.response?.status === 401) {
-        alert("Sessão expirada. Faça login novamente.");
+        toast.error("Sessão expirada. Faça login novamente.");
         navigate("/");
       } else if (isAxiosError(error) && error.response?.status === 403) {
-        alert("Você não tem permissão para criar obras. Apenas ADMINs podem criar obras.");
+        toast.error("Você não tem permissão para criar obras.");
       } else {
-        alert("Falha ao criar obra. Tente novamente.");
+        toast.error("Falha ao criar obra. Tente novamente.");
       }
     } finally {
       setIsLoading(false);
@@ -277,7 +261,7 @@ export default function NovaObra() {
                       <User size={18} className={styles.icone} />
                       <input
                         type="text"
-                        placeholder="Ex: Rafael Pereira"
+                        placeholder="Ex: Carlos Almeida"
                         value={responsavel}
                         onChange={(e) => {
                           setResponsavel(e.target.value);

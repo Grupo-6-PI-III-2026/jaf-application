@@ -32,6 +32,8 @@ public class GastoDto {
     @NotNull(message = "A obra é obrigatória")
     private Long obraId;
 
+    private Boolean reembolsoConcluido;
+
     public String getDescricao() {
         return descricao;
     }
@@ -94,5 +96,13 @@ public class GastoDto {
 
     public void setObraId(Long obraId) {
         this.obraId = obraId;
+    }
+
+    public Boolean getReembolsoConcluido() {
+        return reembolsoConcluido;
+    }
+
+    public void setReembolsoConcluido(Boolean reembolsoConcluido) {
+        this.reembolsoConcluido = reembolsoConcluido;
     }
 }

@@ -16,6 +16,7 @@ export interface Gasto {
   valor: number;
   dtGasto: string;
   funcionario: Funcionario;
+  reembolsoConcluido: boolean | null;
   obra: {
     id: number;
     titulo: string;
@@ -31,6 +32,7 @@ export interface GastoCriarDto {
   dtGasto: string;
   funcionarioId: number;
   obraId: number;
+  reembolsoConcluido?: boolean | null;
 }
 
 export const gastoService = {

@@ -14,7 +14,6 @@ import { obraService, type Obra } from "../../Service/Obras/obraService";
 import { alocacaoService, type AlocacaoObra } from "../../Service/Alocacoes/alocacaoService";
 import { funcionarioService } from "../../Service/Funcionarios/funcionarioService";
 import type { FuncionarioPermissoes } from "../../Types/permissoes";
-import { CargoLabel, type Cargo } from "../../Types/user";
 import { toast } from "sonner";
 
 const IMAGEM_PLACEHOLDER =
@@ -33,8 +32,22 @@ const getIniciais = (nome: string) => {
   return nome.substring(0, 2).toUpperCase();
 };
 
+const CARGO_LABELS: Record<string, string> = {
+  ADMIN: "Administrador",
+  RESPONSAVEL_ADMINISTRATIVO: "Responsável Administrativo",
+  ENGENHEIRO: "Engenheiro",
+  GESTOR_OBRA: "Gestor de Obra",
+  ARQUITETO: "Arquiteto",
+  MESTRE_DE_OBRAS: "Mestre de Obras",
+  OPERADOR_LANCAMENTO: "Operador de Lançamento",
+  PEDREIRO: "Pedreiro",
+  PINTOR: "Pintor",
+  MARCENEIRO: "Marceneiro",
+  GESSEIRO: "Gesseiro",
+};
+
 const cargoLabel = (cargo: string | null | undefined) =>
-  cargo ? (CargoLabel[cargo as Cargo] ?? cargo.replace(/_/g, " ")) : "Não definido";
+  cargo ? (CARGO_LABELS[cargo] ?? cargo.replace(/_/g, " ")) : "Não definido";
 
 const cores = ["#6C63FF", "#FF6584", "#43B89C", "#ffc107", "#9c27b0"];
 
@@ -43,8 +56,10 @@ const cargosObra = [
   { value: "ENGENHEIRO", label: "Engenheiro" },
   { value: "ARQUITETO", label: "Arquiteto" },
   { value: "MESTRE_DE_OBRAS", label: "Mestre de Obras" },
-  { value: "OPERADOR_LANCAMENTO", label: "Operador de Lançamento" },
   { value: "PEDREIRO", label: "Pedreiro" },
+  { value: "PINTOR", label: "Pintor" },
+  { value: "MARCENEIRO", label: "Marceneiro" },
+  { value: "GESSEIRO", label: "Gesseiro" },
 ];
 
 export default function AlocacaoFuncionario() {
@@ -54,7 +69,7 @@ export default function AlocacaoFuncionario() {
   const [modalAberto, setModalAberto] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [funcionarios, setFuncionarios] = useState<FuncionarioPermissoes[]>([]);
-  const [novaAlocacao, setNovaAlocacao] = useState({ funcionarioId: "", cargoNaObra: "OPERADOR_LANCAMENTO" });
+  const [novaAlocacao, setNovaAlocacao] = useState({ funcionarioId: "", cargoNaObra: "PEDREIRO" });
   const [obra, setObra] = useState<Obra | null>(null);
   const [alocacoes, setAlocacoes] = useState<AlocacaoObra[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -149,7 +164,7 @@ export default function AlocacaoFuncionario() {
         cargoNaObra: novaAlocacao.cargoNaObra,
       });
       await carregarAlocacoes();
-      setNovaAlocacao({ funcionarioId: "", cargoNaObra: "OPERADOR_LANCAMENTO" });
+      setNovaAlocacao({ funcionarioId: "", cargoNaObra: "PEDREIRO" });
       setModalAberto(false);
       toast.success("Funcionário alocado com sucesso");
     } catch (error) {
@@ -206,7 +221,7 @@ export default function AlocacaoFuncionario() {
             </header>
             <div className={styles.modalGrid}>
               <label>
-                Funcionário
+                Colaborador operacional
                 <select value={novaAlocacao.funcionarioId} onChange={(evento) => setNovaAlocacao((valorAtual) => ({ ...valorAtual, funcionarioId: evento.target.value }))} required>
                   <option value="" disabled>Selecione</option>
                   {funcionariosDisponiveis.map((funcionario) => (
@@ -220,7 +235,7 @@ export default function AlocacaoFuncionario() {
                 )}
               </label>
               <label>
-                Cargo na obra
+                Função na obra
                 <select value={novaAlocacao.cargoNaObra} onChange={(evento) => setNovaAlocacao((valorAtual) => ({ ...valorAtual, cargoNaObra: evento.target.value }))}>
                   {cargosObra.map((cargo) => (
                     <option key={cargo.value} value={cargo.value}>{cargo.label}</option>
@@ -262,13 +277,13 @@ export default function AlocacaoFuncionario() {
               {obra.titulo}
             </span>
             <span className={styles.separador}>›</span>
-            <span className={styles.navegacaoAtivo}>Alocações de funcionários</span>
+            <span className={styles.navegacaoAtivo}>Alocações de colaboradores</span>
           </span>
         </div>
         <div className={styles.cabecalhoAcoes}>
           <button className={styles.botaoAdicionarGasto} onClick={abrirModalAlocacao}>
             <UserCheck size={16} />
-            Alocar funcionário
+            Alocar colaborador
           </button>
         </div>
       </div>
@@ -327,7 +342,7 @@ export default function AlocacaoFuncionario() {
       {/* Seção status da equipe */}
       <div className={styles.secaoEquipe}>
         <div className={styles.equipeTopo}>
-          <h2 className={styles.equipeTitulo}>Status da equipe ativa</h2>
+          <h2 className={styles.equipeTitulo}>Equipe operacional ativa</h2>
           <div className={styles.equipeControles}>
             <div className={styles.campoBusca}>
               <Search size={15} className={styles.iconeBusca} />
@@ -348,8 +363,8 @@ export default function AlocacaoFuncionario() {
             <thead>
               <tr>
                 <th>NOME</th>
-                <th>FUNÇÃO GLOBAL</th>
-                <th>CARGO NA OBRA</th>
+                <th>PERFIL NO SISTEMA</th>
+                <th>FUNÇÃO NA OBRA</th>
               </tr>
             </thead>
             <tbody>

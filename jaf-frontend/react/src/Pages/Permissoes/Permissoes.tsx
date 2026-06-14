@@ -100,22 +100,14 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
 
 const CARGO_LABELS: Record<Cargo, string> = {
   ADMIN: "Administrador",
-  GESTOR_OBRA: "Gestor de Obras",
-  OPERADOR_LANCAMENTO: "Operador de Lançamento",
-  MESTRE_DE_OBRAS: "Mestre de Obras",
+  RESPONSAVEL_ADMINISTRATIVO: "Responsável Administrativo",
   ENGENHEIRO: "Engenheiro",
-  ARQUITETO: "Arquiteto",
-  PEDREIRO: "Pedreiro",
 };
 
 const CARGO_BADGES: Record<Cargo, string> = {
   ADMIN: "ADM",
-  GESTOR_OBRA: "GES",
-  OPERADOR_LANCAMENTO: "OPR",
-  MESTRE_DE_OBRAS: "MST",
+  RESPONSAVEL_ADMINISTRATIVO: "RA",
   ENGENHEIRO: "ENG",
-  ARQUITETO: "ARQ",
-  PEDREIRO: "PED",
 };
 
 const CARGOS = Object.keys(CARGO_LABELS) as Cargo[];
@@ -124,7 +116,9 @@ export default function Permissoes() {
   const [funcionarios, setFuncionarios] = useState<FuncionarioPermissoes[]>([]);
   const [selectedUser, setSelectedUser] = useState<FuncionarioPermissoes | null>(null);
   const [busca, setBusca] = useState("");
+  const [permissoesPorCargo, setPermissoesPorCargo] = useState<Record<Cargo, string[]>>(permissaoService.getMapaPadraoPermissoes());
   const [permissoesAtivas, setPermissoesAtivas] = useState<Set<string>>(new Set());
+  const [permissoesOriginais, setPermissoesOriginais] = useState<Set<string>>(new Set());
   const [cargoSelecionado, setCargoSelecionado] = useState<Cargo | null>(null);
   const [modulosAbertos, setModulosAbertos] = useState<Set<string>>(new Set(["obras"]));
   const [isLoading, setIsLoading] = useState(true);
@@ -133,8 +127,12 @@ export default function Permissoes() {
   const carregarFuncionarios = useCallback(async () => {
     try {
       setIsLoading(true);
-      const data = await permissaoService.listarFuncionarios();
+      const [data, mapaPermissoes] = await Promise.all([
+        permissaoService.listarFuncionarios(),
+        permissaoService.listarPermissoesPorCargo(),
+      ]);
       setFuncionarios(data);
+      setPermissoesPorCargo(mapaPermissoes);
     } catch {
       toast.error("Erro ao carregar funcionários");
     } finally {
@@ -146,15 +144,40 @@ export default function Permissoes() {
     carregarFuncionarios();
   }, [carregarFuncionarios]);
 
-  const selecionarUsuario = useCallback((user: FuncionarioPermissoes) => {
+  const selecionarUsuario = useCallback(async (user: FuncionarioPermissoes) => {
     setSelectedUser(user);
     setCargoSelecionado(user.cargo);
-    setPermissoesAtivas(new Set(user.cargo ? permissaoService.getPermissoesPorCargo(user.cargo) : []));
-  }, []);
+    const fallback = user.cargo ? permissoesPorCargo[user.cargo] ?? [] : [];
+    setPermissoesAtivas(new Set(fallback));
+    setPermissoesOriginais(new Set(fallback));
+
+    try {
+      const acesso = await permissaoService.buscarPermissoesFuncionario(user.id);
+      setPermissoesAtivas(new Set(acesso.permissoes));
+      setPermissoesOriginais(new Set(acesso.permissoes));
+    } catch (error) {
+      console.error("Erro ao carregar permissões do usuário:", error);
+      toast.error("Erro ao carregar permissões do usuário");
+    }
+  }, [permissoesPorCargo]);
 
   const handleCargoChange = (cargo: Cargo) => {
     setCargoSelecionado(cargo);
-    setPermissoesAtivas(new Set(permissaoService.getPermissoesPorCargo(cargo)));
+    const permissoes = permissoesPorCargo[cargo] ?? [];
+    setPermissoesAtivas(new Set(permissoes));
+    setPermissoesOriginais(new Set(permissoes));
+  };
+
+  const togglePermissao = (permissao: string) => {
+    setPermissoesAtivas((prev) => {
+      const next = new Set(prev);
+      if (next.has(permissao)) {
+        next.delete(permissao);
+      } else {
+        next.add(permissao);
+      }
+      return next;
+    });
   };
 
   const toggleModulo = (moduloId: string) => {
@@ -171,7 +194,10 @@ export default function Permissoes() {
 
   const hasChanges = (): boolean => {
     if (!selectedUser || !cargoSelecionado) return false;
-    return cargoSelecionado !== selectedUser.cargo;
+    if (cargoSelecionado !== selectedUser.cargo) return true;
+
+    if (permissoesAtivas.size !== permissoesOriginais.size) return true;
+    return [...permissoesAtivas].some((permissao) => !permissoesOriginais.has(permissao));
   };
 
   const handleSalvar = async () => {
@@ -179,8 +205,22 @@ export default function Permissoes() {
 
     try {
       setIsSaving(true);
-      await permissaoService.atualizarCargo(selectedUser.id, cargoSelecionado);
-      toast.success(`Cargo de ${selectedUser.nome} atualizado com sucesso!`);
+      const deveAtualizarCargo = cargoSelecionado !== selectedUser.cargo;
+      const deveAtualizarPermissoes = deveAtualizarCargo || (
+        permissoesAtivas.size !== permissoesOriginais.size ||
+        [...permissoesAtivas].some((permissao) => !permissoesOriginais.has(permissao))
+      );
+
+      if (deveAtualizarCargo) {
+        await permissaoService.atualizarCargo(selectedUser.id, cargoSelecionado);
+      }
+
+      if (deveAtualizarPermissoes) {
+        const atualizado = await permissaoService.atualizarPermissoesFuncionario(selectedUser.id, [...permissoesAtivas]);
+        setPermissoesOriginais(new Set(atualizado.permissoes));
+      }
+
+      toast.success("Permissões atualizadas com sucesso. O novo acesso entra no próximo login.");
 
       setFuncionarios((prev) =>
         prev.map((funcionario) =>
@@ -220,8 +260,8 @@ export default function Permissoes() {
   return (
     <div className={styles.container}>
       <div className={styles.listaUsuarios}>
-        <h2>Gerenciar Permissões</h2>
-        <p>Selecione um usuário para configurar</p>
+        <h2>Perfis de acesso</h2>
+        <p>Admin, responsável administrativo e engenheiro</p>
 
         <div className={styles.buscaUsuarios}>
           <Search />
@@ -252,7 +292,7 @@ export default function Permissoes() {
                   className={`${styles.badgeCargo} ${
                     user.cargo === "ADMIN"
                       ? styles.badgeAdmin
-                      : user.cargo === "GESTOR_OBRA"
+                      : user.cargo === "RESPONSAVEL_ADMINISTRATIVO"
                         ? styles.badgeGestor
                         : styles.badgeOperador
                   }`}
@@ -295,8 +335,8 @@ export default function Permissoes() {
             <div className={styles.alertaImpacto}>
               <Info />
               <div>
-                <h4>Impacto das Permissões</h4>
-                <p>O acesso é herdado do cargo. Alterações salvas entram em vigor no próximo login do colaborador.</p>
+                <h4>Perfil do sistema</h4>
+                <p>Funções como pintor, pedreiro e marceneiro ficam na alocação da obra. Aqui o admin ajusta o acesso real deste usuário.</p>
               </div>
             </div>
           </div>
@@ -308,7 +348,16 @@ export default function Permissoes() {
                   <Shield />
                   Configurações de Acesso
                 </h2>
-                <p>Revise os acessos concedidos pela role selecionada.</p>
+                <p>Marque ou remova permissões conforme a necessidade deste usuário.</p>
+              </div>
+              <div className={styles.avisoNovoLogin} title="As permissões são enviadas no token de acesso do usuário.">
+                <span className={styles.avisoToggle} aria-hidden="true">
+                  <span></span>
+                </span>
+                <div>
+                  <strong>Aplicação no próximo login</strong>
+                  <p>Depois de salvar, o usuário precisa entrar novamente para receber as novas permissões.</p>
+                </div>
               </div>
             </div>
 
@@ -355,7 +404,11 @@ export default function Permissoes() {
                             <p>{permissao.descricao}</p>
                           </div>
                           <label className={styles.toggle}>
-                            <input type="checkbox" checked={permissoesAtivas.has(permissao.chave)} disabled readOnly />
+                            <input
+                              type="checkbox"
+                              checked={permissoesAtivas.has(permissao.chave)}
+                              onChange={() => togglePermissao(permissao.chave)}
+                            />
                             <span className={styles.toggleSlider}></span>
                           </label>
                         </div>

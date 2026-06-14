@@ -63,6 +63,10 @@ export default function Home() {
   ).length;
 
   const totalGasto = gastos.reduce((total, gasto) => total + gasto.valor, 0);
+  const totalGastoPorObra = new Map<number, number>();
+  gastos.forEach((gasto) => {
+    totalGastoPorObra.set(gasto.obra.id, (totalGastoPorObra.get(gasto.obra.id) ?? 0) + gasto.valor);
+  });
 
   // Pegar as obras mais recentes (últimas 2)
   const obrasRecentes = obras
@@ -128,8 +132,8 @@ export default function Home() {
                     key={obra.id}
                     id={obra.id}
                     nome={obra.titulo}
-                    local={obra.status}
-                    valor={parseFloat(obra.orcamento) || 0}
+                    status={obra.status}
+                    valor={totalGastoPorObra.get(obra.id) ?? 0}
                     imagem={imagensObras[index % imagensObras.length]}
                   />
                 ))

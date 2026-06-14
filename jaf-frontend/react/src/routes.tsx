@@ -10,6 +10,7 @@ import PrivateRoute from "./Components/PrivateRoute/PrivateRoute";
 import Profile from "./Pages/Profile/Profile";
 import AlocacaoFuncionario from "./Pages/Alocacoes/AlocacaoFuncionario";
 import Dashboard from "./Pages/Dashboard/Dashboard";
+import GestaoPresenca from "./Pages/ControlePresenca/GestaoPresenca";
 
 export const AppRoutes = () => {
   return (
@@ -37,9 +38,24 @@ export const AppRoutes = () => {
           />
           <Route path="/obras/detalhamento" element={<DetalhamentoObras />} />
           <Route path="/obras/detalhamento/:id" element={<DetalhamentoObras />} />
-          <Route path="/obras/detalhamento/:id/financeiro" element={<Dashboard />} />
+          <Route
+            path="/obras/detalhamento/:id/financeiro"
+            element={
+              <PrivateRoute requiredPermission="VISUALIZAR_GASTOS">
+                <Dashboard />
+              </PrivateRoute>
+            }
+          />
           <Route path="/financeiro" element={<Navigate to="/home" replace />} />
           <Route path="/relatorios" element={<Navigate to="/home" replace />} />
+          <Route
+            path="/presencas"
+            element={
+              <PrivateRoute requiredPermission="VISUALIZAR_PRESENCAS">
+                <GestaoPresenca />
+              </PrivateRoute>
+            }
+          />
           <Route
             path="/obras/criar"
             element={

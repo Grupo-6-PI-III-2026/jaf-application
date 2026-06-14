@@ -1,13 +1,16 @@
 import { Pencil, MapPin, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import styles from "./CardObra.module.css";
+import { authService } from "../../Service/Auth/Login/authService";
 
 type Props = {
   id?: number;
   nome: string;
-  local: string;
+  status: string;
   valor: number;
   imagem: string;
+  responsavelNome?: string;
+  responsavelCargo?: string;
 };
 
 const formatarMoeda = (valor: number) =>
@@ -16,8 +19,19 @@ const formatarMoeda = (valor: number) =>
     currency: "BRL",
   });
 
-export default function CardObra({ id, nome, local, valor, imagem }: Props) {
+const formatarStatus = (status: string) => status.replace(/_/g, " ");
+
+const getIniciais = (nome: string) => {
+  const partes = nome.trim().split(/\s+/);
+  return partes.length > 1
+    ? `${partes[0][0]}${partes[1][0]}`.toUpperCase()
+    : nome.substring(0, 2).toUpperCase();
+};
+
+export default function CardObra({ id, nome, status, valor, imagem, responsavelNome, responsavelCargo }: Props) {
   const navigate = useNavigate();
+  const podeEditarObra = authService.hasAuthority("EDITAR_OBRA");
+  const podeVisualizarAlocacoes = authService.hasAuthority("VISUALIZAR_ALOCACOES");
 
   return (
     <div className={styles.card}>
@@ -32,15 +46,17 @@ export default function CardObra({ id, nome, local, valor, imagem }: Props) {
 
         {/* TOPO */}
         <div className={styles.topo}>
-          <span className={styles.status}>EM PROGRESSO</span>
+          <span className={styles.status}>{formatarStatus(status)}</span>
 
-          <button
-            className={styles.botaoEditar}
-            onClick={() => navigate(id ? `/obras/detalhamento/${id}?editar=1` : "/obras/detalhamento?editar=1")}
-            aria-label="Editar obra"
-          >
-            <Pencil size={16} />
-          </button>
+          {podeEditarObra && (
+            <button
+              className={styles.botaoEditar}
+              onClick={() => navigate(id ? `/obras/detalhamento/${id}?editar=1` : "/obras/detalhamento?editar=1")}
+              aria-label="Editar obra"
+            >
+              <Pencil size={16} />
+            </button>
+          )}
         </div>
 
         {/* TITULO */}
@@ -48,7 +64,7 @@ export default function CardObra({ id, nome, local, valor, imagem }: Props) {
 
         <div className={styles.local}>
           <MapPin size={14} />
-          {local}
+          {formatarStatus(status)}
         </div>
 
         {/* RESPONSÁVEL */}
@@ -56,15 +72,17 @@ export default function CardObra({ id, nome, local, valor, imagem }: Props) {
           <span className={styles.label}>FUNCIONÁRIO RESPONSÁVEL</span>
 
           <div className={styles.responsavel}>
-            <div className={styles.avatar}>RP</div>
+            <div className={styles.avatar}>{responsavelNome ? getIniciais(responsavelNome) : "--"}</div>
             <div>
-              <span className={styles.nome}>Rafael Pereira</span>
-              <span className={styles.cargo}>Mestre de Obras</span>
+              <span className={styles.nome}>{responsavelNome ?? "Sem responsável"}</span>
+              <span className={styles.cargo}>{responsavelCargo ?? "Alocação pendente"}</span>
             </div>
 
-            <button className={styles.botaoAdd} onClick={() => id && navigate(`/obras/${id}/alocacoes`)} aria-label="Alocar funcionário">
-              <Plus size={14} />
-            </button>
+            {podeVisualizarAlocacoes && (
+              <button className={styles.botaoAdd} onClick={() => id && navigate(`/obras/${id}/alocacoes`)} aria-label="Alocar funcionário">
+                <Plus size={14} />
+              </button>
+            )}
           </div>
         </div>
 
@@ -74,7 +92,7 @@ export default function CardObra({ id, nome, local, valor, imagem }: Props) {
         {/* RODAPÉ */}
         <div className={styles.rodape}>
           <div>
-            <span className={styles.label}>GASTO DA OBRA</span>
+            <span className={styles.label}>TOTAL GASTO</span>
             <div className={styles.valor}>
               {formatarMoeda(valor)}
             </div>

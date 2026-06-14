@@ -35,10 +35,10 @@ public class DatabaseSeeder implements ApplicationRunner {
 
     private void seedFuncionarios() {
         inserirFuncionario("Administrador", "admin@gmail.com", "ADMIN");
-        inserirFuncionario("Rafael Pereira", "rafael.pereira@jaf.com", "MESTRE_DE_OBRAS");
+        inserirFuncionario("Rafael Pereira", "rafael.pereira@jaf.com", "RESPONSAVEL_ADMINISTRATIVO");
         inserirFuncionario("Gabriel Junior", "gabriel.junior@jaf.com", "ENGENHEIRO");
-        inserirFuncionario("Ana Souza", "ana.souza@jaf.com", "ARQUITETO");
-        inserirFuncionario("Isac Newton", "isac.newton@jaf.com", "PEDREIRO");
+        inserirFuncionario("Ana Souza", "ana.souza@jaf.com", "ENGENHEIRO");
+        inserirFuncionario("Isac Newton", "isac.newton@jaf.com", "ENGENHEIRO");
     }
 
     private void inserirFuncionario(String nome, String email, String cargo) {
@@ -94,35 +94,40 @@ public class DatabaseSeeder implements ApplicationRunner {
         jdbcTemplate.update("UPDATE gasto SET categoria = 'Alvenaria' WHERE categoria IN ('Cimento', 'Silicone')");
         jdbcTemplate.update("UPDATE gasto SET categoria = 'Equipamentos' WHERE categoria IN ('Eletrica', 'Hidraulica')");
         jdbcTemplate.update("UPDATE gasto SET categoria = 'Pintura' WHERE categoria = 'Ceramica'");
+        jdbcTemplate.update("UPDATE funcionario SET cargo_global = 'RESPONSAVEL_ADMINISTRATIVO' WHERE cargo_global IN ('GESTOR_OBRA', 'MESTRE_DE_OBRAS', 'OPERADOR_LANCAMENTO')");
+        jdbcTemplate.update("UPDATE funcionario SET cargo_global = 'ENGENHEIRO' WHERE cargo_global IN ('ARQUITETO', 'PEDREIRO')");
+        jdbcTemplate.update("UPDATE funcionario SET cargo_global = 'RESPONSAVEL_ADMINISTRATIVO' WHERE email = 'rafael.pereira@jaf.com'");
+        jdbcTemplate.update("UPDATE funcionario SET cargo_global = 'ENGENHEIRO' WHERE email = 'gabriel.junior@jaf.com'");
+        jdbcTemplate.update("UPDATE gasto SET reembolso_concluido = NULL WHERE metodo_pagamento <> 'REEMBOLSO' AND reembolso_concluido = false");
     }
 
     private void seedGastos() {
-        inserirGasto("Pagamento mão de obra", "Alvenaria", "Débito", "ETAPA 1", "1000.00", "2026-01-12", "isac.newton@jaf.com", "Obra Alphaville", false);
-        inserirGasto("Silicone e acabamentos", "Alvenaria", "Débito", "ETAPA 1", "450.00", "2026-01-10", "rafael.pereira@jaf.com", "Obra Alphaville", false);
-        inserirGasto("Compra de insumos", "Alvenaria", "Débito", "ETAPA 1", "2300.00", "2026-01-08", "gabriel.junior@jaf.com", "Obra Alphaville", false);
-        inserirGasto("Material elétrico", "Equipamentos", "Crédito", "ETAPA 2", "1850.00", "2026-01-20", "gabriel.junior@jaf.com", "Obra Alphaville", false);
-        inserirGasto("Piso cerâmico", "Pintura", "Débito", "ETAPA 2", "3200.00", "2026-02-05", "rafael.pereira@jaf.com", "Obra Alphaville", false);
-        inserirGasto("Fundação e estrutura", "Alvenaria", "Débito", "ETAPA 1", "5500.00", "2026-02-20", "gabriel.junior@jaf.com", "Obra Osasco", false);
-        inserirGasto("Material hidráulico", "Equipamentos", "Débito", "ETAPA 2", "2100.00", "2026-03-05", "rafael.pereira@jaf.com", "Obra Osasco", false);
-        inserirGasto("Tinta e pintura", "Pintura", "Crédito", "ETAPA 2", "1200.00", "2026-03-15", "isac.newton@jaf.com", "Obra Osasco", false);
+        inserirGasto("Pagamento mão de obra", "Alvenaria", "Débito", "ETAPA 1", "1000.00", "2026-01-12", "isac.newton@jaf.com", "Obra Alphaville", null);
+        inserirGasto("Silicone e acabamentos", "Alvenaria", "Débito", "ETAPA 1", "450.00", "2026-01-10", "rafael.pereira@jaf.com", "Obra Alphaville", null);
+        inserirGasto("Compra de insumos", "Alvenaria", "Débito", "ETAPA 1", "2300.00", "2026-01-08", "gabriel.junior@jaf.com", "Obra Alphaville", null);
+        inserirGasto("Material elétrico", "Equipamentos", "Crédito", "ETAPA 2", "1850.00", "2026-01-20", "gabriel.junior@jaf.com", "Obra Alphaville", null);
+        inserirGasto("Piso cerâmico", "Pintura", "Débito", "ETAPA 2", "3200.00", "2026-02-05", "rafael.pereira@jaf.com", "Obra Alphaville", null);
+        inserirGasto("Fundação e estrutura", "Alvenaria", "Débito", "ETAPA 1", "5500.00", "2026-02-20", "gabriel.junior@jaf.com", "Obra Osasco", null);
+        inserirGasto("Material hidráulico", "Equipamentos", "Débito", "ETAPA 2", "2100.00", "2026-03-05", "rafael.pereira@jaf.com", "Obra Osasco", null);
+        inserirGasto("Tinta e pintura", "Pintura", "Crédito", "ETAPA 2", "1200.00", "2026-03-15", "isac.newton@jaf.com", "Obra Osasco", null);
 
         inserirGasto("Reembolso material extra", "Alvenaria", "REEMBOLSO", "ETAPA 1", "1200.00", "2026-01-15", "rafael.pereira@jaf.com", "Obra Alphaville", false);
         inserirGasto("Reembolso ferramentas", "Equipamentos", "REEMBOLSO", "ETAPA 1", "800.00", "2026-02-10", "gabriel.junior@jaf.com", "Obra Alphaville", true);
         inserirGasto("Reembolso transporte", "Mão de Obra", "REEMBOLSO", "ETAPA 2", "650.00", "2026-02-25", "ana.souza@jaf.com", "Obra Alphaville", false);
         inserirGasto("Reembolso EPI", "Mão de Obra", "REEMBOLSO", "ETAPA 2", "450.00", "2026-03-05", "gabriel.junior@jaf.com", "Obra Alphaville", true);
 
-        inserirGasto("Reparo imprevisto estrutural", "Custos extras", "Débito", "ETAPA 1", "3200.00", "2026-01-20", "rafael.pereira@jaf.com", "Obra Alphaville", false);
-        inserirGasto("Material adicional urgente", "Custos extras", "Crédito", "ETAPA 1", "1800.00", "2026-02-12", "gabriel.junior@jaf.com", "Obra Alphaville", false);
-        inserirGasto("Ajuste de planta", "Custos extras", "Débito", "ETAPA 2", "2500.00", "2026-03-08", "ana.souza@jaf.com", "Obra Alphaville", false);
-        inserirGasto("Correção elétrica imprevista", "Custos extras", "Débito", "ETAPA 2", "1100.00", "2026-04-15", "rafael.pereira@jaf.com", "Obra Alphaville", false);
-        inserirGasto("Reforço de laje", "Custos extras", "Crédito", "ETAPA 1", "4200.00", "2026-05-03", "gabriel.junior@jaf.com", "Obra Alphaville", false);
-        inserirGasto("Troca de tubulação", "Custos extras", "Débito", "ETAPA 2", "950.00", "2026-06-10", "ana.souza@jaf.com", "Obra Alphaville", false);
+        inserirGasto("Reparo imprevisto estrutural", "Custos extras", "Débito", "ETAPA 1", "3200.00", "2026-01-20", "rafael.pereira@jaf.com", "Obra Alphaville", null);
+        inserirGasto("Material adicional urgente", "Custos extras", "Crédito", "ETAPA 1", "1800.00", "2026-02-12", "gabriel.junior@jaf.com", "Obra Alphaville", null);
+        inserirGasto("Ajuste de planta", "Custos extras", "Débito", "ETAPA 2", "2500.00", "2026-03-08", "ana.souza@jaf.com", "Obra Alphaville", null);
+        inserirGasto("Correção elétrica imprevista", "Custos extras", "Débito", "ETAPA 2", "1100.00", "2026-04-15", "rafael.pereira@jaf.com", "Obra Alphaville", null);
+        inserirGasto("Reforço de laje", "Custos extras", "Crédito", "ETAPA 1", "4200.00", "2026-05-03", "gabriel.junior@jaf.com", "Obra Alphaville", null);
+        inserirGasto("Troca de tubulação", "Custos extras", "Débito", "ETAPA 2", "950.00", "2026-06-10", "ana.souza@jaf.com", "Obra Alphaville", null);
 
-        inserirGasto("Demolição de paredes internas", "Demolição", "Débito", "ETAPA 1", "8500.00", "2026-01-25", "rafael.pereira@jaf.com", "Obra Alphaville", false);
-        inserirGasto("Mão de obra estrutura", "Mão de Obra", "Débito", "ETAPA 1", "7200.00", "2026-02-05", "gabriel.junior@jaf.com", "Obra Alphaville", false);
-        inserirGasto("Pintura externa completa", "Pintura", "Crédito", "ETAPA 2", "4800.00", "2026-03-20", "ana.souza@jaf.com", "Obra Alphaville", false);
-        inserirGasto("Locação de equipamentos", "Equipamentos", "Débito", "ETAPA 1", "3100.00", "2026-02-28", "rafael.pereira@jaf.com", "Obra Alphaville", false);
-        inserirGasto("Reforço de fundação", "Alvenaria", "Débito", "ETAPA 1", "5500.00", "2026-01-30", "gabriel.junior@jaf.com", "Obra Alphaville", false);
+        inserirGasto("Demolição de paredes internas", "Demolição", "Débito", "ETAPA 1", "8500.00", "2026-01-25", "rafael.pereira@jaf.com", "Obra Alphaville", null);
+        inserirGasto("Mão de obra estrutura", "Mão de Obra", "Débito", "ETAPA 1", "7200.00", "2026-02-05", "gabriel.junior@jaf.com", "Obra Alphaville", null);
+        inserirGasto("Pintura externa completa", "Pintura", "Crédito", "ETAPA 2", "4800.00", "2026-03-20", "ana.souza@jaf.com", "Obra Alphaville", null);
+        inserirGasto("Locação de equipamentos", "Equipamentos", "Débito", "ETAPA 1", "3100.00", "2026-02-28", "rafael.pereira@jaf.com", "Obra Alphaville", null);
+        inserirGasto("Reforço de fundação", "Alvenaria", "Débito", "ETAPA 1", "5500.00", "2026-01-30", "gabriel.junior@jaf.com", "Obra Alphaville", null);
     }
 
     private void inserirGasto(
@@ -134,7 +139,7 @@ public class DatabaseSeeder implements ApplicationRunner {
             String dataGasto,
             String funcionarioEmail,
             String obraTitulo,
-            boolean reembolsoConcluido
+            Boolean reembolsoConcluido
     ) {
         jdbcTemplate.update("""
                 INSERT INTO gasto (descricao, categoria, metodo_pagamento, etapa, valor, dt_gasto, funcionario_id, obra_id, reembolso_concluido)

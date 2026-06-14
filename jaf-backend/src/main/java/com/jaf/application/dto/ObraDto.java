@@ -21,7 +21,6 @@ public class ObraDto {
     private String status;
 
     @NotNull(message = "A data de início é obrigatória")
-    @FutureOrPresent(message = "A data de início deve ser hoje ou no futuro")
     private LocalDate dtInicio;
 
     @NotNull(message = "A data de término prevista é obrigatória")

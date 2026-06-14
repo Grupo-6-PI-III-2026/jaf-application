@@ -1,20 +1,12 @@
 export type Cargo =
   | "ADMIN"
-  | "GESTOR_OBRA"
-  | "OPERADOR_LANCAMENTO"
-  | "MESTRE_DE_OBRAS"
-  | "ENGENHEIRO"
-  | "ARQUITETO"
-  | "PEDREIRO";
+  | "RESPONSAVEL_ADMINISTRATIVO"
+  | "ENGENHEIRO";
 
 export const CargoLabel: Record<Cargo, string> = {
   ADMIN: "Administrador",
-  GESTOR_OBRA: "Gestor de Obra",
-  OPERADOR_LANCAMENTO: "Operador de Lancamento",
-  MESTRE_DE_OBRAS: "Mestre de Obras",
+  RESPONSAVEL_ADMINISTRATIVO: "Responsável Administrativo",
   ENGENHEIRO: "Engenheiro",
-  ARQUITETO: "Arquiteto",
-  PEDREIRO: "Pedreiro",
 };
 
 export const GENERIC_AVATARS = [

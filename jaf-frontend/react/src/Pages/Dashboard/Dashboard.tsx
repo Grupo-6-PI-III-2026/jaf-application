@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import ChartCard from "../../Components/ChartCard/ChartCard";
 import StatCard from "../../Components/StatCard/StatCard";
 import { dashboardService, type DashboardStats } from "../../Service/Dashboard/dashboardService";
+import { authService } from "../../Service/Auth/Login/authService";
 import styles from "./Dashboard.module.css";
 
 const PIE_COLORS = ["#F5C518", "#5A6B7B"];
@@ -26,6 +27,7 @@ export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
+  const podeCriarGasto = authService.hasAuthority("CRIAR_GASTO");
 
   useEffect(() => {
     const carregarStats = async () => {
@@ -60,8 +62,9 @@ export default function Dashboard() {
     });
 
   const totalReembolsos = stats?.reembolsosPizza.reduce((total, item) => total + item.value, 0) ?? 0;
+  const reembolsosPendentesPizza = stats?.reembolsosPizza.find((item) => item.name === "Pendentes")?.value ?? 0;
   const percentualPendente = totalReembolsos
-    ? limitarPercentual(((stats?.reembolsosPizza[0]?.value ?? 0) / totalReembolsos) * 100)
+    ? limitarPercentual((reembolsosPendentesPizza / totalReembolsos) * 100)
     : 0;
   const maxImprevisto = Math.max(...(stats?.gastosImprevistos.map((item) => item.valor) ?? [0]), 1);
   const pontosLinha = (stats?.gastosImprevistos ?? [])
@@ -108,9 +111,11 @@ export default function Dashboard() {
           <span className={styles.separator}>›</span>
           <span>Financeiro da Obra</span>
         </div>
-        <button className={styles.addBtn} onClick={() => navegar(`/obras/detalhamento/${obraId}`)}>
-          <Plus size={16} /> Adicionar gasto
-        </button>
+        {podeCriarGasto && (
+          <button className={styles.addBtn} onClick={() => navegar(`/obras/detalhamento/${obraId}`)}>
+            <Plus size={16} /> Adicionar gasto
+          </button>
+        )}
       </div>
 
       {/* Filters */}

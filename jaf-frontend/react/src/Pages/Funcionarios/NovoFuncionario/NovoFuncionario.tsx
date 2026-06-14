@@ -38,13 +38,9 @@ export default function NovoFuncionario() {
   const [isLoading, setIsLoading] = useState(false);
 
   const opcoesCargo: { label: string; value: CargoApi }[] = [
-    { label: "Administrador do Sistema", value: "ADMIN" },
-    { label: "Gestor de Obra", value: "GESTOR_OBRA" },
-    { label: "Operador de Lançamento", value: "OPERADOR_LANCAMENTO" },
+    { label: "Administrador", value: "ADMIN" },
+    { label: "Responsável Administrativo", value: "RESPONSAVEL_ADMINISTRATIVO" },
     { label: "Engenheiro", value: "ENGENHEIRO" },
-    { label: "Arquiteto", value: "ARQUITETO" },
-    { label: "Mestre de Obras", value: "MESTRE_DE_OBRAS" },
-    { label: "Pedreiro", value: "PEDREIRO" },
   ];
 
   const emailRegex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
@@ -142,7 +138,7 @@ export default function NovoFuncionario() {
                 <User size={18} className={styles.icone} />
                 <input
                   type="text"
-                  placeholder="Ex: João da Silva"
+                  placeholder="Ex: Carlos Almeida"
                   value={nome}
                   onChange={(e) => {
                     setNome(e.target.value);
@@ -247,7 +243,7 @@ export default function NovoFuncionario() {
 
           <div className={styles.coluna}>
             <div className={styles.grupoCampo}>
-              <label className={styles.rotulo}>CARGO / FUNÇÃO</label>
+              <label className={styles.rotulo}>PERFIL DE ACESSO</label>
               <div className={styles.caixaCampo}>
                 <User size={18} className={styles.icone} />
                 <select

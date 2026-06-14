@@ -44,6 +44,22 @@ const cores = ["#6C63FF", "#FF6584", "#43B89C", "#ffc107", "#9c27b0"];
 
 const dataHoje = () => new Date().toISOString().split("T")[0];
 
+const METODOS_PAGAMENTO = [
+  { value: "PIX", label: "Pix" },
+  { value: "CARTAO_CREDITO", label: "Cartão de crédito" },
+  { value: "CARTAO_DEBITO", label: "Cartão de débito" },
+  { value: "DINHEIRO", label: "Dinheiro" },
+  { value: "TRANSFERENCIA", label: "Transferência" },
+  { value: "REEMBOLSO", label: "Transferência/Reembolso" },
+];
+
+const metodoPagamentoLabel = (metodo: string) =>
+  METODOS_PAGAMENTO.find((item) => item.value === metodo)?.label ??
+  metodo
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/(^|\s)\S/g, (letra) => letra.toUpperCase());
+
 export default function DetalhamentoObras() {
   const [paginaAtual, setPaginaAtual] = useState(1);
   const [controlePresencaAberto, setControlePresencaAberto] = useState(false);
@@ -54,7 +70,8 @@ export default function DetalhamentoObras() {
   const [salvandoObra, setSalvandoObra] = useState(false);
   const [deletandoObra, setDeletandoObra] = useState(false);
   const [buscaFinanceira, setBuscaFinanceira] = useState("");
-  const [ordemFinanceira, setOrdemFinanceira] = useState<"data" | "valor">("data");
+  const [ordemFinanceira, setOrdemFinanceira] = useState<"data" | "valor" | "alfabetica">("data");
+  const [filtroMetodoPagamento, setFiltroMetodoPagamento] = useState("TODOS");
   const [dataSelecionada, setDataSelecionada] = useState<string>(dataHoje());
   const [novoGasto, setNovoGasto] = useState({
     descricao: "",
@@ -64,6 +81,7 @@ export default function DetalhamentoObras() {
     valor: "",
     dtGasto: dataHoje(),
     funcionarioId: "",
+    reembolsoFuncionario: false,
   });
   const [edicaoObra, setEdicaoObra] = useState({
     titulo: "",
@@ -80,6 +98,12 @@ export default function DetalhamentoObras() {
   const { id } = useParams<{ id: string }>();
   const navegar = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const podeEditarObra = authService.hasAuthority("EDITAR_OBRA");
+  const podeDeletarObra = authService.hasAuthority("DELETAR_OBRA");
+  const podeCriarGasto = authService.hasAuthority("CRIAR_GASTO");
+  const podeVisualizarGastos = authService.hasAuthority("VISUALIZAR_GASTOS");
+  const podeVisualizarAlocacoes = authService.hasAuthority("VISUALIZAR_ALOCACOES");
+  const podeRegistrarPresenca = authService.hasAuthority("REGISTRAR_PRESENCA");
 
   const carregarDados = useCallback(async () => {
       try {
@@ -130,17 +154,19 @@ export default function DetalhamentoObras() {
   }, [carregarDados, id]);
 
   useEffect(() => {
-    if (searchParams.get("editar") === "1") {
+    if (searchParams.get("editar") === "1" && podeEditarObra) {
       setModalEdicaoAberto(true);
     }
-  }, [searchParams]);
+  }, [podeEditarObra, searchParams]);
 
   useEffect(() => {
     setPaginaAtual(1);
-  }, [buscaFinanceira, ordemFinanceira]);
+  }, [buscaFinanceira, ordemFinanceira, filtroMetodoPagamento]);
 
   // Calcular métricas
   const totalGastoObra = gastos.reduce((total, gasto) => total + gasto.valor, 0);
+  const reembolsosPendentes = gastos.filter((gasto) => gasto.reembolsoConcluido === false);
+  const totalReembolsoPendente = reembolsosPendentes.reduce((total, gasto) => total + gasto.valor, 0);
   const orcamentoObra = parseFloat(obra?.orcamento || "0");
   const limiteAtingido = orcamentoObra > 0 ? (totalGastoObra / orcamentoObra) * 100 : 0;
 
@@ -157,9 +183,7 @@ export default function DetalhamentoObras() {
   const gastosFiltrados = gastos
     .filter((gasto) => {
       const termo = buscaFinanceira.trim().toLowerCase();
-      if (!termo) return true;
-
-      return [
+      const correspondeBusca = !termo || [
         gasto.descricao,
         gasto.categoria,
         gasto.metodoPagamento,
@@ -168,10 +192,16 @@ export default function DetalhamentoObras() {
       ]
         .filter(Boolean)
         .some((campo) => campo.toLowerCase().includes(termo));
+
+      const correspondeMetodo = filtroMetodoPagamento === "TODOS" || gasto.metodoPagamento === filtroMetodoPagamento;
+      return correspondeBusca && correspondeMetodo;
     })
     .sort((a, b) => {
       if (ordemFinanceira === "valor") {
         return b.valor - a.valor;
+      }
+      if (ordemFinanceira === "alfabetica") {
+        return a.descricao.localeCompare(b.descricao);
       }
       return new Date(b.dtGasto).getTime() - new Date(a.dtGasto).getTime();
     });
@@ -179,7 +209,7 @@ export default function DetalhamentoObras() {
   const totalPaginas = Math.ceil(gastosFiltrados.length / 5);
   const gastosExibidos = gastosFiltrados.slice((paginaAtual - 1) * 5, paginaAtual * 5);
 
-  function atualizarNovoGasto(campo: keyof typeof novoGasto, valor: string) {
+  function atualizarNovoGasto(campo: keyof typeof novoGasto, valor: string | boolean) {
     setNovoGasto((gastoAtual) => ({ ...gastoAtual, [campo]: valor }));
   }
 
@@ -250,6 +280,7 @@ export default function DetalhamentoObras() {
         dtGasto: novoGasto.dtGasto,
         funcionarioId: Number(novoGasto.funcionarioId),
         obraId: obra.id,
+        reembolsoConcluido: novoGasto.reembolsoFuncionario ? false : null,
       });
 
       const gastosAtualizados = await gastoService.listarPorObra(obra.id);
@@ -263,6 +294,7 @@ export default function DetalhamentoObras() {
         valor: "",
         dtGasto: dataHoje(),
         funcionarioId: String(alocacoes[0]?.funcionario.id ?? ""),
+        reembolsoFuncionario: false,
       });
       toast.success("Gasto adicionado ao financeiro da obra");
     } catch (error) {
@@ -354,7 +386,7 @@ export default function DetalhamentoObras() {
                 <select value={edicaoObra.status} onChange={(evento) => atualizarEdicaoObra("status", evento.target.value)}>
                   <option value="EM_ANDAMENTO">Em andamento</option>
                   <option value="CONCLUIDA">Concluída</option>
-                  <option value="PAUSADA">Pausada</option>
+                  <option value="PLANEJADA">Planejada</option>
                   <option value="CANCELADA">Cancelada</option>
                 </select>
               </label>
@@ -429,7 +461,19 @@ export default function DetalhamentoObras() {
                   <option value="CARTAO_DEBITO">Cartão de débito</option>
                   <option value="DINHEIRO">Dinheiro</option>
                   <option value="TRANSFERENCIA">Transferência</option>
+                  <option value="REEMBOLSO">Transferência/Reembolso</option>
                 </select>
+              </label>
+              <label className={styles.checkboxLinha}>
+                <input
+                  type="checkbox"
+                  checked={novoGasto.reembolsoFuncionario}
+                  onChange={(evento) => atualizarNovoGasto("reembolsoFuncionario", evento.target.checked)}
+                />
+                <span>
+                  Reembolso ao funcionário
+                  <small>Use quando o funcionário pagou com cartão, Pix ou dinheiro pessoal.</small>
+                </span>
               </label>
               <label>
                 Etapa
@@ -497,28 +541,34 @@ export default function DetalhamentoObras() {
           </span>
         </div>
         <div className={styles.cabecalhoAcoes}>
-          <input
-            type="date"
-            value={dataSelecionada}
-            onChange={(e) => setDataSelecionada(e.target.value)}
-            style={{
-              padding: '8px 12px',
-              border: '1px solid #d1d5db',
-              borderRadius: '6px',
-              marginRight: '8px',
-              fontSize: '14px'
-            }}
-          />
-          <button
-            className={styles.botaoAdicionarGasto}
-            onClick={() => setControlePresencaAberto(true)}
-          >
-            Controle de presença
-          </button>
-          <button className={styles.botaoAdicionarGasto} onClick={() => setModalGastoAberto(true)}>
-            <Plus size={16} />
-            Adicionar gasto
-          </button>
+          {podeRegistrarPresenca && (
+            <>
+              <input
+                type="date"
+                value={dataSelecionada}
+                onChange={(e) => setDataSelecionada(e.target.value)}
+                style={{
+                  padding: '8px 12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  marginRight: '8px',
+                  fontSize: '14px'
+                }}
+              />
+              <button
+                className={styles.botaoAdicionarGasto}
+                onClick={() => setControlePresencaAberto(true)}
+              >
+                Controle de presença
+              </button>
+            </>
+          )}
+          {podeCriarGasto && (
+            <button className={styles.botaoAdicionarGasto} onClick={() => setModalGastoAberto(true)}>
+              <Plus size={16} />
+              Adicionar gasto
+            </button>
+          )}
         </div>
       </div>
 
@@ -538,10 +588,12 @@ export default function DetalhamentoObras() {
           <div className={styles.cardObraTitulo}>
             <h1>{obra.titulo}</h1>
             <div className={styles.cardObraAcoes}>
-              <button className={styles.botaoEditar} onClick={() => setModalEdicaoAberto(true)} aria-label="Editar obra">
-                <Pencil size={16} />
-              </button>
-              {authService.hasAuthority('DELETAR_OBRA') && (
+              {podeEditarObra && (
+                <button className={styles.botaoEditar} onClick={() => setModalEdicaoAberto(true)} aria-label="Editar obra">
+                  <Pencil size={16} />
+                </button>
+              )}
+              {podeDeletarObra && (
                 <button className={styles.botaoDeletar} onClick={() => setModalDeleteAberto(true)} aria-label="Excluir obra">
                   <Trash2 size={16} />
                 </button>
@@ -577,12 +629,14 @@ export default function DetalhamentoObras() {
             ) : (
               <p style={{ fontSize: "14px", color: "#666" }}>Nenhum funcionário alocado</p>
             )}
-            <button
-              className={styles.botaoAdicionarMembro}
-              onClick={() => navegar(`/obras/${obra.id}/alocacoes`)}
-            >
-              <Plus size={18} />
-            </button>
+            {podeVisualizarAlocacoes && (
+              <button
+                className={styles.botaoAdicionarMembro}
+                onClick={() => navegar(`/obras/${obra.id}/alocacoes`)}
+              >
+                <Plus size={18} />
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -621,6 +675,14 @@ export default function DetalhamentoObras() {
             <span>Entrega prevista: {formatarData(obra.dtTerminoPrevisto)}</span>
           </div>
         </div>
+
+        <div className={styles.metricaCard}>
+          <span className={styles.metricaRotulo}>REEMBOLSOS PENDENTES</span>
+          <span className={styles.metricaValorDestaque}>{formatarMoeda(totalReembolsoPendente)}</span>
+          <div className={styles.metricaSubtitulo}>
+            <span>{reembolsosPendentes.length} lançamento(s) pagos pelo funcionário</span>
+          </div>
+        </div>
       </div>
 
       {/* Seção financeiro */}
@@ -628,9 +690,11 @@ export default function DetalhamentoObras() {
         <div className={styles.financeiroTopo}>
           <h2 className={styles.financeiroTitulo}>Financeiro</h2>
           <div className={styles.financeiroControles}>
-            <button className={styles.botaoFiltro} onClick={() => navegar(`/obras/detalhamento/${obra.id}/financeiro`)}>
-              Ver dashboard
-            </button>
+            {podeVisualizarGastos && (
+              <button className={styles.botaoFiltro} onClick={() => navegar(`/obras/detalhamento/${obra.id}/financeiro`)}>
+                Ver dashboard
+              </button>
+            )}
             <div className={styles.campoBusca}>
               <Search size={15} className={styles.iconeBusca} />
               <input
@@ -645,10 +709,20 @@ export default function DetalhamentoObras() {
               <Filter size={14} />
               Valor
             </button>
+            <button className={`${styles.botaoFiltro} ${ordemFinanceira === "alfabetica" ? styles.botaoFiltroAtivo : ""}`} onClick={() => setOrdemFinanceira("alfabetica")}>
+              <Filter size={14} />
+              Alfabética
+            </button>
             <button className={`${styles.botaoFiltro} ${ordemFinanceira === "data" ? styles.botaoFiltroAtivo : ""}`} onClick={() => setOrdemFinanceira("data")}>
               <CalendarDays size={14} />
               Data
             </button>
+            <select className={styles.inputFiltro} value={filtroMetodoPagamento} onChange={(evento) => setFiltroMetodoPagamento(evento.target.value)}>
+              <option value="TODOS">Todos os pagamentos</option>
+              {METODOS_PAGAMENTO.map((metodo) => (
+                <option key={metodo.value} value={metodo.value}>{metodo.label}</option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -660,6 +734,7 @@ export default function DetalhamentoObras() {
                 <th>VALOR</th>
                 <th>FUNCIONÁRIO</th>
                 <th>TIPO</th>
+                <th>REEMBOLSO</th>
                 <th>DESCRIÇÃO</th>
                 <th>ETAPA</th>
                 <th>MATERIAL</th>
@@ -688,7 +763,26 @@ export default function DetalhamentoObras() {
                         {gasto.funcionario.nome}
                       </div>
                     </td>
-                    <td>{gasto.metodoPagamento}</td>
+                    <td>
+                      <span className={gasto.metodoPagamento === "REEMBOLSO" || gasto.reembolsoConcluido !== null ? styles.metodoReembolso : undefined}>
+                        {metodoPagamentoLabel(gasto.metodoPagamento)}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`${styles.badgeReembolso} ${
+                        gasto.reembolsoConcluido === false
+                          ? styles.reembolsoPendente
+                          : gasto.reembolsoConcluido === true
+                            ? styles.reembolsoConcluido
+                            : styles.reembolsoNaoAplicavel
+                      }`}>
+                        {gasto.reembolsoConcluido === false
+                          ? "Pendente"
+                          : gasto.reembolsoConcluido === true
+                            ? "Concluído"
+                            : "Não"}
+                      </span>
+                    </td>
                     <td>
                       <span className={styles.descricaoDestaque}>{gasto.descricao}</span>
                     </td>
@@ -699,7 +793,7 @@ export default function DetalhamentoObras() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: "center", padding: "2rem" }}>
+                  <td colSpan={8} style={{ textAlign: "center", padding: "2rem" }}>
                     {buscaFinanceira ? "Nenhum lançamento encontrado para a busca." : "Nenhum gasto registrado para esta obra."}
                   </td>
                 </tr>
