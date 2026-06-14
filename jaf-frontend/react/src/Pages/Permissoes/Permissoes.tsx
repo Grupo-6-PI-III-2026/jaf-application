@@ -125,7 +125,7 @@ export default function Permissoes() {
   const [selectedUser, setSelectedUser] = useState<FuncionarioPermissoes | null>(null);
   const [busca, setBusca] = useState("");
   const [permissoesAtivas, setPermissoesAtivas] = useState<Set<string>>(new Set());
-  const [cargoSelecionado, setCargoSelecionado] = useState<Cargo | "">("");
+  const [cargoSelecionado, setCargoSelecionado] = useState<Cargo | null>(null);
   const [modulosAbertos, setModulosAbertos] = useState<Set<string>>(new Set(["obras"]));
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -149,7 +149,7 @@ export default function Permissoes() {
   const selecionarUsuario = useCallback((user: FuncionarioPermissoes) => {
     setSelectedUser(user);
     setCargoSelecionado(user.cargo);
-    setPermissoesAtivas(new Set(permissaoService.getPermissoesPorCargo(user.cargo)));
+    setPermissoesAtivas(new Set(user.cargo ? permissaoService.getPermissoesPorCargo(user.cargo) : []));
   }, []);
 
   const handleCargoChange = (cargo: Cargo) => {
@@ -170,7 +170,8 @@ export default function Permissoes() {
   };
 
   const hasChanges = (): boolean => {
-    return Boolean(selectedUser && cargoSelecionado && cargoSelecionado !== selectedUser.cargo);
+    if (!selectedUser || !cargoSelecionado) return false;
+    return cargoSelecionado !== selectedUser.cargo;
   };
 
   const handleSalvar = async () => {
@@ -187,7 +188,8 @@ export default function Permissoes() {
         )
       );
       setSelectedUser({ ...selectedUser, cargo: cargoSelecionado });
-    } catch {
+    } catch (error) {
+      console.error("Erro ao salvar cargo:", error);
       toast.error("Erro ao salvar cargo");
     } finally {
       setIsSaving(false);
@@ -243,19 +245,21 @@ export default function Permissoes() {
               <div className={styles.avatarUsuario}>{user.nome.charAt(0).toUpperCase()}</div>
               <div className={styles.infoUsuario}>
                 <h4>{user.nome}</h4>
-                <span>{CARGO_LABELS[user.cargo]}</span>
+                <span>{user.cargo ? CARGO_LABELS[user.cargo] : "Sem cargo"}</span>
               </div>
-              <span
-                className={`${styles.badgeCargo} ${
-                  user.cargo === "ADMIN"
-                    ? styles.badgeAdmin
-                    : user.cargo === "GESTOR_OBRA"
-                      ? styles.badgeGestor
-                      : styles.badgeOperador
-                }`}
-              >
-                {CARGO_BADGES[user.cargo]}
-              </span>
+              {user.cargo && (
+                <span
+                  className={`${styles.badgeCargo} ${
+                    user.cargo === "ADMIN"
+                      ? styles.badgeAdmin
+                      : user.cargo === "GESTOR_OBRA"
+                        ? styles.badgeGestor
+                        : styles.badgeOperador
+                  }`}
+                >
+                  {CARGO_BADGES[user.cargo]}
+                </span>
+              )}
             </div>
           ))
         )}
@@ -269,7 +273,7 @@ export default function Permissoes() {
               <div className={styles.statusOnline}></div>
             </div>
             <h3 className={styles.perfilNome}>{selectedUser.nome}</h3>
-            <p className={styles.perfilCargo}>{cargoSelecionado ? CARGO_LABELS[cargoSelecionado] : "Sem cargo"}</p>
+            <p className={styles.perfilCargo}>{cargoSelecionado ? CARGO_LABELS[cargoSelecionado] : (selectedUser.cargo ? CARGO_LABELS[selectedUser.cargo] : "Sem cargo")}</p>
 
             <div className={styles.divider}></div>
 

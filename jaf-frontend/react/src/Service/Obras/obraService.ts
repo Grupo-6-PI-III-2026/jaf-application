@@ -37,4 +37,8 @@ export const obraService = {
     const response = await api.put(`/obras/${id}`, dto);
     return response.data;
   },
+
+  deletar: async (id: number): Promise<void> => {
+    await api.delete(`/obras/${id}`);
+  },
 };

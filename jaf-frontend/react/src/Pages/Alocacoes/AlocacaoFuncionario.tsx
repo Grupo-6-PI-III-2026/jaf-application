@@ -33,8 +33,8 @@ const getIniciais = (nome: string) => {
   return nome.substring(0, 2).toUpperCase();
 };
 
-const cargoLabel = (cargo: string) =>
-  CargoLabel[cargo as Cargo] ?? cargo.replace(/_/g, " ");
+const cargoLabel = (cargo: string | null | undefined) =>
+  cargo ? (CargoLabel[cargo as Cargo] ?? cargo.replace(/_/g, " ")) : "Não definido";
 
 const cores = ["#6C63FF", "#FF6584", "#43B89C", "#ffc107", "#9c27b0"];
 
@@ -64,7 +64,10 @@ export default function AlocacaoFuncionario() {
 
   useEffect(() => {
     const carregarDados = async () => {
-      if (!id) return;
+      if (!id) {
+        toast.error("ID da obra não fornecido");
+        return;
+      }
       try {
         setCarregando(true);
         const [obraData, alocacoesData, funcionariosData] = await Promise.all([
@@ -78,7 +81,11 @@ export default function AlocacaoFuncionario() {
         setPaginaAtual(1);
       } catch (error) {
         console.error("Erro ao carregar dados:", error);
-        toast.error("Erro ao carregar alocações da obra");
+        if (error instanceof Error) {
+          toast.error(`Erro ao carregar alocações: ${error.message}`);
+        } else {
+          toast.error("Erro ao carregar alocações da obra");
+        }
       } finally {
         setCarregando(false);
       }

@@ -41,4 +41,15 @@ export const funcionarioService = {
   excluirConta: async (): Promise<void> => {
     await api.delete("/funcionarios/me");
   },
+
+  uploadFoto: async (file: File): Promise<{ url: string }> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await api.post<{ url: string }>("/funcionarios/me/foto", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return response.data;
+  },
 };

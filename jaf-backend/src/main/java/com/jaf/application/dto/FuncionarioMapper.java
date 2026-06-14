@@ -39,6 +39,7 @@ public class FuncionarioMapper {
         funcionarioListarDto.setId(funcionario.getId());
         funcionarioListarDto.setEmail(funcionario.getEmail());
         funcionarioListarDto.setNome(funcionario.getNome());
+        funcionarioListarDto.setCargo(funcionario.getCargoGlobal());
 
         return funcionarioListarDto;
     }

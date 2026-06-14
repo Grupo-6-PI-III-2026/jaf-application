@@ -4,7 +4,7 @@ export interface FuncionarioPermissoes {
   id: number;
   nome: string;
   email: string;
-  cargo: Cargo;
+  cargo: Cargo | null;
 }
 
 export interface Permissao {

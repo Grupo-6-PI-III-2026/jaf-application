@@ -11,6 +11,7 @@ import {
   Plus,
   Pencil,
   X,
+  Trash2,
 } from "lucide-react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import styles from "./DetalhamentoObras.module.css";
@@ -18,6 +19,7 @@ import ControlePresenca from "../ControlePresenca/ControlePresenca";
 import { obraService, type Obra } from "../../Service/Obras/obraService";
 import { gastoService, type Gasto } from "../../Service/Gastos/gastoService";
 import { alocacaoService, type AlocacaoObra } from "../../Service/Alocacoes/alocacaoService";
+import { authService } from "../../Service/Auth/Login/authService";
 import { toast } from "sonner";
 
 const formatarMoeda = (valor: number) =>
@@ -35,6 +37,9 @@ const getIniciais = (nome: string) => {
   return nome.substring(0, 2).toUpperCase();
 };
 
+const cargoLabel = (cargo: string | null | undefined) =>
+  cargo ? cargo.replace(/_/g, " ") : "Não definido";
+
 const cores = ["#6C63FF", "#FF6584", "#43B89C", "#ffc107", "#9c27b0"];
 
 const dataHoje = () => new Date().toISOString().split("T")[0];
@@ -44,8 +49,10 @@ export default function DetalhamentoObras() {
   const [controlePresencaAberto, setControlePresencaAberto] = useState(false);
   const [modalGastoAberto, setModalGastoAberto] = useState(false);
   const [modalEdicaoAberto, setModalEdicaoAberto] = useState(false);
+  const [modalDeleteAberto, setModalDeleteAberto] = useState(false);
   const [salvandoGasto, setSalvandoGasto] = useState(false);
   const [salvandoObra, setSalvandoObra] = useState(false);
+  const [deletandoObra, setDeletandoObra] = useState(false);
   const [buscaFinanceira, setBuscaFinanceira] = useState("");
   const [ordemFinanceira, setOrdemFinanceira] = useState<"data" | "valor">("data");
   const [dataSelecionada, setDataSelecionada] = useState<string>(dataHoje());
@@ -120,7 +127,7 @@ export default function DetalhamentoObras() {
 
   useEffect(() => {
     carregarDados();
-  }, [carregarDados]);
+  }, [carregarDados, id]);
 
   useEffect(() => {
     if (searchParams.get("editar") === "1") {
@@ -278,6 +285,22 @@ export default function DetalhamentoObras() {
     setPaginaAtual(pagina);
   }
 
+  async function deletarObra() {
+    if (!obra) return;
+
+    try {
+      setDeletandoObra(true);
+      await obraService.deletar(obra.id);
+      toast.success("Obra excluída com sucesso");
+      navegar("/home");
+    } catch (error) {
+      console.error("Erro ao deletar obra:", error);
+      toast.error("Não foi possível excluir a obra");
+    } finally {
+      setDeletandoObra(false);
+    }
+  }
+
   if (carregando) {
     return (
       <div className={styles.pagina}>
@@ -432,6 +455,33 @@ export default function DetalhamentoObras() {
         </div>
       )}
 
+      {modalDeleteAberto && (
+        <div className={styles.modalOverlay} onClick={() => setModalDeleteAberto(false)}>
+          <div className={styles.modalGasto} onClick={(evento) => evento.stopPropagation()}>
+            <header className={styles.modalHeader}>
+              <div>
+                <h2>Excluir obra</h2>
+                <p>{obra.titulo}</p>
+              </div>
+              <button type="button" className={styles.botaoFecharModal} onClick={() => setModalDeleteAberto(false)} aria-label="Fechar modal de exclusão">
+                <X size={20} />
+              </button>
+            </header>
+            <div className={styles.modalGrid}>
+              <p style={{ color: "#6b6b6b", lineHeight: "1.6" }}>
+                Tem certeza que deseja excluir esta obra? Esta ação é irreversível e todos os dados associados (gastos, alocações, presenças) serão permanentemente removidos.
+              </p>
+            </div>
+            <footer className={styles.modalFooter}>
+              <button type="button" className={styles.botaoSecundario} onClick={() => setModalDeleteAberto(false)}>Cancelar</button>
+              <button type="button" className={styles.botaoDeletarConfirm} onClick={deletarObra} disabled={deletandoObra}>
+                {deletandoObra ? "Excluindo..." : "Confirmar exclusão"}
+              </button>
+            </footer>
+          </div>
+        </div>
+      )}
+
       {/* Cabeçalho */}
       <div className={styles.cabecalho}>
         <div className={styles.cabecalhoEsquerda}>
@@ -487,9 +537,16 @@ export default function DetalhamentoObras() {
           </div>
           <div className={styles.cardObraTitulo}>
             <h1>{obra.titulo}</h1>
-            <button className={styles.botaoEditar} onClick={() => setModalEdicaoAberto(true)} aria-label="Editar obra">
-              <Pencil size={16} />
-            </button>
+            <div className={styles.cardObraAcoes}>
+              <button className={styles.botaoEditar} onClick={() => setModalEdicaoAberto(true)} aria-label="Editar obra">
+                <Pencil size={16} />
+              </button>
+              {authService.hasAuthority('DELETAR_OBRA') && (
+                <button className={styles.botaoDeletar} onClick={() => setModalDeleteAberto(true)} aria-label="Excluir obra">
+                  <Trash2 size={16} />
+                </button>
+              )}
+            </div>
           </div>
           <div className={styles.cardObraData}>
             <Calendar size={14} />
@@ -512,7 +569,7 @@ export default function DetalhamentoObras() {
                   <div className={styles.membroInformacoes}>
                     <span className={styles.membroNome}>{alocacao.funcionario.nome}</span>
                     <span className={styles.membroCargo}>
-                      {alocacao.cargo.replace("_", " ")}
+                      {cargoLabel(alocacao.cargo)}
                     </span>
                   </div>
                 </div>

@@ -379,6 +379,118 @@
   display: block;
 }
 
+.uploadActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.uploadBtn {
+  padding: 8px 16px;
+  background: #f5c400;
+  color: #1e1e1e;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s;
+}
+
+.uploadBtn:hover:not(:disabled) {
+  background: #e0b200;
+}
+
+.uploadBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.removeBtn {
+  padding: 8px 16px;
+  background: transparent;
+  color: #d32f2f;
+  border: 1.5px solid #ffcdd2;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.removeBtn:hover {
+  background: #fff5f5;
+}
+
+.avatarPreview {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fotoActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.currentFoto {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #f5c400;
+}
+
+.changeFotoBtn {
+  padding: 8px 16px;
+  background: #f5c400;
+  color: #1e1e1e;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s;
+}
+
+.changeFotoBtn:hover {
+  background: #e0b200;
+}
+
+.removeFotoBtn {
+  padding: 8px 16px;
+  background: transparent;
+  color: #d32f2f;
+  border: 1.5px solid #ffcdd2;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.removeFotoBtn:hover {
+  background: #fff5f5;
+}
+
+.addFotoBtn {
+  padding: 12px 24px;
+  background: #f5c400;
+  color: #1e1e1e;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s;
+  align-self: flex-start;
+}
+
+.addFotoBtn:hover {
+  background: #e0b200;
+}
+
 .dangerBox {
   background: #fff5f5;
   border: 1px solid #ffcdd2;

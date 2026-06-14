@@ -56,7 +56,14 @@ export const AppRoutes = () => {
               </PrivateRoute>
             }
           />
-          <Route path="/obras/:id/alocacoes" element={<AlocacaoFuncionario />} />
+          <Route
+            path="/obras/:id/alocacoes"
+            element={
+              <PrivateRoute requiredPermission="VISUALIZAR_ALOCACOES">
+                <AlocacaoFuncionario />
+              </PrivateRoute>
+            }
+          />
         </Route>
 
         <Route path="*" element={<Navigate to="/" />} />

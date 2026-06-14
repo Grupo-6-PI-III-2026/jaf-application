@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useUser } from "../../Context/useUser";
 import { funcionarioService } from "../../Service/Funcionarios/funcionarioService";
 import { authService } from "../../Service/Auth/Login/authService";
+import { toast } from "sonner";
 import {
   CargoLabel,
   DEFAULT_AVATAR_URL,
@@ -124,6 +125,8 @@ export default function Profile() {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [fotoSelecionada, setFotoSelecionada] = useState<string>(DEFAULT_AVATAR_URL);
+  const [fotoFile, setFotoFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -144,9 +147,40 @@ export default function Profile() {
     setNome(user.nome);
     setEmail(user.email);
     setFotoSelecionada(user.fotoUrl || DEFAULT_AVATAR_URL);
+    setFotoFile(null);
     setSaveError(null);
     setSaveSuccess(false);
     setIsEditing(true);
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setFotoFile(file);
+      const previewUrl = URL.createObjectURL(file);
+      setFotoSelecionada(previewUrl);
+    }
+  };
+
+  const handleUploadPhoto = async () => {
+    if (!fotoFile) return;
+    setIsUploading(true);
+    try {
+      const { url } = await funcionarioService.uploadFoto(fotoFile);
+      setFotoSelecionada(url);
+      setFotoFile(null);
+      toast.success("Foto enviada com sucesso!");
+    } catch (error) {
+      console.error("Erro ao fazer upload da foto:", error);
+      toast.error("Erro ao enviar foto");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleRemovePhoto = () => {
+    setFotoSelecionada(DEFAULT_AVATAR_URL);
+    setFotoFile(null);
   };
 
   const handleCancelEdit = () => {
@@ -161,7 +195,7 @@ export default function Profile() {
     setSaveSuccess(false);
 
     try {
-      const fotoUrl = fotoSelecionada || DEFAULT_AVATAR_URL;
+      const fotoUrl = fotoSelecionada === DEFAULT_AVATAR_URL ? null : fotoSelecionada;
       const emailChanged =
         email.trim().toLowerCase() !== user.email.toLowerCase();
 
@@ -369,28 +403,107 @@ export default function Profile() {
                 </div>
               )}
 
-              {isEditing && (
-                <div className={styles.formGroup}>
-                  <label className={styles.fieldLabel}>ICONE DE PERFIL</label>
-                  <div className={styles.avatarOptions}>
-                    {GENERIC_AVATARS.map((avatar) => (
+              <div className={styles.formGroup}>
+                <label className={styles.fieldLabel}>ICONE DE PERFIL</label>
+                {isEditing ? (
+                  <>
+                    <div className={styles.avatarOptions}>
+                      {GENERIC_AVATARS.map((avatar) => (
+                        <button
+                          key={avatar.value}
+                          type="button"
+                          className={`${styles.avatarOption} ${
+                            fotoSelecionada === avatar.value
+                              ? styles.avatarOptionActive
+                              : ""
+                          }`}
+                          onClick={() => {
+                            setFotoSelecionada(avatar.value);
+                            setFotoFile(null);
+                          }}
+                          aria-label={`Selecionar avatar ${avatar.label}`}
+                        >
+                          <img src={avatar.value} alt="" />
+                        </button>
+                      ))}
                       <button
-                        key={avatar.value}
                         type="button"
                         className={`${styles.avatarOption} ${
-                          fotoSelecionada === avatar.value
-                            ? styles.avatarOptionActive
-                            : ""
+                          fotoFile ? styles.avatarOptionActive : ""
                         }`}
-                        onClick={() => setFotoSelecionada(avatar.value)}
-                        aria-label={`Selecionar avatar ${avatar.label}`}
+                        onClick={() => document.getElementById('foto-upload')?.click()}
+                        aria-label="Fazer upload de foto"
                       >
-                        <img src={avatar.value} alt="" />
+                        <div style={{ fontSize: '24px', textAlign: 'center', color: '#6b7280' }}>+</div>
                       </button>
-                    ))}
+                      <input
+                        id="foto-upload"
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={handleFileSelect}
+                      />
+                    </div>
+                    {fotoFile && (
+                      <div className={styles.uploadActions}>
+                        <button
+                          type="button"
+                          className={styles.uploadBtn}
+                          onClick={handleUploadPhoto}
+                          disabled={isUploading}
+                        >
+                          {isUploading ? "Enviando..." : "Enviar foto"}
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.removeBtn}
+                          onClick={handleRemovePhoto}
+                        >
+                          Remover foto
+                        </button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className={styles.avatarPreview}>
+                    {user?.fotoUrl && user.fotoUrl !== DEFAULT_AVATAR_URL ? (
+                      <div className={styles.fotoActions}>
+                        <img src={user.fotoUrl} alt="Foto atual" className={styles.currentFoto} />
+                        <button
+                          type="button"
+                          className={styles.changeFotoBtn}
+                          onClick={() => setIsEditing(true)}
+                        >
+                          Alterar foto
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.removeFotoBtn}
+                          onClick={async () => {
+                            try {
+                              await funcionarioService.atualizarPerfil({ nome: user.nome, email: user.email, fotoUrl: null });
+                              await refreshUser();
+                              toast.success("Foto removida com sucesso!");
+                            } catch (error) {
+                              toast.error("Erro ao remover foto");
+                            }
+                          }}
+                        >
+                          Remover foto
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className={styles.addFotoBtn}
+                        onClick={() => setIsEditing(true)}
+                      >
+                        Adicionar foto
+                      </button>
+                    )}
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
               <div className={styles.formGroup}>
                 <label className={styles.fieldLabel}>NOME</label>
