@@ -256,7 +256,7 @@ export default function DetalhamentoObras() {
       const correspondeMetodo =
         filtroMetodoPagamento === "TODOS" ||
         (filtroMetodoPagamento === "REEMBOLSO"
-          ? gasto.reembolsoConcluido !== null || normalizarMetodoPagamento(gasto.metodoPagamento) === "REEMBOLSO"
+          ? gasto.reembolsoConcluido === false
           : normalizarMetodoPagamento(gasto.metodoPagamento) === filtroMetodoPagamento);
       return correspondeBusca && correspondeMetodo;
     })

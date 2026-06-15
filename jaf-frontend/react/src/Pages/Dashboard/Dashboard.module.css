@@ -25,6 +25,14 @@
   font-size: 13px;
 }
 
+.headerActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .addBtn {
   display: inline-flex;
   align-items: center;
@@ -41,6 +49,25 @@
 
 .addBtn:hover {
   background: #e5b800;
+}
+
+.reportBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 6px;
+  background: #243038;
+  padding: 8px 16px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #fff;
+  border: 1px solid #243038;
+  cursor: pointer;
+}
+
+.reportBtn:hover {
+  background: #1f2a33;
+  border-color: #F5C518;
 }
 
 /* Filters */
@@ -241,43 +268,44 @@
   color: rgba(255, 255, 255, 0.7);
 }
 
-.lineChartWrap {
+.unplannedList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   height: 100%;
+  justify-content: center;
+}
+
+.unplannedItem {
   display: grid;
-  grid-template-rows: 1fr auto auto;
-  gap: 10px;
+  grid-template-columns: minmax(92px, 130px) 1fr;
+  align-items: center;
+  gap: 14px;
 }
 
-.lineChart {
-  width: 100%;
-  height: 104px;
-  border-left: 1px solid rgba(255, 255, 255, 0.12);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  background-image: linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
-  background-size: 100% 25%;
-}
-
-.lineChart polyline {
-  fill: none;
-  stroke: #fff;
-  stroke-width: 2.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  vector-effect: non-scaling-stroke;
-}
-
-.lineLabels,
-.lineValues {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
-  gap: 8px;
-  color: rgba(255, 255, 255, 0.65);
-  font-size: 10px;
-}
-
-.lineValues {
+.unplannedInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   color: #fff;
-  font-weight: 700;
+  font-size: 11px;
+}
+
+.unplannedInfo span {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.unplannedBarWrap {
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.unplannedBar {
+  height: 100%;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #F5C518, #f7dc72);
 }
 
 .categoryList {
@@ -347,6 +375,11 @@
   }
 
   .categoryItem {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .unplannedItem {
     grid-template-columns: 1fr;
     gap: 6px;
   }

@@ -1,6 +1,5 @@
 import { useState, useEffect, type FormEvent } from "react";
 import {
-  ArrowLeft,
   Calendar,
   ChevronLeft,
   ChevronRight,
@@ -8,7 +7,7 @@ import {
   Search,
   X,
 } from "lucide-react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import styles from "./AlocacaoFuncionario.module.css";
 import { obraService, type Obra } from "../../Service/Obras/obraService";
 import { alocacaoService, type AlocacaoObra } from "../../Service/Alocacoes/alocacaoService";
@@ -75,7 +74,6 @@ export default function AlocacaoFuncionario() {
   const [carregando, setCarregando] = useState(true);
 
   const { id } = useParams<{ id: string }>();
-  const navegar = useNavigate();
 
   useEffect(() => {
     const carregarDados = async () => {
@@ -255,31 +253,7 @@ export default function AlocacaoFuncionario() {
 
       {/* Cabeçalho */}
       <div className={styles.cabecalho}>
-        <div className={styles.cabecalhoEsquerda}>
-          <button
-            className={styles.botaoVoltar}
-            onClick={() => navegar(`/obras/detalhamento/${id}`)}
-          >
-            <ArrowLeft size={18} />
-          </button>
-          <span className={styles.navegacao}>
-            <span
-              className={styles.navegacaoLink}
-              onClick={() => navegar("/home")}
-            >
-              Obras
-            </span>
-            <span className={styles.separador}>›</span>
-            <span
-              className={styles.navegacaoLink}
-              onClick={() => navegar(`/obras/detalhamento/${id}`)}
-            >
-              {obra.titulo}
-            </span>
-            <span className={styles.separador}>›</span>
-            <span className={styles.navegacaoAtivo}>Alocações de colaboradores</span>
-          </span>
-        </div>
+        <div />
         <div className={styles.cabecalhoAcoes}>
           <button className={styles.botaoAdicionarGasto} onClick={abrirModalAlocacao}>
             <UserCheck size={16} />
