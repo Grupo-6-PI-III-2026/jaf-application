@@ -4,7 +4,6 @@ import styles from "./Login.module.css";
 import { authService } from "../../../Service/Auth/Login/authService";
 import { useUser } from "../../../Context/useUser";
 import { toast } from "sonner";
-import { AxiosError } from "axios";
 
 function Login() {
   const navigate = useNavigate();
@@ -17,23 +16,19 @@ function Login() {
 
   const emailRegex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
 
-  const validateInputs = () => {
-    if (!emailRegex.test(email)) return false;
-    return password.trim().length > 0;
-  };
-
   const funcLogin = async (evento: React.MouseEvent) => {
     evento.preventDefault();
     setErrorMessage(null);
+    const emailNormalizado = email.trim().toLowerCase();
 
-    if (!validateInputs()) {
+    if (!emailRegex.test(emailNormalizado) || password.trim().length === 0) {
       setErrorMessage("E-mail ou senha inválidos. Verifique suas credenciais.");
       return;
     }
 
     setLoading(true);
     try {
-      await authService.login({ email, senha: password });
+      await authService.login({ email: emailNormalizado, senha: password });
       await refreshUser();
       toast.success("Login realizado com sucesso!");
       setTimeout(() => {
@@ -41,20 +36,7 @@ function Login() {
       }, 1000);
     } catch (error: unknown) {
       console.error(error);
-
-      if (error instanceof AxiosError) {
-        if (error.code === "ERR_NETWORK") {
-          toast.error("Servidor indisponível. Tente novamente mais tarde.");
-        } else if (error.response?.status === 400) {
-          setErrorMessage("E-mail e senha são obrigatórios.");
-        } else if (error.response?.status === 401) {
-          setErrorMessage(
-            "E-mail ou senha inválidos. Verifique suas credenciais.",
-          );
-        } else {
-          toast.error("Erro inesperado. Tente novamente.");
-        }
-      }
+      setErrorMessage(error instanceof Error ? error.message : "Erro inesperado. Tente novamente.");
     } finally {
       setLoading(false);
     }

@@ -128,21 +128,21 @@ public class FuncionarioService {
     public FuncionarioResponseDto atualizarPerfil(String emailAtual, FuncionarioPerfilUpdateDto dto) {
         Funcionario existente = buscarPorEmail(emailAtual);
 
-        if (dto.getEmail() != null && !dto.getEmail().equalsIgnoreCase(existente.getEmail())) {
-            funcionarioRepository.findByEmailIgnoreCase(dto.getEmail())
+        String nome = dto.getNome().trim();
+        String email = dto.getEmail().trim().toLowerCase();
+        String fotoUrl = dto.getFotoUrl() == null || dto.getFotoUrl().isBlank() ? null : dto.getFotoUrl().trim();
+
+        if (!email.equalsIgnoreCase(existente.getEmail())) {
+            funcionarioRepository.findByEmailIgnoreCase(email)
                     .filter(f -> !f.getId().equals(existente.getId()))
                     .ifPresent(f -> {
                         throw new Conflict("E-mail ja cadastrado.");
                     });
         }
 
-        existente.setNome(dto.getNome());
-        existente.setEmail(dto.getEmail());
-
-        if (dto.getFotoUrl() != null) {
-            String fotoUrl = dto.getFotoUrl().isBlank() ? null : dto.getFotoUrl();
-            existente.setFotoUrl(fotoUrl);
-        }
+        existente.setNome(nome);
+        existente.setEmail(email);
+        existente.setFotoUrl(fotoUrl);
 
         Funcionario salvo = funcionarioRepository.save(existente);
         return new FuncionarioResponseDto(salvo);

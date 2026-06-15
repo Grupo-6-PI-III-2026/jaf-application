@@ -264,6 +264,17 @@
   box-shadow: 0 6px 24px #f5b80061;
 }
 
+.btnEntrar:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btnEntrar:disabled .btnArrow {
+  transform: none;
+}
+
 .btnEntrar:active {
   transform: translateY(0);
 }

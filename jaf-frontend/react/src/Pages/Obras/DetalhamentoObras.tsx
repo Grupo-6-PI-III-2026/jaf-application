@@ -1,6 +1,5 @@
 import { useCallback, useState, useEffect, type FormEvent } from "react";
 import {
-  ArrowLeft,
   Calendar,
   Search,
   Filter,
@@ -10,6 +9,7 @@ import {
   ChevronRight,
   Plus,
   Pencil,
+  Upload,
   X,
   Trash2,
 } from "lucide-react";
@@ -18,6 +18,7 @@ import styles from "./DetalhamentoObras.module.css";
 import ControlePresenca from "../ControlePresenca/ControlePresenca";
 import { obraService, type Obra } from "../../Service/Obras/obraService";
 import { gastoService, type Gasto } from "../../Service/Gastos/gastoService";
+import { ocrService } from "../../Service/Gastos/ocrService";
 import { alocacaoService, type AlocacaoObra } from "../../Service/Alocacoes/alocacaoService";
 import { authService } from "../../Service/Auth/Login/authService";
 import { toast } from "sonner";
@@ -26,7 +27,7 @@ const formatarMoeda = (valor: number) =>
   valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 const formatarData = (data: string) => {
-  return new Date(data).toLocaleDateString("pt-BR");
+  return new Date(`${data}T00:00:00`).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
 };
 
 const getIniciais = (nome: string) => {
@@ -42,15 +43,22 @@ const cargoLabel = (cargo: string | null | undefined) =>
 
 const cores = ["#6C63FF", "#FF6584", "#43B89C", "#ffc107", "#9c27b0"];
 
-const dataHoje = () => new Date().toISOString().split("T")[0];
+const dataHoje = () => {
+  const partes = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const getParte = (tipo: string) => partes.find((parte) => parte.type === tipo)?.value ?? "";
+  return `${getParte("year")}-${getParte("month")}-${getParte("day")}`;
+};
 
 const METODOS_PAGAMENTO = [
   { value: "PIX", label: "Pix" },
   { value: "CARTAO_CREDITO", label: "Cartão de crédito" },
   { value: "CARTAO_DEBITO", label: "Cartão de débito" },
   { value: "DINHEIRO", label: "Dinheiro" },
-  { value: "TRANSFERENCIA", label: "Transferência" },
-  { value: "REEMBOLSO", label: "Transferência/Reembolso" },
 ];
 
 const metodoPagamentoLabel = (metodo: string) =>
@@ -59,6 +67,32 @@ const metodoPagamentoLabel = (metodo: string) =>
     .replace(/_/g, " ")
     .toLowerCase()
     .replace(/(^|\s)\S/g, (letra) => letra.toUpperCase());
+
+const normalizarMetodoPagamentoOcr = (metodo: string | null | undefined) => {
+  if (!metodo) return null;
+  const metodoNormalizado = metodo
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/_/g, " ")
+    .toLowerCase();
+
+  if (metodoNormalizado.includes("pix")) return "PIX";
+  if (metodoNormalizado.includes("debito")) return "CARTAO_DEBITO";
+  if (metodoNormalizado.includes("cartao") || metodoNormalizado.includes("credito")) return "CARTAO_CREDITO";
+  if (metodoNormalizado.includes("dinheiro") || metodoNormalizado.includes("especie")) return "DINHEIRO";
+  return null;
+};
+
+const formatarValorInput = (valor: number) =>
+  valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const parseValorMonetario = (valor: string) => {
+  const valorNormalizado = valor.trim();
+  if (valorNormalizado.includes(",")) {
+    return Number(valorNormalizado.replace(/\./g, "").replace(",", "."));
+  }
+  return Number(valorNormalizado);
+};
 
 export default function DetalhamentoObras() {
   const [paginaAtual, setPaginaAtual] = useState(1);
@@ -73,6 +107,9 @@ export default function DetalhamentoObras() {
   const [ordemFinanceira, setOrdemFinanceira] = useState<"data" | "valor" | "alfabetica">("data");
   const [filtroMetodoPagamento, setFiltroMetodoPagamento] = useState("TODOS");
   const [dataSelecionada, setDataSelecionada] = useState<string>(dataHoje());
+  const [notaFiscalArquivo, setNotaFiscalArquivo] = useState<File | null>(null);
+  const [processandoNotaFiscal, setProcessandoNotaFiscal] = useState(false);
+  const [mensagemNotaFiscal, setMensagemNotaFiscal] = useState<string | null>(null);
   const [novoGasto, setNovoGasto] = useState({
     descricao: "",
     categoria: "MATERIAL",
@@ -166,6 +203,7 @@ export default function DetalhamentoObras() {
   // Calcular métricas
   const totalGastoObra = gastos.reduce((total, gasto) => total + gasto.valor, 0);
   const reembolsosPendentes = gastos.filter((gasto) => gasto.reembolsoConcluido === false);
+  const reembolsosConcluidos = gastos.filter((gasto) => gasto.reembolsoConcluido === true);
   const totalReembolsoPendente = reembolsosPendentes.reduce((total, gasto) => total + gasto.valor, 0);
   const orcamentoObra = parseFloat(obra?.orcamento || "0");
   const limiteAtingido = orcamentoObra > 0 ? (totalGastoObra / orcamentoObra) * 100 : 0;
@@ -173,8 +211,8 @@ export default function DetalhamentoObras() {
   // Calcular dias restantes
   const calcularDiasRestantes = () => {
     if (!obra?.dtTerminoPrevisto) return 0;
-    const hoje = new Date();
-    const dataTermino = new Date(obra.dtTerminoPrevisto);
+    const hoje = new Date(`${dataHoje()}T00:00:00`);
+    const dataTermino = new Date(`${obra.dtTerminoPrevisto}T00:00:00`);
     const diffTime = dataTermino.getTime() - hoje.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays > 0 ? diffDays : 0;
@@ -213,6 +251,16 @@ export default function DetalhamentoObras() {
     setNovoGasto((gastoAtual) => ({ ...gastoAtual, [campo]: valor }));
   }
 
+  function limparNotaFiscal() {
+    setNotaFiscalArquivo(null);
+    setMensagemNotaFiscal(null);
+  }
+
+  function fecharModalGasto() {
+    setModalGastoAberto(false);
+    limparNotaFiscal();
+  }
+
   function atualizarEdicaoObra(campo: keyof typeof edicaoObra, valor: string) {
     setEdicaoObra((obraAtual) => ({ ...obraAtual, [campo]: valor }));
   }
@@ -229,7 +277,7 @@ export default function DetalhamentoObras() {
 
     if (!obra) return;
 
-    const orcamento = Number(edicaoObra.orcamento.replace(",", "."));
+    const orcamento = parseValorMonetario(edicaoObra.orcamento);
     if (!orcamento || orcamento <= 0) {
       toast.error("Informe um orçamento maior que zero");
       return;
@@ -263,7 +311,7 @@ export default function DetalhamentoObras() {
       return;
     }
 
-    const valor = Number(novoGasto.valor.replace(",", "."));
+    const valor = parseValorMonetario(novoGasto.valor);
     if (!valor || valor <= 0) {
       toast.error("Informe um valor maior que zero");
       return;
@@ -285,7 +333,7 @@ export default function DetalhamentoObras() {
 
       const gastosAtualizados = await gastoService.listarPorObra(obra.id);
       setGastos(gastosAtualizados);
-      setModalGastoAberto(false);
+      fecharModalGasto();
       setNovoGasto({
         descricao: "",
         categoria: "MATERIAL",
@@ -302,6 +350,47 @@ export default function DetalhamentoObras() {
       toast.error("Não foi possível adicionar o gasto");
     } finally {
       setSalvandoGasto(false);
+    }
+  }
+
+  async function processarNotaFiscal() {
+    if (!notaFiscalArquivo) {
+      toast.error("Selecione a foto ou PDF da nota fiscal");
+      return;
+    }
+
+    try {
+      setProcessandoNotaFiscal(true);
+      setMensagemNotaFiscal(null);
+      const resultado = await ocrService.processarNotaFiscal(notaFiscalArquivo);
+
+      if (!resultado.sucesso) {
+        setMensagemNotaFiscal(resultado.mensagem);
+        toast.error(resultado.mensagem || "Não foi possível processar a nota fiscal");
+        return;
+      }
+
+      const metodoPagamento = normalizarMetodoPagamentoOcr(resultado.metodoPagamento);
+      const descricao = [resultado.materialInsumo, resultado.descricaoAdicional]
+        .filter(Boolean)
+        .join(" - ")
+        .slice(0, 255);
+
+      setNovoGasto((gastoAtual) => ({
+        ...gastoAtual,
+        descricao: descricao || gastoAtual.descricao,
+        valor: resultado.valor ? formatarValorInput(resultado.valor) : gastoAtual.valor,
+        dtGasto: resultado.dtGasto || gastoAtual.dtGasto,
+        metodoPagamento: metodoPagamento || gastoAtual.metodoPagamento,
+      }));
+
+      setMensagemNotaFiscal(resultado.mensagem);
+      toast.success("Campos preenchidos a partir da nota fiscal");
+    } catch (error) {
+      console.error("Erro ao processar nota fiscal:", error);
+      toast.error("Não foi possível processar a nota fiscal");
+    } finally {
+      setProcessandoNotaFiscal(false);
     }
   }
 
@@ -411,19 +500,44 @@ export default function DetalhamentoObras() {
       )}
 
       {modalGastoAberto && (
-        <div className={styles.modalOverlay} onClick={() => setModalGastoAberto(false)}>
+        <div className={styles.modalOverlay} onClick={fecharModalGasto}>
           <form className={styles.modalGasto} onSubmit={cadastrarGasto} onClick={(evento) => evento.stopPropagation()}>
             <header className={styles.modalHeader}>
               <div>
                 <h2>Adicionar gasto</h2>
                 <p>{obra.titulo}</p>
               </div>
-              <button type="button" className={styles.botaoFecharModal} onClick={() => setModalGastoAberto(false)} aria-label="Fechar modal de gasto">
+              <button type="button" className={styles.botaoFecharModal} onClick={fecharModalGasto} aria-label="Fechar modal de gasto">
                 <X size={20} />
               </button>
             </header>
 
             <div className={styles.modalGrid}>
+              <div className={styles.notaFiscalBox}>
+                <div>
+                  <strong>Nota fiscal</strong>
+                  <span>{notaFiscalArquivo ? notaFiscalArquivo.name : "Selecione uma imagem ou PDF para preencher os campos automaticamente."}</span>
+                  {mensagemNotaFiscal && <small>{mensagemNotaFiscal}</small>}
+                </div>
+                <label className={styles.botaoUploadNota}>
+                  <Upload size={16} />
+                  Escolher arquivo
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/bmp,image/tiff,image/webp,application/pdf"
+                    onChange={(evento) => setNotaFiscalArquivo(evento.target.files?.[0] ?? null)}
+                  />
+                </label>
+                <button
+                  type="button"
+                  className={styles.botaoProcessarNota}
+                  onClick={processarNotaFiscal}
+                  disabled={!notaFiscalArquivo || processandoNotaFiscal}
+                >
+                  {processandoNotaFiscal ? "Lendo nota..." : "Extrair campos"}
+                </button>
+              </div>
+
               <label>
                 Descrição
                 <input value={novoGasto.descricao} onChange={(evento) => atualizarNovoGasto("descricao", evento.target.value)} required maxLength={255} placeholder="Ex.: Compra de cimento" />
@@ -460,8 +574,6 @@ export default function DetalhamentoObras() {
                   <option value="CARTAO_CREDITO">Cartão de crédito</option>
                   <option value="CARTAO_DEBITO">Cartão de débito</option>
                   <option value="DINHEIRO">Dinheiro</option>
-                  <option value="TRANSFERENCIA">Transferência</option>
-                  <option value="REEMBOLSO">Transferência/Reembolso</option>
                 </select>
               </label>
               <label className={styles.checkboxLinha}>
@@ -490,7 +602,7 @@ export default function DetalhamentoObras() {
             </div>
 
             <footer className={styles.modalFooter}>
-              <button type="button" className={styles.botaoSecundario} onClick={() => setModalGastoAberto(false)}>Cancelar</button>
+              <button type="button" className={styles.botaoSecundario} onClick={fecharModalGasto}>Cancelar</button>
               <button type="submit" className={styles.botaoAdicionarGasto} disabled={salvandoGasto || alocacoes.length === 0}>
                 {salvandoGasto ? "Salvando..." : "Salvar gasto"}
               </button>
@@ -528,18 +640,7 @@ export default function DetalhamentoObras() {
 
       {/* Cabeçalho */}
       <div className={styles.cabecalho}>
-        <div className={styles.cabecalhoEsquerda}>
-          <button className={styles.botaoVoltar} onClick={() => navegar("/home")}>
-            <ArrowLeft size={18} />
-          </button>
-          <span className={styles.navegacao}>
-            <span className={styles.navegacaoLink} onClick={() => navegar("/home")}>
-              Obras
-            </span>
-            <span className={styles.separador}>›</span>
-            <span className={styles.navegacaoAtivo}>Detalhes da Obra</span>
-          </span>
-        </div>
+        <div className={styles.cabecalhoEsquerda}></div>
         <div className={styles.cabecalhoAcoes}>
           {podeRegistrarPresenca && (
             <>
@@ -677,10 +778,10 @@ export default function DetalhamentoObras() {
         </div>
 
         <div className={styles.metricaCard}>
-          <span className={styles.metricaRotulo}>REEMBOLSOS PENDENTES</span>
+          <span className={styles.metricaRotulo}>REEMBOLSO A FUNCIONÁRIOS</span>
           <span className={styles.metricaValorDestaque}>{formatarMoeda(totalReembolsoPendente)}</span>
           <div className={styles.metricaSubtitulo}>
-            <span>{reembolsosPendentes.length} lançamento(s) pagos pelo funcionário</span>
+            <span>{reembolsosPendentes.length} pendente(s) · {reembolsosConcluidos.length} concluído(s)</span>
           </div>
         </div>
       </div>
@@ -692,7 +793,7 @@ export default function DetalhamentoObras() {
           <div className={styles.financeiroControles}>
             {podeVisualizarGastos && (
               <button className={styles.botaoFiltro} onClick={() => navegar(`/obras/detalhamento/${obra.id}/financeiro`)}>
-                Ver dashboard
+                Ver estatísticas
               </button>
             )}
             <div className={styles.campoBusca}>
@@ -764,7 +865,7 @@ export default function DetalhamentoObras() {
                       </div>
                     </td>
                     <td>
-                      <span className={gasto.metodoPagamento === "REEMBOLSO" || gasto.reembolsoConcluido !== null ? styles.metodoReembolso : undefined}>
+                      <span className={gasto.reembolsoConcluido !== null ? styles.metodoReembolso : undefined}>
                         {metodoPagamentoLabel(gasto.metodoPagamento)}
                       </span>
                     </td>

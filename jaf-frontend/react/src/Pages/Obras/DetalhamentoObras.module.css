@@ -25,6 +25,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  min-height: 38px;
 }
 
 .botaoVoltar {
@@ -480,7 +481,7 @@
 .modalOverlay {
   position: fixed;
   inset: 0;
-  z-index: 40;
+  z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -550,6 +551,76 @@
   color: #495057;
   font-size: 13px;
   font-weight: 700;
+}
+
+.notaFiscalBox {
+  grid-column: span 2;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px dashed #d7dbe0;
+  border-radius: 8px;
+  background: #f8f9fa;
+}
+
+.notaFiscalBox div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.notaFiscalBox strong {
+  color: #333;
+  font-size: 13px;
+}
+
+.notaFiscalBox span,
+.notaFiscalBox small {
+  color: #6c757d;
+  font-size: 12px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.botaoUploadNota,
+.botaoProcessarNota {
+  min-height: 38px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center;
+  gap: 8px !important;
+  padding: 9px 12px;
+}
+
+.botaoUploadNota {
+  border: 1px solid #e9ecef;
+  background: #fff;
+  color: #495057 !important;
+}
+
+.botaoUploadNota input {
+  display: none;
+}
+
+.botaoProcessarNota {
+  border: none;
+  background: #ffc107;
+  color: #333;
+}
+
+.botaoProcessarNota:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .modalGrid input,
@@ -818,6 +889,11 @@
   }
 
   .modalGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .notaFiscalBox {
+    grid-column: span 1;
     grid-template-columns: 1fr;
   }
 

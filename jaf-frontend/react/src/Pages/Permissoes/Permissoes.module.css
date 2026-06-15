@@ -3,11 +3,9 @@
   gap: 24px;
   padding: 24px;
   min-height: calc(100vh - 80px);
-  background-color: #f5f5f5;
 }
 
 .listaUsuarios,
-.perfilUsuario,
 .painelPermissoes,
 .estadoVazio {
   background: #2d2d2d;
@@ -93,8 +91,7 @@
   border-color: #ffc107;
 }
 
-.avatarUsuario,
-.avatarGrande {
+.avatarUsuario {
   border-radius: 50%;
   background: linear-gradient(135deg, #ffc107, #ff9800);
   display: flex;
@@ -155,117 +152,6 @@
   color: #22c55e;
 }
 
-.perfilUsuario {
-  width: 280px;
-  min-width: 280px;
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  height: fit-content;
-}
-
-.avatarGrande {
-  width: 80px;
-  height: 80px;
-  font-size: 28px;
-  position: relative;
-}
-
-.statusOnline {
-  position: absolute;
-  bottom: 4px;
-  right: 4px;
-  width: 14px;
-  height: 14px;
-  background-color: #22c55e;
-  border-radius: 50%;
-  border: 3px solid #2d2d2d;
-}
-
-.perfilNome {
-  color: #fff;
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0;
-  text-align: center;
-}
-
-.perfilCargo {
-  color: #adb5bd;
-  font-size: 13px;
-  margin: -8px 0 0;
-}
-
-.divider {
-  width: 100%;
-  height: 1px;
-  background: #4d4d4d;
-  margin: 4px 0;
-}
-
-.perfilDetalhes {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.detalheItem {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: #dee2e6;
-  font-size: 13px;
-}
-
-.detalheItem svg {
-  width: 16px;
-  height: 16px;
-  color: #adb5bd;
-  flex-shrink: 0;
-}
-
-.alertaImpacto,
-.avisoNovoLogin {
-  border: 1px solid rgba(255, 193, 7, 0.3);
-  border-radius: 8px;
-  background: rgba(255, 193, 7, 0.08);
-}
-
-.alertaImpacto {
-  width: 100%;
-  padding: 12px;
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-}
-
-.alertaImpacto svg {
-  width: 18px;
-  height: 18px;
-  color: #ffc107;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.alertaImpacto div h4,
-.avisoNovoLogin strong {
-  color: #ffc107;
-  font-size: 12px;
-  font-weight: 600;
-  margin: 0 0 4px;
-}
-
-.alertaImpacto div p,
-.avisoNovoLogin p {
-  color: #adb5bd;
-  font-size: 11px;
-  margin: 0;
-  line-height: 1.4;
-}
-
 .painelPermissoes {
   flex: 1;
   padding: 24px;
@@ -299,33 +185,6 @@
   color: #adb5bd;
   font-size: 13px;
   margin: 4px 0 20px;
-}
-
-.avisoNovoLogin {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  max-width: 360px;
-  padding: 10px 12px;
-}
-
-.avisoToggle {
-  position: relative;
-  width: 42px;
-  height: 24px;
-  flex: 0 0 auto;
-  border-radius: 24px;
-  background: #ffc107;
-}
-
-.avisoToggle span {
-  position: absolute;
-  width: 18px;
-  height: 18px;
-  right: 3px;
-  bottom: 3px;
-  border-radius: 50%;
-  background: #fff;
 }
 
 .seletorCargo {
@@ -643,18 +502,14 @@
     padding: 16px;
   }
 
+  .usuarioCard {
+    min-width: 240px;
+  }
+
   .listaUsuarios h2,
   .listaUsuarios > p,
   .buscaUsuarios {
     display: none;
-  }
-
-  .perfilUsuario {
-    width: 100%;
-    min-width: unset;
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 16px;
   }
 
   .painelPermissoes {
@@ -666,10 +521,6 @@
   .container {
     padding: 12px;
     gap: 12px;
-  }
-
-  .perfilUsuario {
-    display: none;
   }
 
   .listaUsuarios {

@@ -120,6 +120,9 @@
   background: transparent;
   color: #fff;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* DIVISOR */
@@ -148,4 +151,5 @@
   border-radius: 8px;
   font-weight: 700;
   cursor: pointer;
+  color: #333;
 }

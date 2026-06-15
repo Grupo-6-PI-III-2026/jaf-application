@@ -2,10 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 import {
   Shield,
   Search,
-  Mail,
-  Building2,
-  IdCard,
-  Info,
   Save,
   ChevronDown,
   Pickaxe,
@@ -306,41 +302,6 @@ export default function Permissoes() {
       </div>
 
       {selectedUser ? (
-        <>
-          <div className={styles.perfilUsuario}>
-            <div className={styles.avatarGrande}>
-              {selectedUser.nome.charAt(0).toUpperCase()}
-              <div className={styles.statusOnline}></div>
-            </div>
-            <h3 className={styles.perfilNome}>{selectedUser.nome}</h3>
-            <p className={styles.perfilCargo}>{cargoSelecionado ? CARGO_LABELS[cargoSelecionado] : (selectedUser.cargo ? CARGO_LABELS[selectedUser.cargo] : "Sem cargo")}</p>
-
-            <div className={styles.divider}></div>
-
-            <div className={styles.perfilDetalhes}>
-              <div className={styles.detalheItem}>
-                <Mail />
-                <span>{selectedUser.email}</span>
-              </div>
-              <div className={styles.detalheItem}>
-                <Building2 />
-                <span>JAF Construtora</span>
-              </div>
-              <div className={styles.detalheItem}>
-                <IdCard />
-                <span>ID: JAF-{String(selectedUser.id).padStart(4, "0")}</span>
-              </div>
-            </div>
-
-            <div className={styles.alertaImpacto}>
-              <Info />
-              <div>
-                <h4>Perfil do sistema</h4>
-                <p>Funções como pintor, pedreiro e marceneiro ficam na alocação da obra. Aqui o admin ajusta o acesso real deste usuário.</p>
-              </div>
-            </div>
-          </div>
-
           <div className={styles.painelPermissoes}>
             <div className={styles.headerPermissoes}>
               <div>
@@ -348,16 +309,9 @@ export default function Permissoes() {
                   <Shield />
                   Configurações de Acesso
                 </h2>
-                <p>Marque ou remova permissões conforme a necessidade deste usuário.</p>
-              </div>
-              <div className={styles.avisoNovoLogin} title="As permissões são enviadas no token de acesso do usuário.">
-                <span className={styles.avisoToggle} aria-hidden="true">
-                  <span></span>
-                </span>
-                <div>
-                  <strong>Aplicação no próximo login</strong>
-                  <p>Depois de salvar, o usuário precisa entrar novamente para receber as novas permissões.</p>
-                </div>
+                <p>
+                  {selectedUser.nome} · {selectedUser.email} · {cargoSelecionado ? CARGO_LABELS[cargoSelecionado] : "Sem cargo"}
+                </p>
               </div>
             </div>
 
@@ -429,7 +383,6 @@ export default function Permissoes() {
               </button>
             </div>
           </div>
-        </>
       ) : (
         <div className={styles.estadoVazio}>
           <UserCog />

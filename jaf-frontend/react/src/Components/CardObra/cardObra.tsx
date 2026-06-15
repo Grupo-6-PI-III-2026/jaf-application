@@ -98,8 +98,8 @@ export default function CardObra({ id, nome, status, valor, imagem, responsavelN
             </div>
           </div>
 
-          <button className={styles.botaoDetalhes} onClick={() => navigate(id ? `/obras/detalhamento/${id}` : '/obras/detalhamento')}>
-            VISUALIZAR DETALHES
+          <button className={styles.botaoDetalhes} onClick={() => navigate(id ? `/obras/detalhamento/${id}/financeiro` : "/obras/detalhamento")}>
+            VER ESTATÍSTICAS
           </button>
         </div>
 

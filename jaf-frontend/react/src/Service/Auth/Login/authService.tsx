@@ -23,6 +23,12 @@ export const authService = {
     } catch (error: unknown) {
       console.error("Erro ao fazer login:", error);
 
+      if (axios.isAxiosError(error) && error.code === "ERR_NETWORK") {
+        throw new Error("Servidor indisponivel. Tente novamente mais tarde.");
+      }
+      if (axios.isAxiosError(error) && error.response?.status === 400) {
+        throw new Error("Informe e-mail e senha para acessar.");
+      }
       if (axios.isAxiosError(error) && error.response?.status === 401) {
         throw new Error("Email ou senha inválidos");
       }

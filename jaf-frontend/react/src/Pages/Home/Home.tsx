@@ -10,6 +10,7 @@ import styles from "./Home.module.css";
 import CardObra from "../../Components/CardObra/cardObra";
 import { obraService, type Obra } from "../../Service/Obras/obraService";
 import { gastoService, type Gasto } from "../../Service/Gastos/gastoService";
+import { alocacaoService, type AlocacaoObra } from "../../Service/Alocacoes/alocacaoService";
 
 const formatarMoeda = (valor: number) =>
   valor.toLocaleString("pt-BR", {
@@ -28,6 +29,7 @@ const imagensObras = [
 export default function Home() {
   const [obras, setObras] = useState<Obra[]>([]);
   const [gastos, setGastos] = useState<Gasto[]>([]);
+  const [responsaveisPorObra, setResponsaveisPorObra] = useState<Map<number, AlocacaoObra>>(new Map());
   const [carregando, setCarregando] = useState(true);
 
   useEffect(() => {
@@ -38,11 +40,21 @@ export default function Home() {
         const gastosPorObra = await Promise.allSettled(
           obrasData.map((obra) => gastoService.listarPorObra(obra.id))
         );
+        const alocacoesPorObra = await Promise.allSettled(
+          obrasData.map((obra) => alocacaoService.listarPorObra(obra.id))
+        );
         const gastosData = gastosPorObra.flatMap((resultado) =>
           resultado.status === "fulfilled" ? resultado.value : []
         );
+        const responsaveis = new Map<number, AlocacaoObra>();
+        alocacoesPorObra.forEach((resultado, index) => {
+          if (resultado.status === "fulfilled" && resultado.value.length > 0) {
+            responsaveis.set(obrasData[index].id, resultado.value[0]);
+          }
+        });
         setObras(obrasData);
         setGastos(gastosData);
+        setResponsaveisPorObra(responsaveis);
       } catch (error) {
         console.error("Erro ao carregar dados:", error);
       } finally {
@@ -79,7 +91,7 @@ export default function Home() {
       
       {/* HEADER */}
       <div className={styles.cabecalho}>
-        <h1 className={styles.titulo}>Dashboard</h1>
+        <h1 className={styles.titulo}>Visão geral das obras</h1>
       </div>
 
       {carregando ? (
@@ -127,16 +139,21 @@ export default function Home() {
 
             <div className={styles.lista}>
               {obrasRecentes.length > 0 ? (
-                obrasRecentes.map((obra, index) => (
-                  <CardObra
-                    key={obra.id}
-                    id={obra.id}
-                    nome={obra.titulo}
-                    status={obra.status}
-                    valor={totalGastoPorObra.get(obra.id) ?? 0}
-                    imagem={imagensObras[index % imagensObras.length]}
-                  />
-                ))
+                obrasRecentes.map((obra, index) => {
+                  const responsavel = responsaveisPorObra.get(obra.id);
+                  return (
+                    <CardObra
+                      key={obra.id}
+                      id={obra.id}
+                      nome={obra.titulo}
+                      status={obra.status}
+                      valor={totalGastoPorObra.get(obra.id) ?? 0}
+                      imagem={imagensObras[index % imagensObras.length]}
+                      responsavelNome={responsavel?.funcionario.nome}
+                      responsavelCargo={responsavel?.cargo?.replace(/_/g, " ")}
+                    />
+                  );
+                })
               ) : (
                 <p>Nenhuma obra encontrada.</p>
               )}

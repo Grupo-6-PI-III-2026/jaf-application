@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, Plus, Search, Tag, ChevronDown } from "lucide-react";
+import { Plus, Search, Tag, ChevronDown } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import ChartCard from "../../Components/ChartCard/ChartCard";
 import StatCard from "../../Components/StatCard/StatCard";
@@ -7,12 +7,12 @@ import { dashboardService, type DashboardStats } from "../../Service/Dashboard/d
 import { authService } from "../../Service/Auth/Login/authService";
 import styles from "./Dashboard.module.css";
 
-const PIE_COLORS = ["#F5C518", "#5A6B7B"];
+const PIE_COLORS = ["#5A6B7B", "#F5C518"];
 
 const formatBRL = (v: number) =>
   `R$${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
-const etapas = ["ETAPA 1", "ETAPA 2", "TODAS"];
+const etapas = ["TODAS", "ETAPA 1", "ETAPA 2", "ETAPA 3"];
 
 const limitarPercentual = (valor: number) => Math.min(100, Math.max(0, valor));
 
@@ -21,7 +21,7 @@ export default function Dashboard() {
   const navegar = useNavigate();
   const obraId = id ? parseInt(id) : NaN;
 
-  const [etapa, setEtapa] = useState("ETAPA 1");
+  const [etapa, setEtapa] = useState("TODAS");
   const [busca, setBusca] = useState("");
   const [ordenacao, setOrdenacao] = useState<"valor" | "categoria">("valor");
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -76,11 +76,6 @@ export default function Dashboard() {
     .join(" ");
   const maxCategoria = Math.max(...categoriasExibidas.map((item) => item.valor), 1);
 
-  function trocarEtapa() {
-    const indiceAtual = etapas.indexOf(etapa);
-    setEtapa(etapas[(indiceAtual + 1) % etapas.length]);
-  }
-
   if (carregando) {
     return (
       <div className={styles.dashboard}>
@@ -99,17 +94,10 @@ export default function Dashboard() {
 
   return (
     <div className={styles.dashboard}>
-      {/* Header / Breadcrumb */}
       <div className={styles.header}>
-        <div className={styles.breadcrumb}>
-          <button className={styles.botaoVoltarBreadcrumb} onClick={() => navegar(`/obras/detalhamento/${obraId}`)} aria-label="Voltar para detalhes da obra">
-            <ArrowLeft size={16} />
-          </button>
-          <span>Obras</span>
-          <span className={styles.separator}>›</span>
-          <span>Detalhes da Obra</span>
-          <span className={styles.separator}>›</span>
-          <span>Financeiro da Obra</span>
+        <div>
+          <h1 className={styles.titulo}>Estatísticas financeiras</h1>
+          <p className={styles.subtitulo}>Acompanhe gastos, reembolsos e categorias da obra.</p>
         </div>
         {podeCriarGasto && (
           <button className={styles.addBtn} onClick={() => navegar(`/obras/detalhamento/${obraId}`)}>
@@ -118,8 +106,15 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Filters */}
       <div className={styles.filters}>
+        <label className={styles.selectWrapper}>
+          Etapa
+          <select value={etapa} onChange={(evento) => setEtapa(evento.target.value)}>
+            {etapas.map((item) => (
+              <option key={item} value={item}>{item === "TODAS" ? "Todas as etapas" : item}</option>
+            ))}
+          </select>
+        </label>
         <div className={styles.searchWrapper}>
           <Search className={styles.searchIcon} />
           <input placeholder="Buscar categoria..." className={styles.searchInput} value={busca} onChange={(evento) => setBusca(evento.target.value)} />
@@ -138,7 +133,6 @@ export default function Dashboard() {
           label={`Gastos da ${etapa === "TODAS" ? "obra" : etapa.toLowerCase()}`}
           value={formatBRL(stats.gastosEtapa)}
           progress={stats.progressoEtapa}
-          action={<button className={styles.etapaBtn} onClick={trocarEtapa}>Trocar etapa</button>}
         />
         <StatCard
           label="Total de reembolsos pendentes"
@@ -160,7 +154,7 @@ export default function Dashboard() {
               <div
                 className={styles.pieChart}
                 style={{
-                  background: `conic-gradient(${PIE_COLORS[0]} 0 ${percentualPendente}%, ${PIE_COLORS[1]} ${percentualPendente}% 100%)`,
+                  background: `conic-gradient(${PIE_COLORS[1]} 0 ${percentualPendente}%, ${PIE_COLORS[0]} ${percentualPendente}% 100%)`,
                 }}
                 aria-label={`Reembolsos pendentes ${percentualPendente.toFixed(0)}%`}
               >
@@ -179,61 +173,46 @@ export default function Dashboard() {
           </div>
         </ChartCard>
 
-        {/* Line */}
         <ChartCard title="Gastos imprevistos">
           <div className={styles.chartContainer}>
-            <div className={styles.lineChartWrap}>
-              <svg className={styles.lineChart} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                <polyline points={pontosLinha} />
-              </svg>
-              <div className={styles.lineLabels}>
-                {stats.gastosImprevistos.map((item) => (
-                  <span key={item.mes}>{item.mes}</span>
-                ))}
+            {stats.gastosImprevistos.length > 0 ? (
+              <div className={styles.lineChartWrap}>
+                <svg className={styles.lineChart} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                  <polyline points={pontosLinha} />
+                </svg>
+                <div className={styles.lineLabels}>
+                  {stats.gastosImprevistos.map((item) => (
+                    <span key={item.mes}>{item.mes}</span>
+                  ))}
+                </div>
+                <div className={styles.lineValues}>
+                  {stats.gastosImprevistos.map((item) => (
+                    <span key={`${item.mes}-${item.valor}`}>{formatBRL(item.valor)}</span>
+                  ))}
+                </div>
               </div>
-              <div className={styles.lineValues}>
-                {stats.gastosImprevistos.map((item) => (
-                  <span key={`${item.mes}-${item.valor}`}>{formatBRL(item.valor)}</span>
-                ))}
-              </div>
-            </div>
+            ) : (
+              <div className={styles.emptyChart}>Nenhum gasto imprevisto na etapa selecionada.</div>
+            )}
           </div>
         </ChartCard>
       </div>
 
-      {/* Bar chart full width */}
       <div className={styles.chartFull}>
-        <ChartCard
-          title="Gastos por categoria na obra"
-          right={
-            <div className={styles.etapaTabs}>
-              {etapas.map((e) => (
-                <button
-                  key={e}
-                  onClick={() => setEtapa(e)}
-                  className={`${styles.etapaTab} ${
-                    etapa === e ? styles.etapaTabActive : styles.etapaTabInactive
-                  }`}
-                >
-                  {e === "TODAS" ? "Todas as etapas" : e}
-                </button>
-              ))}
-            </div>
-          }
-        >
+        <ChartCard title="Gastos por categoria">
           <div className={styles.chartContainerLarge}>
-            <div className={styles.barList}>
+            <div className={styles.categoryChart}>
               {categoriasExibidas.map((item) => (
-                <div key={item.categoria} className={styles.barItem}>
-                  <div className={styles.barHeader}>
-                    <span>{item.categoria}</span>
-                    <strong>{formatBRL(item.valor)}</strong>
-                  </div>
-                  <div className={styles.barTrack}>
+                <div key={item.categoria} className={styles.categoryColumn}>
+                  <div className={styles.categoryBarWrap}>
                     <div
-                      className={styles.barFill}
-                      style={{ width: `${limitarPercentual((item.valor / maxCategoria) * 100)}%` }}
+                      className={styles.categoryBar}
+                      style={{ height: `${Math.max(12, limitarPercentual((item.valor / maxCategoria) * 100))}%` }}
                     />
+                  </div>
+                  <div className={styles.categoryInfo}>
+                    <strong>{formatBRL(item.valor)}</strong>
+                    <span>{item.categoria}</span>
                   </div>
                 </div>
               ))}

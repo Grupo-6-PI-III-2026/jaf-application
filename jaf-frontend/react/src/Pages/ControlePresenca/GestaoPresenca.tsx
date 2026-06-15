@@ -6,7 +6,16 @@ import { authService } from "../../Service/Auth/Login/authService";
 import { obraService, type Obra } from "../../Service/Obras/obraService";
 import { presencaService, type Colaborador } from "../../Service/Presencas/presencaService";
 
-const hojeIso = () => new Date().toISOString().slice(0, 10);
+const hojeIso = () => {
+  const partes = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const getParte = (tipo: string) => partes.find((parte) => parte.type === tipo)?.value ?? "";
+  return `${getParte("year")}-${getParte("month")}-${getParte("day")}`;
+};
 
 const formatarCargoObra = (cargo: string) => cargo.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (letra) => letra.toUpperCase());
 

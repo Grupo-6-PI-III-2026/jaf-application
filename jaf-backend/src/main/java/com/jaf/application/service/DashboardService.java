@@ -17,7 +17,7 @@ import java.util.*;
 @Service
 public class DashboardService {
 
-    private static final String CATEGORIA_IMPREVISTOS = "Custos extras";
+    private static final Set<String> CATEGORIAS_IMPREVISTOS = Set.of("IMPREVISTO", "Custos extras");
 
     private final GastoRepository gastoRepository;
     private final ObraRepository obraRepository;
@@ -48,8 +48,10 @@ public class DashboardService {
         BigDecimal saldoRestante = orcamento.subtract(totalGastosObra);
         int progressoSaldo = calcularPercentual(totalGastosObra, orcamento);
 
-        // StatCard 2: reembolsos pendentes (escopo da obra inteira)
-        List<Gasto> reembolsos = gastoRepository.findByObraIdAndReembolsoConcluidoIsNotNull(obraId);
+        // StatCard 2: reembolsos pendentes (filtrado pela etapa selecionada)
+        List<Gasto> reembolsos = gastoRepository.findByObraIdAndReembolsoConcluidoIsNotNull(obraId).stream()
+            .filter(g -> "TODAS".equals(etapa) || etapa.equals(g.getEtapa()))
+            .toList();
 
         BigDecimal reembolsosPendentes = reembolsos.stream()
                 .filter(g -> !Boolean.TRUE.equals(g.getReembolsoConcluido()))
@@ -60,7 +62,7 @@ public class DashboardService {
         List<DashboardResponseDto.PieItemDto> pizza = calcularPizza(reembolsos);
 
         // Linha: gastos imprevistos agrupados por mês
-        List<DashboardResponseDto.LineItemDto> linha = calcularLinha(todosGastos);
+        List<DashboardResponseDto.LineItemDto> linha = calcularLinha(gastosEtapaFiltrado);
 
         // Barra: gastos por categoria (filtrado pela etapa selecionada)
         List<DashboardResponseDto.BarItemDto> barra = calcularBarra(gastosEtapaFiltrado);
@@ -96,7 +98,7 @@ public class DashboardService {
     private List<DashboardResponseDto.LineItemDto> calcularLinha(List<Gasto> todosGastos) {
         Map<YearMonth, BigDecimal> porMes = new TreeMap<>();
         todosGastos.stream()
-                .filter(g -> CATEGORIA_IMPREVISTOS.equals(g.getCategoria()))
+                .filter(g -> g.getCategoria() != null && CATEGORIAS_IMPREVISTOS.contains(g.getCategoria()))
                 .forEach(g -> porMes.merge(YearMonth.from(g.getDtGasto()), g.getValor(), BigDecimal::add));
 
         return porMes.entrySet().stream()

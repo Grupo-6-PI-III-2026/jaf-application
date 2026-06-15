@@ -3,6 +3,7 @@ import { useUser } from "../../Context/useUser";
 import { funcionarioService } from "../../Service/Funcionarios/funcionarioService";
 import { authService } from "../../Service/Auth/Login/authService";
 import { toast } from "sonner";
+import axios from "axios";
 import {
   CargoLabel,
   DEFAULT_AVATAR_URL,
@@ -117,6 +118,19 @@ const IconShield = () => (
 
 type Tab = "info" | "seguranca" | "excluir";
 
+const EMAIL_REGEX = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
+const SENHA_REGEX = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d).{6,}$/;
+const FOTO_MAX_BYTES = 5 * 1024 * 1024;
+
+const getApiMessage = (error: unknown, fallback: string) => {
+  if (axios.isAxiosError(error)) {
+    const data = error.response?.data as { message?: string; fields?: Record<string, string> } | undefined;
+    const fieldMessage = data?.fields ? Object.values(data.fields)[0] : null;
+    return fieldMessage || data?.message || fallback;
+  }
+  return error instanceof Error ? error.message : fallback;
+};
+
 export default function Profile() {
   const { user, isLoading, refreshUser, clearUser, error } = useUser();
 
@@ -156,6 +170,17 @@ export default function Profile() {
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      if (!file.type.startsWith("image/")) {
+        setSaveError("Selecione um arquivo de imagem valido.");
+        event.target.value = "";
+        return;
+      }
+      if (file.size > FOTO_MAX_BYTES) {
+        setSaveError("A foto deve ter no maximo 5 MB.");
+        event.target.value = "";
+        return;
+      }
+      setSaveError(null);
       setFotoFile(file);
       const previewUrl = URL.createObjectURL(file);
       setFotoSelecionada(previewUrl);
@@ -170,9 +195,11 @@ export default function Profile() {
       setFotoSelecionada(url);
       setFotoFile(null);
       toast.success("Foto enviada com sucesso!");
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Erro ao fazer upload da foto:", error);
-      toast.error("Erro ao enviar foto");
+      const message = getApiMessage(error, "Erro ao enviar foto");
+      setSaveError(message);
+      toast.error(message);
     } finally {
       setIsUploading(false);
     }
@@ -195,6 +222,18 @@ export default function Profile() {
       return;
     }
 
+    const nomeNormalizado = nome.trim();
+    const emailNormalizado = email.trim().toLowerCase();
+
+    if (nomeNormalizado.length < 3 || nomeNormalizado.length > 100) {
+      setSaveError("Nome deve ter entre 3 e 100 caracteres.");
+      return;
+    }
+    if (!EMAIL_REGEX.test(emailNormalizado)) {
+      setSaveError("Informe um e-mail valido.");
+      return;
+    }
+
     setIsSaving(true);
     setSaveError(null);
     setSaveSuccess(false);
@@ -202,9 +241,9 @@ export default function Profile() {
     try {
       const fotoUrl = fotoSelecionada === DEFAULT_AVATAR_URL ? null : fotoSelecionada;
       const emailChanged =
-        email.trim().toLowerCase() !== user.email.toLowerCase();
+        emailNormalizado !== user.email.toLowerCase();
 
-      await funcionarioService.atualizarPerfil({ nome, email, fotoUrl });
+      await funcionarioService.atualizarPerfil({ nome: nomeNormalizado, email: emailNormalizado, fotoUrl });
       if (emailChanged) {
         clearUser();
         authService.logout();
@@ -216,9 +255,7 @@ export default function Profile() {
       setSaveSuccess(true);
       setIsEditing(false);
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Erro ao salvar. Tente novamente.";
-      setSaveError(message);
+      setSaveError(getApiMessage(err, "Erro ao salvar. Tente novamente."));
     } finally {
       setIsSaving(false);
     }
@@ -228,12 +265,17 @@ export default function Profile() {
     setSenhaError(null);
     setSenhaSuccess(false);
 
+    if (!senhaAtual.trim()) {
+      setSenhaError("Informe sua senha atual.");
+      return;
+    }
+
     if (novaSenha !== confirmacaoSenha) {
       setSenhaError("Nova senha e confirmacao nao conferem.");
       return;
     }
-    if (novaSenha.length < 6) {
-      setSenhaError("A nova senha deve ter pelo menos 6 caracteres.");
+    if (!SENHA_REGEX.test(novaSenha)) {
+      setSenhaError("A nova senha deve ter pelo menos 6 caracteres, 1 letra maiuscula, 1 minuscula e 1 numero.");
       return;
     }
 
@@ -245,8 +287,8 @@ export default function Profile() {
       setSenhaAtual("");
       setNovaSenha("");
       setConfirmacaoSenha("");
-    } catch {
-      setSenhaError("Senha atual incorreta ou erro no servidor.");
+    } catch (error: unknown) {
+      setSenhaError(getApiMessage(error, "Senha atual incorreta ou erro no servidor."));
     } finally {
       setIsSavingSenha(false);
     }
@@ -263,8 +305,8 @@ export default function Profile() {
       await funcionarioService.excluirConta();
       clearUser();
       authService.logout();
-    } catch {
-      setDeleteError("Erro ao excluir a conta. Tente novamente.");
+    } catch (error: unknown) {
+      setDeleteError(getApiMessage(error, "Erro ao excluir a conta. Tente novamente."));
     } finally {
       setIsDeleting(false);
     }
@@ -477,7 +519,7 @@ export default function Profile() {
                         <button
                           type="button"
                           className={styles.changeFotoBtn}
-                          onClick={() => setIsEditing(true)}
+                          onClick={handleStartEdit}
                         >
                           Alterar foto
                         </button>
@@ -489,8 +531,8 @@ export default function Profile() {
                               await funcionarioService.atualizarPerfil({ nome: user.nome, email: user.email, fotoUrl: null });
                               await refreshUser();
                               toast.success("Foto removida com sucesso!");
-                            } catch {
-                              toast.error("Erro ao remover foto");
+                            } catch (error: unknown) {
+                              toast.error(getApiMessage(error, "Erro ao remover foto"));
                             }
                           }}
                         >
@@ -501,7 +543,7 @@ export default function Profile() {
                       <button
                         type="button"
                         className={styles.addFotoBtn}
-                        onClick={() => setIsEditing(true)}
+                        onClick={handleStartEdit}
                       >
                         Adicionar foto
                       </button>

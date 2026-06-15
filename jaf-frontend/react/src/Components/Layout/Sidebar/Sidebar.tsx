@@ -2,7 +2,6 @@ import {
   CalendarCheck,
   Pickaxe,
   Settings,
-  Bell,
   UserPlus,
   HardHat,
   Shield,
@@ -27,12 +26,6 @@ const menuSections = [
       { icon: HardHat, label: "Nova Obra", path: "/obras/criar", permissao: "CRIAR_OBRA" },
       { icon: UserPlus, label: "Novo Usuário", path: "/funcionarios/novo", permissao: "CRIAR_FUNCIONARIO" },
       { icon: Shield, label: "Perfis de Acesso", path: "/permissoes", permissao: "EDITAR_FUNCIONARIO" },
-    ],
-  },
-  {
-    title: "Conta",
-    items: [
-      { icon: Settings, label: "Perfil", path: "/perfil" },
     ],
   },
 ];
@@ -93,7 +86,7 @@ export function Sidebar() {
           title="Perfil"
           aria-label="Ir para perfil"
         >
-          <Bell />
+          <Settings />
         </NavLink>
       </div>
     </div>

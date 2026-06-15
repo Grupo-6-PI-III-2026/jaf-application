@@ -111,8 +111,8 @@ export default function ControlePresenca({
 
   function formatarData(dataStr?: string): string {
     if (!dataStr) return "Selecionar data";
-    const data = new Date(dataStr);
-    return data.toLocaleDateString('pt-BR');
+    const data = new Date(`${dataStr}T00:00:00`);
+    return data.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
   }
 
   if (!aberto) {

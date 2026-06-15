@@ -164,12 +164,12 @@
 }
 
 .notificationBtn {
-  background: none;
-  border: none;
+  background: #fff;
+  border: 1px solid #e9ecef;
   cursor: pointer;
   padding: 8px;
   color: #6c757d;
-  border-radius: 50%;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -178,4 +178,5 @@
 
 .notificationBtn:hover {
   background-color: #e9ecef;
+  color: #333;
 }
