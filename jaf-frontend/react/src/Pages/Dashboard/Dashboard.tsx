@@ -12,7 +12,7 @@ const PIE_COLORS = ["#5A6B7B", "#F5C518"];
 const formatBRL = (v: number) =>
   `R$${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
-const etapas = ["TODAS", "ETAPA 1", "ETAPA 2", "ETAPA 3"];
+const etapas = ["TODAS", "ETAPA 1", "ETAPA 2"];
 
 const limitarPercentual = (valor: number) => Math.min(100, Math.max(0, valor));
 
@@ -201,18 +201,18 @@ export default function Dashboard() {
       <div className={styles.chartFull}>
         <ChartCard title="Gastos por categoria">
           <div className={styles.chartContainerLarge}>
-            <div className={styles.categoryChart}>
+            <div className={styles.categoryList}>
               {categoriasExibidas.map((item) => (
-                <div key={item.categoria} className={styles.categoryColumn}>
+                <div key={item.categoria} className={styles.categoryItem}>
+                  <div className={styles.categoryInfo}>
+                    <span>{item.categoria}</span>
+                    <strong>{formatBRL(item.valor)}</strong>
+                  </div>
                   <div className={styles.categoryBarWrap}>
                     <div
                       className={styles.categoryBar}
-                      style={{ height: `${Math.max(12, limitarPercentual((item.valor / maxCategoria) * 100))}%` }}
+                      style={{ width: `${Math.max(4, limitarPercentual((item.valor / maxCategoria) * 100))}%` }}
                     />
-                  </div>
-                  <div className={styles.categoryInfo}>
-                    <strong>{formatBRL(item.valor)}</strong>
-                    <span>{item.categoria}</span>
                   </div>
                 </div>
               ))}

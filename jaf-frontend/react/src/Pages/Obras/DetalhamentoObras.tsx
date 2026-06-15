@@ -61,8 +61,28 @@ const METODOS_PAGAMENTO = [
   { value: "DINHEIRO", label: "Dinheiro" },
 ];
 
+const FILTROS_PAGAMENTO = [
+  ...METODOS_PAGAMENTO,
+  { value: "REEMBOLSO", label: "Reembolso" },
+];
+
+const normalizarMetodoPagamento = (metodo: string) => {
+  const metodoNormalizado = metodo
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/_/g, " ")
+    .toLowerCase();
+
+  if (metodoNormalizado.includes("pix")) return "PIX";
+  if (metodoNormalizado.includes("debito")) return "CARTAO_DEBITO";
+  if (metodoNormalizado.includes("credito") || metodoNormalizado.includes("cartao")) return "CARTAO_CREDITO";
+  if (metodoNormalizado.includes("dinheiro") || metodoNormalizado.includes("especie")) return "DINHEIRO";
+  if (metodoNormalizado.includes("reembolso")) return "REEMBOLSO";
+  return metodo;
+};
+
 const metodoPagamentoLabel = (metodo: string) =>
-  METODOS_PAGAMENTO.find((item) => item.value === metodo)?.label ??
+  FILTROS_PAGAMENTO.find((item) => item.value === normalizarMetodoPagamento(metodo))?.label ??
   metodo
     .replace(/_/g, " ")
     .toLowerCase()
@@ -103,6 +123,7 @@ export default function DetalhamentoObras() {
   const [salvandoGasto, setSalvandoGasto] = useState(false);
   const [salvandoObra, setSalvandoObra] = useState(false);
   const [deletandoObra, setDeletandoObra] = useState(false);
+  const [atualizandoReembolsoId, setAtualizandoReembolsoId] = useState<number | null>(null);
   const [buscaFinanceira, setBuscaFinanceira] = useState("");
   const [ordemFinanceira, setOrdemFinanceira] = useState<"data" | "valor" | "alfabetica">("data");
   const [filtroMetodoPagamento, setFiltroMetodoPagamento] = useState("TODOS");
@@ -138,6 +159,7 @@ export default function DetalhamentoObras() {
   const podeEditarObra = authService.hasAuthority("EDITAR_OBRA");
   const podeDeletarObra = authService.hasAuthority("DELETAR_OBRA");
   const podeCriarGasto = authService.hasAuthority("CRIAR_GASTO");
+  const podeEditarGasto = authService.hasAuthority("EDITAR_GASTO");
   const podeVisualizarGastos = authService.hasAuthority("VISUALIZAR_GASTOS");
   const podeVisualizarAlocacoes = authService.hasAuthority("VISUALIZAR_ALOCACOES");
   const podeRegistrarPresenca = authService.hasAuthority("REGISTRAR_PRESENCA");
@@ -231,7 +253,11 @@ export default function DetalhamentoObras() {
         .filter(Boolean)
         .some((campo) => campo.toLowerCase().includes(termo));
 
-      const correspondeMetodo = filtroMetodoPagamento === "TODOS" || gasto.metodoPagamento === filtroMetodoPagamento;
+      const correspondeMetodo =
+        filtroMetodoPagamento === "TODOS" ||
+        (filtroMetodoPagamento === "REEMBOLSO"
+          ? gasto.reembolsoConcluido !== null || normalizarMetodoPagamento(gasto.metodoPagamento) === "REEMBOLSO"
+          : normalizarMetodoPagamento(gasto.metodoPagamento) === filtroMetodoPagamento);
       return correspondeBusca && correspondeMetodo;
     })
     .sort((a, b) => {
@@ -391,6 +417,35 @@ export default function DetalhamentoObras() {
       toast.error("Não foi possível processar a nota fiscal");
     } finally {
       setProcessandoNotaFiscal(false);
+    }
+  }
+
+  async function alternarReembolso(gasto: Gasto) {
+    if (!obra || gasto.reembolsoConcluido === null || atualizandoReembolsoId) return;
+
+    try {
+      setAtualizandoReembolsoId(gasto.id);
+      const gastoAtualizado = await gastoService.atualizar(gasto.id, {
+        descricao: gasto.descricao,
+        categoria: gasto.categoria,
+        metodoPagamento: gasto.metodoPagamento,
+        etapa: gasto.etapa,
+        valor: gasto.valor,
+        dtGasto: gasto.dtGasto,
+        funcionarioId: gasto.funcionario.id,
+        obraId: obra.id,
+        reembolsoConcluido: !gasto.reembolsoConcluido,
+      });
+
+      setGastos((gastosAtuais) =>
+        gastosAtuais.map((item) => (item.id === gasto.id ? gastoAtualizado : item))
+      );
+      toast.success(gastoAtualizado.reembolsoConcluido ? "Reembolso concluído" : "Reembolso marcado como pendente");
+    } catch (error) {
+      console.error("Erro ao atualizar reembolso:", error);
+      toast.error("Não foi possível atualizar o reembolso");
+    } finally {
+      setAtualizandoReembolsoId(null);
     }
   }
 
@@ -592,7 +647,6 @@ export default function DetalhamentoObras() {
                 <select value={novoGasto.etapa} onChange={(evento) => atualizarNovoGasto("etapa", evento.target.value)}>
                   <option value="ETAPA 1">Etapa 1</option>
                   <option value="ETAPA 2">Etapa 2</option>
-                  <option value="ETAPA 3">Etapa 3</option>
                 </select>
               </label>
               <label>
@@ -820,7 +874,7 @@ export default function DetalhamentoObras() {
             </button>
             <select className={styles.inputFiltro} value={filtroMetodoPagamento} onChange={(evento) => setFiltroMetodoPagamento(evento.target.value)}>
               <option value="TODOS">Todos os pagamentos</option>
-              {METODOS_PAGAMENTO.map((metodo) => (
+              {FILTROS_PAGAMENTO.map((metodo) => (
                 <option key={metodo.value} value={metodo.value}>{metodo.label}</option>
               ))}
             </select>
@@ -870,19 +924,25 @@ export default function DetalhamentoObras() {
                       </span>
                     </td>
                     <td>
-                      <span className={`${styles.badgeReembolso} ${
-                        gasto.reembolsoConcluido === false
-                          ? styles.reembolsoPendente
-                          : gasto.reembolsoConcluido === true
-                            ? styles.reembolsoConcluido
-                            : styles.reembolsoNaoAplicavel
-                      }`}>
-                        {gasto.reembolsoConcluido === false
-                          ? "Pendente"
-                          : gasto.reembolsoConcluido === true
-                            ? "Concluído"
-                            : "Não"}
-                      </span>
+                      {gasto.reembolsoConcluido !== null ? (
+                        <button
+                          type="button"
+                          className={`${styles.badgeReembolso} ${
+                            gasto.reembolsoConcluido ? styles.reembolsoConcluido : styles.reembolsoPendente
+                          } ${podeEditarGasto ? styles.badgeReembolsoAcionavel : ""}`}
+                          onClick={() => alternarReembolso(gasto)}
+                          disabled={!podeEditarGasto || atualizandoReembolsoId === gasto.id}
+                          title={podeEditarGasto ? "Clique para alternar o status do reembolso" : "Sem permissão para editar reembolso"}
+                        >
+                          {atualizandoReembolsoId === gasto.id
+                            ? "Salvando..."
+                            : gasto.reembolsoConcluido
+                              ? "Concluído"
+                              : "Pendente"}
+                        </button>
+                      ) : (
+                        <span className={`${styles.badgeReembolso} ${styles.reembolsoNaoAplicavel}`}>Não</span>
+                      )}
                     </td>
                     <td>
                       <span className={styles.descricaoDestaque}>{gasto.descricao}</span>

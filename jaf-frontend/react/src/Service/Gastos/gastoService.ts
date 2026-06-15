@@ -51,6 +51,11 @@ export const gastoService = {
     return response.data;
   },
 
+  atualizar: async (id: number, dto: GastoCriarDto): Promise<Gasto> => {
+    const response = await api.put(`/gastos/${id}`, dto);
+    return response.data;
+  },
+
   buscarPorId: async (id: number): Promise<Gasto> => {
     const response = await api.get(`/gastos/${id}`);
     return response.data;

@@ -137,6 +137,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
 }
 
 .valor {
@@ -144,12 +145,64 @@
   font-weight: 800;
 }
 
-.botaoDetalhes {
+.acoesCard {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.botaoDetalhes,
+.botaoDashboard {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   background: #ffc107;
   border: none;
-  padding: 10px 18px;
+  padding: 9px 12px;
   border-radius: 8px;
   font-weight: 700;
   cursor: pointer;
   color: #333;
+  font-size: 12px;
+  min-height: 36px;
+}
+
+.botaoDetalhes {
+  background: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+.botaoDashboard:hover,
+.botaoDetalhes:hover {
+  transform: translateY(-1px);
+}
+
+@media (max-width: 900px) {
+  .card {
+    flex-direction: column;
+  }
+
+  .imagemWrapper {
+    width: 100%;
+    min-width: 0;
+    height: 180px;
+  }
+
+  .rodape {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .acoesCard {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .botaoDetalhes,
+  .botaoDashboard {
+    flex: 1;
+  }
 }

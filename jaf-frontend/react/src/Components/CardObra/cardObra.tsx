@@ -1,4 +1,4 @@
-import { Pencil, MapPin, Plus } from "lucide-react";
+import { BarChart3, FileText, Pencil, MapPin, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import styles from "./CardObra.module.css";
 import { authService } from "../../Service/Auth/Login/authService";
@@ -98,9 +98,16 @@ export default function CardObra({ id, nome, status, valor, imagem, responsavelN
             </div>
           </div>
 
-          <button className={styles.botaoDetalhes} onClick={() => navigate(id ? `/obras/detalhamento/${id}/financeiro` : "/obras/detalhamento")}>
-            VER ESTATÍSTICAS
-          </button>
+          <div className={styles.acoesCard}>
+            <button className={styles.botaoDetalhes} onClick={() => navigate(id ? `/obras/detalhamento/${id}` : "/obras/detalhamento")}>
+              <FileText size={15} />
+              Detalhes
+            </button>
+            <button className={styles.botaoDashboard} onClick={() => navigate(id ? `/obras/detalhamento/${id}/financeiro` : "/obras/detalhamento")}>
+              <BarChart3 size={15} />
+              Dashboard
+            </button>
+          </div>
         </div>
 
       </div>

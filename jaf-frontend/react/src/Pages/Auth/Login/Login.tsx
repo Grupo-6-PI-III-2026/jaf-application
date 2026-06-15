@@ -22,7 +22,9 @@ function Login() {
     const emailNormalizado = email.trim().toLowerCase();
 
     if (!emailRegex.test(emailNormalizado) || password.trim().length === 0) {
-      setErrorMessage("E-mail ou senha inválidos. Verifique suas credenciais.");
+      const message = "E-mail ou senha inválidos. Verifique suas credenciais.";
+      setErrorMessage(message);
+      toast.error(message);
       return;
     }
 
@@ -36,7 +38,9 @@ function Login() {
       }, 1000);
     } catch (error: unknown) {
       console.error(error);
-      setErrorMessage(error instanceof Error ? error.message : "Erro inesperado. Tente novamente.");
+      const message = error instanceof Error ? error.message : "Erro inesperado. Tente novamente.";
+      setErrorMessage(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }

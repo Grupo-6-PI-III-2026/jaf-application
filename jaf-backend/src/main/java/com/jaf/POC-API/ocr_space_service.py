@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from datetime import datetime, timezone
 from pathlib import Path
@@ -9,8 +10,8 @@ from typing import Any
 import requests
 
 
-# Configure sua chave da OCR.space aqui.
-OCR_SPACE_API_KEY = "K83732583388957"
+# Configure OCR_SPACE_API_KEY no ambiente ou no .env do projeto.
+OCR_SPACE_API_KEY = os.getenv("OCR_SPACE_API_KEY", "")
 OCR_SPACE_ENDPOINT = "https://api.ocr.space/parse/image"
 
 
