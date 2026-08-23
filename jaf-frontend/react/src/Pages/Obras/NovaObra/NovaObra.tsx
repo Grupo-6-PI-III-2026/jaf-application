@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { isAxiosError } from "axios";
 import {
   FileText,
@@ -13,6 +13,9 @@ import {
 import { useNavigate } from "react-router-dom";
 import styles from "./NovaObra.module.css";
 import { obraService, type ObraCriarDto } from "../../../Service/Obras/obraService";
+import { alocacaoService } from "../../../Service/Alocacoes/alocacaoService";
+import { funcionarioService } from "../../../Service/Funcionarios/funcionarioService";
+import type { FuncionarioPermissoes } from "../../../Types/permissoes";
 import { toast } from "sonner";
 
 interface ErrosFormulario {
@@ -48,22 +51,59 @@ const STATUS_OPCOES = [
   { label: "Cancelada", value: "CANCELADA" },
 ];
 
+const CARGO_LABELS: Record<string, string> = {
+  ADMIN: "Administrador",
+  RESPONSAVEL_ADMINISTRATIVO: "Responsável Administrativo",
+  ENGENHEIRO: "Engenheiro",
+  GESTOR_OBRA: "Gestor de Obra",
+  ARQUITETO: "Arquiteto",
+  MESTRE_DE_OBRAS: "Mestre de Obras",
+  OPERADOR_LANCAMENTO: "Operador de Lançamento",
+  PEDREIRO: "Pedreiro",
+  PINTOR: "Pintor",
+  MARCENEIRO: "Marceneiro",
+  GESSEIRO: "Gesseiro",
+};
+
+const cargoLabel = (cargo: string | null | undefined) =>
+  cargo ? (CARGO_LABELS[cargo] ?? cargo.replace(/_/g, " ")) : "Sem cargo";
+
 export default function NovaObra() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [carregandoFuncionarios, setCarregandoFuncionarios] = useState(true);
   const [errors, setErrors] = useState<ErrosFormulario>({});
   const [arquivos, setArquivos] = useState<ArquivoUpload[]>([]);
+  const [funcionarios, setFuncionarios] = useState<FuncionarioPermissoes[]>([]);
 
   const [nomeObra, setNomeObra] = useState("");
   const [status, setStatus] = useState("PLANEJADA");
-  const [responsavel, setResponsavel] = useState("");
+  const [responsavelId, setResponsavelId] = useState("");
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
   const [endereco, setEndereco] = useState("");
   const [cidade, setCidade] = useState("");
   const [estado, setEstado] = useState("");
   const [orcamento, setOrcamento] = useState("");
+
+  useEffect(() => {
+    const carregarFuncionarios = async () => {
+      try {
+        setCarregandoFuncionarios(true);
+        const data = await funcionarioService.listar();
+        setFuncionarios(data);
+        setResponsavelId((valorAtual) => valorAtual || String(data[0]?.id ?? ""));
+      } catch (error) {
+        console.error("Erro ao carregar funcionários:", error);
+        toast.error("Não foi possível carregar os usuários do sistema.");
+      } finally {
+        setCarregandoFuncionarios(false);
+      }
+    };
+
+    carregarFuncionarios();
+  }, []);
 
   const validateInputs = () => {
     const nextErrors: ErrosFormulario = {};
@@ -86,6 +126,12 @@ export default function NovaObra() {
 
     if (!orcamento.trim()) {
       nextErrors.orcamento = "Defina o orçamento inicial.";
+    }
+
+    if (!responsavelId) {
+      nextErrors.responsavel = funcionarios.length
+        ? "Selecione um usuário responsável pela obra."
+        : "Nenhum usuário disponível para vincular à obra.";
     }
 
     setErrors(nextErrors);
@@ -140,13 +186,19 @@ export default function NovaObra() {
 
       
       const obraCriada = await obraService.criar(obraDto);
+
+      await alocacaoService.criar({
+        funcionarioId: Number(responsavelId),
+        obraId: obraCriada.id,
+        cargoNaObra: "GESTOR_OBRA",
+      });
       
       toast.success(`Obra "${obraCriada.titulo}" criada com sucesso!`);
       
       // Limpar formulário
       setNomeObra("");
       setStatus("PLANEJADA");
-      setResponsavel("");
+      setResponsavelId(String(funcionarios[0]?.id ?? ""));
       setDataInicio("");
       setDataFim("");
       setEndereco("");
@@ -257,23 +309,34 @@ export default function NovaObra() {
 
                   <div className={styles.grupoCampo}>
                     <label className={styles.rotulo}>RESPONSÁVEL</label>
-                    <div className={styles.caixaCampo}>
+                    <div className={styles.selectWrapperComIcone}>
                       <User size={18} className={styles.icone} />
-                      <input
-                        type="text"
-                        placeholder="Ex: Carlos Almeida"
-                        value={responsavel}
+                      <select
+                        value={responsavelId}
                         onChange={(e) => {
-                          setResponsavel(e.target.value);
+                          setResponsavelId(e.target.value);
                           if (errors.responsavel)
                             setErrors((prev) => ({
                               ...prev,
                               responsavel: undefined,
                             }));
                         }}
-                        className={styles.campo}
-                        disabled={isLoading}
-                      />
+                        className={styles.selectComIcone}
+                        disabled={isLoading || carregandoFuncionarios || funcionarios.length === 0}
+                      >
+                        {carregandoFuncionarios ? (
+                          <option value="">Carregando usuários...</option>
+                        ) : funcionarios.length > 0 ? (
+                          funcionarios.map((funcionario) => (
+                            <option key={funcionario.id} value={funcionario.id}>
+                              {funcionario.nome} - {cargoLabel(funcionario.cargo)} - {funcionario.email}
+                            </option>
+                          ))
+                        ) : (
+                          <option value="">Nenhum usuário encontrado</option>
+                        )}
+                      </select>
+                      <ChevronDown size={20} className={styles.iconSelect} />
                     </div>
                     {errors.responsavel && (
                       <span className={styles.errorText}>

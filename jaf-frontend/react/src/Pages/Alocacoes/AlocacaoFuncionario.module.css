@@ -21,59 +21,6 @@
   gap: 10px;
 }
 
-.cabecalhoEsquerda {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.botaoVoltar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border: none;
-  border-radius: 8px;
-  background: #fff;
-  color: #495057;
-  cursor: pointer;
-  border: 1px solid #e9ecef;
-  transition: background 0.2s;
-}
-
-.botaoVoltar:hover {
-  background: #e9ecef;
-}
-
-.navegacao {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.navegacaoLink {
-  color: #6c757d;
-  cursor: pointer;
-  transition: color 0.2s;
-}
-
-.navegacaoLink:hover {
-  color: #333;
-}
-
-.separador {
-  color: #6c757d;
-  font-size: 16px;
-}
-
-.navegacaoAtivo {
-  color: #333;
-  font-weight: 600;
-}
-
 .botaoAdicionarGasto {
   display: flex;
   align-items: center;
