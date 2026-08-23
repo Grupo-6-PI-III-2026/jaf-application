@@ -11,6 +11,8 @@ import com.jaf.application.repository.FuncionarioRepository;
 import com.jaf.application.dto.FuncionarioTokenDto;
 import com.jaf.application.service.FuncionarioPermissaoService;
 import com.jaf.application.service.FuncionarioService;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -45,14 +47,49 @@ public class FuncionarioController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<FuncionarioTokenDto> login(@Valid @RequestBody FuncionarioLoginDto loginDto) {
+    public ResponseEntity<FuncionarioTokenDto> login(@Valid @RequestBody FuncionarioLoginDto loginDto, HttpServletResponse response) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginDto.getEmail(), loginDto.getSenha())
         );
         
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String token = gerenciadorTokenJwt.generateToken(authentication);
-                return ResponseEntity.ok(new FuncionarioTokenDto(loginDto.getEmail(), token));
+        
+        // CORREÇÃO DE SEGURANÇA A07: Envio de token via cookie HttpOnly em vez de no corpo da resposta
+        // Antes: return ResponseEntity.ok(new FuncionarioTokenDto(loginDto.getEmail(), token));
+        // Agora: Token enviado via cookie com flags de segurança
+        Cookie jwtCookie = new Cookie("jwt", token);
+        jwtCookie.setHttpOnly(true);      // Não acessível via JavaScript (proteção contra XSS)
+        // Secure deve ser true em produção (HTTPS), false em desenvolvimento (HTTP)
+        jwtCookie.setSecure(false);       // Ajustado para desenvolvimento (localhost sem HTTPS)
+        jwtCookie.setPath("/");            // Disponível em todo o domínio
+        jwtCookie.setMaxAge(3600);         // 1 hora de validade (mesma configuração do JWT)
+        response.addCookie(jwtCookie);
+        
+        // Busca informações do funcionário para retornar no DTO (sem o token)
+        var funcionario = funcionarioService.buscarPorEmail(loginDto.getEmail());
+        FuncionarioTokenDto dto = new FuncionarioTokenDto();
+        dto.setEmail(funcionario.getEmail());
+        dto.setNome(funcionario.getNome());
+        dto.setId(funcionario.getId());
+        dto.setCargo(funcionario.getCargoGlobal());
+        dto.setToken(null); // Token está no cookie, não no corpo da resposta
+        
+        return ResponseEntity.ok(dto);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(HttpServletResponse response) {
+        // CORREÇÃO DE SEGURANÇA A07: Limpa o cookie HttpOnly no logout
+        Cookie jwtCookie = new Cookie("jwt", "");
+        jwtCookie.setHttpOnly(true);
+        jwtCookie.setSecure(false);       // Ajustado para desenvolvimento (localhost sem HTTPS)
+        jwtCookie.setPath("/");
+        jwtCookie.setMaxAge(0); // Remove o cookie imediatamente
+        response.addCookie(jwtCookie);
+        
+        SecurityContextHolder.clearContext();
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping
