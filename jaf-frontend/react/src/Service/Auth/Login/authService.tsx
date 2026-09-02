@@ -3,8 +3,6 @@ import type { Cargo, JwtPayload } from "../../../Types/user";
 import api from "./Api/Api";
 import axios from "axios";
 
-const TOKEN_KEYS = ["token", "auth_token"];
-
 export const authService = {
   // endpoint de login
   login: async (credentials: LoginCredentials): Promise<LoginResponse> => {
@@ -106,6 +104,6 @@ export const authService = {
     // Em produção, isso deve ser validado no backend via endpoint dedicado
     const cargo = authService.getCargo();
     // Implementação simplificada - ajustar conforme necessidades de permissão
-    return cargo !== null;
+    return authority.length > 0 && cargo !== null;
   },
 };
