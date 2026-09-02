@@ -17,6 +17,9 @@ public class AutenticacaoService implements UserDetailsService {
     @Autowired
     private FuncionarioRepository funcionarioRepository;
 
+    @Autowired
+    private FuncionarioPermissaoService funcionarioPermissaoService;
+
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
 
@@ -26,6 +29,10 @@ public class AutenticacaoService implements UserDetailsService {
             throw new UsernameNotFoundException(String.format("usuario: %s nao encontrado", username));
         }
 
-        return new FuncionarioDetalhesDto(funcionarioOpt.get());
+        Funcionario funcionario = funcionarioOpt.get();
+        return new FuncionarioDetalhesDto(
+            funcionario,
+            funcionarioPermissaoService.permissoesDoFuncionario(funcionario)
+        );
     }
 }

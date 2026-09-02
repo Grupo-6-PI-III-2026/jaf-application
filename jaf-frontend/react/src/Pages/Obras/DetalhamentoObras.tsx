@@ -1,28 +1,33 @@
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect, type FormEvent } from "react";
 import {
-  ArrowLeft,
   Calendar,
   Search,
   Filter,
   CalendarDays,
-  Pencil,
   TrendingUp,
   ChevronLeft,
   ChevronRight,
   Plus,
+  Pencil,
+  Upload,
+  X,
+  Trash2,
 } from "lucide-react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import styles from "./DetalhamentoObras.module.css";
 import ControlePresenca from "../ControlePresenca/ControlePresenca";
 import { obraService, type Obra } from "../../Service/Obras/obraService";
 import { gastoService, type Gasto } from "../../Service/Gastos/gastoService";
+import { ocrService } from "../../Service/Gastos/ocrService";
 import { alocacaoService, type AlocacaoObra } from "../../Service/Alocacoes/alocacaoService";
+import { authService } from "../../Service/Auth/Login/authService";
+import { toast } from "sonner";
 
 const formatarMoeda = (valor: number) =>
   valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 const formatarData = (data: string) => {
-  return new Date(data).toLocaleDateString("pt-BR");
+  return new Date(`${data}T00:00:00`).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
 };
 
 const getIniciais = (nome: string) => {
@@ -33,23 +38,133 @@ const getIniciais = (nome: string) => {
   return nome.substring(0, 2).toUpperCase();
 };
 
+const cargoLabel = (cargo: string | null | undefined) =>
+  cargo ? cargo.replace(/_/g, " ") : "Não definido";
+
 const cores = ["#6C63FF", "#FF6584", "#43B89C", "#ffc107", "#9c27b0"];
+
+const dataHoje = () => {
+  const partes = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const getParte = (tipo: string) => partes.find((parte) => parte.type === tipo)?.value ?? "";
+  return `${getParte("year")}-${getParte("month")}-${getParte("day")}`;
+};
+
+const METODOS_PAGAMENTO = [
+  { value: "PIX", label: "Pix" },
+  { value: "CARTAO_CREDITO", label: "Cartão de crédito" },
+  { value: "CARTAO_DEBITO", label: "Cartão de débito" },
+  { value: "DINHEIRO", label: "Dinheiro" },
+];
+
+const FILTROS_PAGAMENTO = [
+  ...METODOS_PAGAMENTO,
+  { value: "REEMBOLSO", label: "Reembolso" },
+];
+
+const normalizarMetodoPagamento = (metodo: string) => {
+  const metodoNormalizado = metodo
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/_/g, " ")
+    .toLowerCase();
+
+  if (metodoNormalizado.includes("pix")) return "PIX";
+  if (metodoNormalizado.includes("debito")) return "CARTAO_DEBITO";
+  if (metodoNormalizado.includes("credito") || metodoNormalizado.includes("cartao")) return "CARTAO_CREDITO";
+  if (metodoNormalizado.includes("dinheiro") || metodoNormalizado.includes("especie")) return "DINHEIRO";
+  if (metodoNormalizado.includes("reembolso")) return "REEMBOLSO";
+  return metodo;
+};
+
+const metodoPagamentoLabel = (metodo: string) =>
+  FILTROS_PAGAMENTO.find((item) => item.value === normalizarMetodoPagamento(metodo))?.label ??
+  metodo
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/(^|\s)\S/g, (letra) => letra.toUpperCase());
+
+const normalizarMetodoPagamentoOcr = (metodo: string | null | undefined) => {
+  if (!metodo) return null;
+  const metodoNormalizado = metodo
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/_/g, " ")
+    .toLowerCase();
+
+  if (metodoNormalizado.includes("pix")) return "PIX";
+  if (metodoNormalizado.includes("debito")) return "CARTAO_DEBITO";
+  if (metodoNormalizado.includes("cartao") || metodoNormalizado.includes("credito")) return "CARTAO_CREDITO";
+  if (metodoNormalizado.includes("dinheiro") || metodoNormalizado.includes("especie")) return "DINHEIRO";
+  return null;
+};
+
+const formatarValorInput = (valor: number) =>
+  valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const parseValorMonetario = (valor: string) => {
+  const valorNormalizado = valor.trim();
+  if (valorNormalizado.includes(",")) {
+    return Number(valorNormalizado.replace(/\./g, "").replace(",", "."));
+  }
+  return Number(valorNormalizado);
+};
 
 export default function DetalhamentoObras() {
   const [paginaAtual, setPaginaAtual] = useState(1);
   const [controlePresencaAberto, setControlePresencaAberto] = useState(false);
-  const [dataSelecionada, setDataSelecionada] = useState<string>(new Date().toISOString().split("T")[0]);
+  const [modalGastoAberto, setModalGastoAberto] = useState(false);
+  const [modalEdicaoAberto, setModalEdicaoAberto] = useState(false);
+  const [modalDeleteAberto, setModalDeleteAberto] = useState(false);
+  const [salvandoGasto, setSalvandoGasto] = useState(false);
+  const [salvandoObra, setSalvandoObra] = useState(false);
+  const [deletandoObra, setDeletandoObra] = useState(false);
+  const [atualizandoReembolsoId, setAtualizandoReembolsoId] = useState<number | null>(null);
+  const [buscaFinanceira, setBuscaFinanceira] = useState("");
+  const [ordemFinanceira, setOrdemFinanceira] = useState<"data" | "valor" | "alfabetica">("data");
+  const [filtroMetodoPagamento, setFiltroMetodoPagamento] = useState("TODOS");
+  const [dataSelecionada, setDataSelecionada] = useState<string>(dataHoje());
+  const [notaFiscalArquivo, setNotaFiscalArquivo] = useState<File | null>(null);
+  const [processandoNotaFiscal, setProcessandoNotaFiscal] = useState(false);
+  const [mensagemNotaFiscal, setMensagemNotaFiscal] = useState<string | null>(null);
+  const [novoGasto, setNovoGasto] = useState({
+    descricao: "",
+    categoria: "MATERIAL",
+    metodoPagamento: "PIX",
+    etapa: "ETAPA 1",
+    valor: "",
+    dtGasto: dataHoje(),
+    funcionarioId: "",
+    reembolsoFuncionario: false,
+  });
+  const [edicaoObra, setEdicaoObra] = useState({
+    titulo: "",
+    orcamento: "",
+    status: "EM_ANDAMENTO",
+    dtInicio: dataHoje(),
+    dtTerminoPrevisto: dataHoje(),
+  });
   const [obra, setObra] = useState<Obra | null>(null);
   const [gastos, setGastos] = useState<Gasto[]>([]);
   const [alocacoes, setAlocacoes] = useState<AlocacaoObra[]>([]);
   const [carregando, setCarregando] = useState(true);
   
   const { id } = useParams<{ id: string }>();
-  const totalPaginas = Math.ceil(gastos.length / 5);
   const navegar = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const podeEditarObra = authService.hasAuthority("EDITAR_OBRA");
+  const podeDeletarObra = authService.hasAuthority("DELETAR_OBRA");
+  const podeCriarGasto = authService.hasAuthority("CRIAR_GASTO");
+  const podeEditarGasto = authService.hasAuthority("EDITAR_GASTO");
+  const podeVisualizarGastos = authService.hasAuthority("VISUALIZAR_GASTOS");
+  const podeVisualizarAlocacoes = authService.hasAuthority("VISUALIZAR_ALOCACOES");
+  const podeRegistrarPresenca = authService.hasAuthority("REGISTRAR_PRESENCA");
 
-  useEffect(() => {
-    const carregarDados = async () => {
+  const carregarDados = useCallback(async () => {
       try {
         setCarregando(true);
         
@@ -63,53 +178,276 @@ export default function DetalhamentoObras() {
         }
         
         setObra(obraData);
+        setEdicaoObra({
+          titulo: obraData.titulo,
+          orcamento: obraData.orcamento,
+          status: obraData.status,
+          dtInicio: obraData.dtInicio,
+          dtTerminoPrevisto: obraData.dtTerminoPrevisto,
+        });
 
         if (obraData) {
-          // Carregar gastos e alocações
           const [gastosData, alocacoesData] = await Promise.all([
-            gastoService.listar(),
-            alocacaoService.listar(),
+            gastoService.listarPorObra(obraData.id),
+            alocacaoService.listarPorObra(obraData.id),
           ]);
 
-          // Filtrar gastos da obra específica
-          const gastosDaObra = gastosData.filter(
-            (gasto) => gasto.obra.id === obraData.id
-          );
-          setGastos(gastosDaObra);
-
-          // Filtrar alocações da obra específica
-          const alocacoesDaObra = alocacoesData.filter(
-            (alocacao) => alocacao.obra.id === obraData.id
-          );
-          setAlocacoes(alocacoesDaObra);
+          setGastos(gastosData);
+          setAlocacoes(alocacoesData);
+          setNovoGasto((gastoAtual) => ({
+            ...gastoAtual,
+            funcionarioId:
+              gastoAtual.funcionarioId || String(alocacoesData[0]?.funcionario.id ?? ""),
+          }));
         }
       } catch (error) {
         console.error("Erro ao carregar dados:", error);
+        toast.error("Erro ao carregar detalhes da obra");
       } finally {
         setCarregando(false);
       }
-    };
-
-    carregarDados();
   }, [id]);
+
+  useEffect(() => {
+    carregarDados();
+  }, [carregarDados, id]);
+
+  useEffect(() => {
+    if (searchParams.get("editar") === "1" && podeEditarObra) {
+      setModalEdicaoAberto(true);
+    }
+  }, [podeEditarObra, searchParams]);
+
+  useEffect(() => {
+    setPaginaAtual(1);
+  }, [buscaFinanceira, ordemFinanceira, filtroMetodoPagamento]);
 
   // Calcular métricas
   const totalGastoObra = gastos.reduce((total, gasto) => total + gasto.valor, 0);
+  const reembolsosPendentes = gastos.filter((gasto) => gasto.reembolsoConcluido === false);
+  const reembolsosConcluidos = gastos.filter((gasto) => gasto.reembolsoConcluido === true);
+  const totalReembolsoPendente = reembolsosPendentes.reduce((total, gasto) => total + gasto.valor, 0);
   const orcamentoObra = parseFloat(obra?.orcamento || "0");
   const limiteAtingido = orcamentoObra > 0 ? (totalGastoObra / orcamentoObra) * 100 : 0;
 
   // Calcular dias restantes
   const calcularDiasRestantes = () => {
     if (!obra?.dtTerminoPrevisto) return 0;
-    const hoje = new Date();
-    const dataTermino = new Date(obra.dtTerminoPrevisto);
+    const hoje = new Date(`${dataHoje()}T00:00:00`);
+    const dataTermino = new Date(`${obra.dtTerminoPrevisto}T00:00:00`);
     const diffTime = dataTermino.getTime() - hoje.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays > 0 ? diffDays : 0;
   };
 
-  // Paginação
-  const gastosExibidos = gastos.slice((paginaAtual - 1) * 5, paginaAtual * 5);
+  const gastosFiltrados = gastos
+    .filter((gasto) => {
+      const termo = buscaFinanceira.trim().toLowerCase();
+      const correspondeBusca = !termo || [
+        gasto.descricao,
+        gasto.categoria,
+        gasto.metodoPagamento,
+        gasto.etapa,
+        gasto.funcionario.nome,
+      ]
+        .filter(Boolean)
+        .some((campo) => campo.toLowerCase().includes(termo));
+
+      const correspondeMetodo =
+        filtroMetodoPagamento === "TODOS" ||
+        (filtroMetodoPagamento === "REEMBOLSO"
+          ? gasto.reembolsoConcluido === false
+          : normalizarMetodoPagamento(gasto.metodoPagamento) === filtroMetodoPagamento);
+      return correspondeBusca && correspondeMetodo;
+    })
+    .sort((a, b) => {
+      if (ordemFinanceira === "valor") {
+        return b.valor - a.valor;
+      }
+      if (ordemFinanceira === "alfabetica") {
+        return a.descricao.localeCompare(b.descricao);
+      }
+      return new Date(b.dtGasto).getTime() - new Date(a.dtGasto).getTime();
+    });
+
+  const totalPaginas = Math.ceil(gastosFiltrados.length / 5);
+  const gastosExibidos = gastosFiltrados.slice((paginaAtual - 1) * 5, paginaAtual * 5);
+
+  function atualizarNovoGasto(campo: keyof typeof novoGasto, valor: string | boolean) {
+    setNovoGasto((gastoAtual) => ({ ...gastoAtual, [campo]: valor }));
+  }
+
+  function limparNotaFiscal() {
+    setNotaFiscalArquivo(null);
+    setMensagemNotaFiscal(null);
+  }
+
+  function fecharModalGasto() {
+    setModalGastoAberto(false);
+    limparNotaFiscal();
+  }
+
+  function atualizarEdicaoObra(campo: keyof typeof edicaoObra, valor: string) {
+    setEdicaoObra((obraAtual) => ({ ...obraAtual, [campo]: valor }));
+  }
+
+  function fecharModalEdicao() {
+    setModalEdicaoAberto(false);
+    if (searchParams.get("editar")) {
+      setSearchParams({});
+    }
+  }
+
+  async function salvarEdicaoObra(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+
+    if (!obra) return;
+
+    const orcamento = parseValorMonetario(edicaoObra.orcamento);
+    if (!orcamento || orcamento <= 0) {
+      toast.error("Informe um orçamento maior que zero");
+      return;
+    }
+
+    try {
+      setSalvandoObra(true);
+      const obraAtualizada = await obraService.atualizar(obra.id, {
+        titulo: edicaoObra.titulo.trim(),
+        orcamento: String(orcamento),
+        status: edicaoObra.status,
+        dtInicio: edicaoObra.dtInicio,
+        dtTerminoPrevisto: edicaoObra.dtTerminoPrevisto,
+      });
+      setObra(obraAtualizada);
+      fecharModalEdicao();
+      toast.success("Obra atualizada com sucesso");
+    } catch (error) {
+      console.error("Erro ao atualizar obra:", error);
+      toast.error("Não foi possível atualizar a obra");
+    } finally {
+      setSalvandoObra(false);
+    }
+  }
+
+  async function cadastrarGasto(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+
+    if (!obra || !novoGasto.funcionarioId) {
+      toast.error("Selecione um funcionário alocado na obra");
+      return;
+    }
+
+    const valor = parseValorMonetario(novoGasto.valor);
+    if (!valor || valor <= 0) {
+      toast.error("Informe um valor maior que zero");
+      return;
+    }
+
+    try {
+      setSalvandoGasto(true);
+      await gastoService.criar({
+        descricao: novoGasto.descricao.trim(),
+        categoria: novoGasto.categoria,
+        metodoPagamento: novoGasto.metodoPagamento,
+        etapa: novoGasto.etapa,
+        valor,
+        dtGasto: novoGasto.dtGasto,
+        funcionarioId: Number(novoGasto.funcionarioId),
+        obraId: obra.id,
+        reembolsoConcluido: novoGasto.reembolsoFuncionario ? false : null,
+      });
+
+      const gastosAtualizados = await gastoService.listarPorObra(obra.id);
+      setGastos(gastosAtualizados);
+      fecharModalGasto();
+      setNovoGasto({
+        descricao: "",
+        categoria: "MATERIAL",
+        metodoPagamento: "PIX",
+        etapa: "ETAPA 1",
+        valor: "",
+        dtGasto: dataHoje(),
+        funcionarioId: String(alocacoes[0]?.funcionario.id ?? ""),
+        reembolsoFuncionario: false,
+      });
+      toast.success("Gasto adicionado ao financeiro da obra");
+    } catch (error) {
+      console.error("Erro ao cadastrar gasto:", error);
+      toast.error("Não foi possível adicionar o gasto");
+    } finally {
+      setSalvandoGasto(false);
+    }
+  }
+
+  async function processarNotaFiscal() {
+    if (!notaFiscalArquivo) {
+      toast.error("Selecione a foto ou PDF da nota fiscal");
+      return;
+    }
+
+    try {
+      setProcessandoNotaFiscal(true);
+      setMensagemNotaFiscal(null);
+      const resultado = await ocrService.processarNotaFiscal(notaFiscalArquivo);
+
+      if (!resultado.sucesso) {
+        setMensagemNotaFiscal(resultado.mensagem);
+        toast.error(resultado.mensagem || "Não foi possível processar a nota fiscal");
+        return;
+      }
+
+      const metodoPagamento = normalizarMetodoPagamentoOcr(resultado.metodoPagamento);
+      const descricao = [resultado.materialInsumo, resultado.descricaoAdicional]
+        .filter(Boolean)
+        .join(" - ")
+        .slice(0, 255);
+
+      setNovoGasto((gastoAtual) => ({
+        ...gastoAtual,
+        descricao: descricao || gastoAtual.descricao,
+        valor: resultado.valor ? formatarValorInput(resultado.valor) : gastoAtual.valor,
+        dtGasto: resultado.dtGasto || gastoAtual.dtGasto,
+        metodoPagamento: metodoPagamento || gastoAtual.metodoPagamento,
+      }));
+
+      setMensagemNotaFiscal(resultado.mensagem);
+      toast.success("Campos preenchidos a partir da nota fiscal");
+    } catch (error) {
+      console.error("Erro ao processar nota fiscal:", error);
+      toast.error("Não foi possível processar a nota fiscal");
+    } finally {
+      setProcessandoNotaFiscal(false);
+    }
+  }
+
+  async function alternarReembolso(gasto: Gasto) {
+    if (!obra || gasto.reembolsoConcluido === null || atualizandoReembolsoId) return;
+
+    try {
+      setAtualizandoReembolsoId(gasto.id);
+      const gastoAtualizado = await gastoService.atualizar(gasto.id, {
+        descricao: gasto.descricao,
+        categoria: gasto.categoria,
+        metodoPagamento: gasto.metodoPagamento,
+        etapa: gasto.etapa,
+        valor: gasto.valor,
+        dtGasto: gasto.dtGasto,
+        funcionarioId: gasto.funcionario.id,
+        obraId: obra.id,
+        reembolsoConcluido: !gasto.reembolsoConcluido,
+      });
+
+      setGastos((gastosAtuais) =>
+        gastosAtuais.map((item) => (item.id === gasto.id ? gastoAtualizado : item))
+      );
+      toast.success(gastoAtualizado.reembolsoConcluido ? "Reembolso concluído" : "Reembolso marcado como pendente");
+    } catch (error) {
+      console.error("Erro ao atualizar reembolso:", error);
+      toast.error("Não foi possível atualizar o reembolso");
+    } finally {
+      setAtualizandoReembolsoId(null);
+    }
+  }
 
   function irParaPaginaAnterior() {
     setPaginaAtual((paginaCorrente) => Math.max(1, paginaCorrente - 1));
@@ -121,6 +459,22 @@ export default function DetalhamentoObras() {
 
   function irParaPagina(pagina: number) {
     setPaginaAtual(pagina);
+  }
+
+  async function deletarObra() {
+    if (!obra) return;
+
+    try {
+      setDeletandoObra(true);
+      await obraService.deletar(obra.id);
+      toast.success("Obra excluída com sucesso");
+      navegar("/home");
+    } catch (error) {
+      console.error("Erro ao deletar obra:", error);
+      toast.error("Não foi possível excluir a obra");
+    } finally {
+      setDeletandoObra(false);
+    }
   }
 
   if (carregando) {
@@ -149,42 +503,227 @@ export default function DetalhamentoObras() {
         data={dataSelecionada}
       />
 
+      {modalEdicaoAberto && (
+        <div className={styles.modalOverlay} onClick={fecharModalEdicao}>
+          <form className={styles.modalGasto} onSubmit={salvarEdicaoObra} onClick={(evento) => evento.stopPropagation()}>
+            <header className={styles.modalHeader}>
+              <div>
+                <h2>Editar obra</h2>
+                <p>{obra.titulo}</p>
+              </div>
+              <button type="button" className={styles.botaoFecharModal} onClick={fecharModalEdicao} aria-label="Fechar modal de edição">
+                <X size={20} />
+              </button>
+            </header>
+
+            <div className={styles.modalGrid}>
+              <label>
+                Título
+                <input value={edicaoObra.titulo} onChange={(evento) => atualizarEdicaoObra("titulo", evento.target.value)} required minLength={5} maxLength={150} />
+              </label>
+              <label>
+                Orçamento
+                <input value={edicaoObra.orcamento} onChange={(evento) => atualizarEdicaoObra("orcamento", evento.target.value)} required inputMode="decimal" />
+              </label>
+              <label>
+                Status
+                <select value={edicaoObra.status} onChange={(evento) => atualizarEdicaoObra("status", evento.target.value)}>
+                  <option value="EM_ANDAMENTO">Em andamento</option>
+                  <option value="CONCLUIDA">Concluída</option>
+                  <option value="PLANEJADA">Planejada</option>
+                  <option value="CANCELADA">Cancelada</option>
+                </select>
+              </label>
+              <label>
+                Início
+                <input type="date" value={edicaoObra.dtInicio} onChange={(evento) => atualizarEdicaoObra("dtInicio", evento.target.value)} required />
+              </label>
+              <label>
+                Término previsto
+                <input type="date" value={edicaoObra.dtTerminoPrevisto} onChange={(evento) => atualizarEdicaoObra("dtTerminoPrevisto", evento.target.value)} required />
+              </label>
+            </div>
+
+            <footer className={styles.modalFooter}>
+              <button type="button" className={styles.botaoSecundario} onClick={fecharModalEdicao}>Cancelar</button>
+              <button type="submit" className={styles.botaoAdicionarGasto} disabled={salvandoObra}>
+                {salvandoObra ? "Salvando..." : "Salvar obra"}
+              </button>
+            </footer>
+          </form>
+        </div>
+      )}
+
+      {modalGastoAberto && (
+        <div className={styles.modalOverlay} onClick={fecharModalGasto}>
+          <form className={styles.modalGasto} onSubmit={cadastrarGasto} onClick={(evento) => evento.stopPropagation()}>
+            <header className={styles.modalHeader}>
+              <div>
+                <h2>Adicionar gasto</h2>
+                <p>{obra.titulo}</p>
+              </div>
+              <button type="button" className={styles.botaoFecharModal} onClick={fecharModalGasto} aria-label="Fechar modal de gasto">
+                <X size={20} />
+              </button>
+            </header>
+
+            <div className={styles.modalGrid}>
+              <div className={styles.notaFiscalBox}>
+                <div>
+                  <strong>Nota fiscal</strong>
+                  <span>{notaFiscalArquivo ? notaFiscalArquivo.name : "Selecione uma imagem ou PDF para preencher os campos automaticamente."}</span>
+                  {mensagemNotaFiscal && <small>{mensagemNotaFiscal}</small>}
+                </div>
+                <label className={styles.botaoUploadNota}>
+                  <Upload size={16} />
+                  Escolher arquivo
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/bmp,image/tiff,image/webp,application/pdf"
+                    onChange={(evento) => setNotaFiscalArquivo(evento.target.files?.[0] ?? null)}
+                  />
+                </label>
+                <button
+                  type="button"
+                  className={styles.botaoProcessarNota}
+                  onClick={processarNotaFiscal}
+                  disabled={!notaFiscalArquivo || processandoNotaFiscal}
+                >
+                  {processandoNotaFiscal ? "Lendo nota..." : "Extrair campos"}
+                </button>
+              </div>
+
+              <label>
+                Descrição
+                <input value={novoGasto.descricao} onChange={(evento) => atualizarNovoGasto("descricao", evento.target.value)} required maxLength={255} placeholder="Ex.: Compra de cimento" />
+              </label>
+              <label>
+                Valor
+                <input value={novoGasto.valor} onChange={(evento) => atualizarNovoGasto("valor", evento.target.value)} required inputMode="decimal" placeholder="0,00" />
+              </label>
+              <label>
+                Responsável
+                <select value={novoGasto.funcionarioId} onChange={(evento) => atualizarNovoGasto("funcionarioId", evento.target.value)} required>
+                  <option value="" disabled>Selecione</option>
+                  {alocacoes.map((alocacao) => (
+                    <option key={alocacao.id} value={alocacao.funcionario.id}>
+                      {alocacao.funcionario.nome}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Categoria
+                <select value={novoGasto.categoria} onChange={(evento) => atualizarNovoGasto("categoria", evento.target.value)}>
+                  <option value="MATERIAL">Material</option>
+                  <option value="MAO_DE_OBRA">Mão de obra</option>
+                  <option value="TRANSPORTE">Transporte</option>
+                  <option value="EQUIPAMENTO">Equipamento</option>
+                  <option value="IMPREVISTO">Imprevisto</option>
+                </select>
+              </label>
+              <label>
+                Método de pagamento
+                <select value={novoGasto.metodoPagamento} onChange={(evento) => atualizarNovoGasto("metodoPagamento", evento.target.value)}>
+                  <option value="PIX">Pix</option>
+                  <option value="CARTAO_CREDITO">Cartão de crédito</option>
+                  <option value="CARTAO_DEBITO">Cartão de débito</option>
+                  <option value="DINHEIRO">Dinheiro</option>
+                </select>
+              </label>
+              <label className={styles.checkboxLinha}>
+                <input
+                  type="checkbox"
+                  checked={novoGasto.reembolsoFuncionario}
+                  onChange={(evento) => atualizarNovoGasto("reembolsoFuncionario", evento.target.checked)}
+                />
+                <span>
+                  Reembolso ao funcionário
+                  <small>Use quando o funcionário pagou com cartão, Pix ou dinheiro pessoal.</small>
+                </span>
+              </label>
+              <label>
+                Etapa
+                <select value={novoGasto.etapa} onChange={(evento) => atualizarNovoGasto("etapa", evento.target.value)}>
+                  <option value="ETAPA 1">Etapa 1</option>
+                  <option value="ETAPA 2">Etapa 2</option>
+                </select>
+              </label>
+              <label>
+                Data
+                <input type="date" value={novoGasto.dtGasto} max={dataHoje()} onChange={(evento) => atualizarNovoGasto("dtGasto", evento.target.value)} required />
+              </label>
+            </div>
+
+            <footer className={styles.modalFooter}>
+              <button type="button" className={styles.botaoSecundario} onClick={fecharModalGasto}>Cancelar</button>
+              <button type="submit" className={styles.botaoAdicionarGasto} disabled={salvandoGasto || alocacoes.length === 0}>
+                {salvandoGasto ? "Salvando..." : "Salvar gasto"}
+              </button>
+            </footer>
+          </form>
+        </div>
+      )}
+
+      {modalDeleteAberto && (
+        <div className={styles.modalOverlay} onClick={() => setModalDeleteAberto(false)}>
+          <div className={styles.modalGasto} onClick={(evento) => evento.stopPropagation()}>
+            <header className={styles.modalHeader}>
+              <div>
+                <h2>Excluir obra</h2>
+                <p>{obra.titulo}</p>
+              </div>
+              <button type="button" className={styles.botaoFecharModal} onClick={() => setModalDeleteAberto(false)} aria-label="Fechar modal de exclusão">
+                <X size={20} />
+              </button>
+            </header>
+            <div className={styles.modalGrid}>
+              <p style={{ color: "#6b6b6b", lineHeight: "1.6" }}>
+                Tem certeza que deseja excluir esta obra? Esta ação é irreversível e todos os dados associados (gastos, alocações, presenças) serão permanentemente removidos.
+              </p>
+            </div>
+            <footer className={styles.modalFooter}>
+              <button type="button" className={styles.botaoSecundario} onClick={() => setModalDeleteAberto(false)}>Cancelar</button>
+              <button type="button" className={styles.botaoDeletarConfirm} onClick={deletarObra} disabled={deletandoObra}>
+                {deletandoObra ? "Excluindo..." : "Confirmar exclusão"}
+              </button>
+            </footer>
+          </div>
+        </div>
+      )}
+
       {/* Cabeçalho */}
       <div className={styles.cabecalho}>
-        <div className={styles.cabecalhoEsquerda}>
-          <button className={styles.botaoVoltar} onClick={() => navegar("/home")}>
-            <ArrowLeft size={18} />
-          </button>
-          <span className={styles.navegacao}>
-            <span className={styles.navegacaoLink} onClick={() => navegar("/home")}>
-              Obras
-            </span>
-            <span className={styles.separador}>›</span>
-            <span className={styles.navegacaoAtivo}>Detalhes da Obra</span>
-          </span>
-        </div>
+        <div className={styles.cabecalhoEsquerda}></div>
         <div className={styles.cabecalhoAcoes}>
-          <input
-            type="date"
-            value={dataSelecionada}
-            onChange={(e) => setDataSelecionada(e.target.value)}
-            style={{
-              padding: '8px 12px',
-              border: '1px solid #d1d5db',
-              borderRadius: '6px',
-              marginRight: '8px',
-              fontSize: '14px'
-            }}
-          />
-          <button
-            className={styles.botaoAdicionarGasto}
-            onClick={() => setControlePresencaAberto(true)}
-          >
-            Controle de presença
-          </button>
-          <button className={styles.botaoAdicionarGasto}>
-            💰 Adicionar gasto
-          </button>
+          {podeRegistrarPresenca && (
+            <>
+              <input
+                type="date"
+                value={dataSelecionada}
+                onChange={(e) => setDataSelecionada(e.target.value)}
+                style={{
+                  padding: '8px 12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  marginRight: '8px',
+                  fontSize: '14px'
+                }}
+              />
+              <button
+                className={styles.botaoAdicionarGasto}
+                onClick={() => setControlePresencaAberto(true)}
+              >
+                Controle de presença
+              </button>
+            </>
+          )}
+          {podeCriarGasto && (
+            <button className={styles.botaoAdicionarGasto} onClick={() => setModalGastoAberto(true)}>
+              <Plus size={16} />
+              Adicionar gasto
+            </button>
+          )}
         </div>
       </div>
 
@@ -203,9 +742,18 @@ export default function DetalhamentoObras() {
           </div>
           <div className={styles.cardObraTitulo}>
             <h1>{obra.titulo}</h1>
-            <button className={styles.botaoEditar}>
-              <Pencil size={16} />
-            </button>
+            <div className={styles.cardObraAcoes}>
+              {podeEditarObra && (
+                <button className={styles.botaoEditar} onClick={() => setModalEdicaoAberto(true)} aria-label="Editar obra">
+                  <Pencil size={16} />
+                </button>
+              )}
+              {podeDeletarObra && (
+                <button className={styles.botaoDeletar} onClick={() => setModalDeleteAberto(true)} aria-label="Excluir obra">
+                  <Trash2 size={16} />
+                </button>
+              )}
+            </div>
           </div>
           <div className={styles.cardObraData}>
             <Calendar size={14} />
@@ -228,7 +776,7 @@ export default function DetalhamentoObras() {
                   <div className={styles.membroInformacoes}>
                     <span className={styles.membroNome}>{alocacao.funcionario.nome}</span>
                     <span className={styles.membroCargo}>
-                      {alocacao.cargo.replace("_", " ")}
+                      {cargoLabel(alocacao.cargo)}
                     </span>
                   </div>
                 </div>
@@ -236,9 +784,14 @@ export default function DetalhamentoObras() {
             ) : (
               <p style={{ fontSize: "14px", color: "#666" }}>Nenhum funcionário alocado</p>
             )}
-            <button className={styles.botaoAdicionarMembro}>
-              <Plus size={18} />
-            </button>
+            {podeVisualizarAlocacoes && (
+              <button
+                className={styles.botaoAdicionarMembro}
+                onClick={() => navegar(`/obras/${obra.id}/alocacoes`)}
+              >
+                <Plus size={18} />
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -277,6 +830,14 @@ export default function DetalhamentoObras() {
             <span>Entrega prevista: {formatarData(obra.dtTerminoPrevisto)}</span>
           </div>
         </div>
+
+        <div className={styles.metricaCard}>
+          <span className={styles.metricaRotulo}>REEMBOLSO A FUNCIONÁRIOS</span>
+          <span className={styles.metricaValorDestaque}>{formatarMoeda(totalReembolsoPendente)}</span>
+          <div className={styles.metricaSubtitulo}>
+            <span>{reembolsosPendentes.length} pendente(s) · {reembolsosConcluidos.length} concluído(s)</span>
+          </div>
+        </div>
       </div>
 
       {/* Seção financeiro */}
@@ -284,22 +845,39 @@ export default function DetalhamentoObras() {
         <div className={styles.financeiroTopo}>
           <h2 className={styles.financeiroTitulo}>Financeiro</h2>
           <div className={styles.financeiroControles}>
+            {podeVisualizarGastos && (
+              <button className={styles.botaoFiltro} onClick={() => navegar(`/obras/detalhamento/${obra.id}/financeiro`)}>
+                Ver estatísticas
+              </button>
+            )}
             <div className={styles.campoBusca}>
               <Search size={15} className={styles.iconeBusca} />
               <input
                 type="text"
                 placeholder="Buscar lançamentos..."
                 className={styles.inputBusca}
+                value={buscaFinanceira}
+                onChange={(evento) => setBuscaFinanceira(evento.target.value)}
               />
             </div>
-            <button className={styles.botaoFiltro}>
+            <button className={`${styles.botaoFiltro} ${ordemFinanceira === "valor" ? styles.botaoFiltroAtivo : ""}`} onClick={() => setOrdemFinanceira("valor")}>
               <Filter size={14} />
               Valor
             </button>
-            <button className={styles.botaoFiltro}>
+            <button className={`${styles.botaoFiltro} ${ordemFinanceira === "alfabetica" ? styles.botaoFiltroAtivo : ""}`} onClick={() => setOrdemFinanceira("alfabetica")}>
+              <Filter size={14} />
+              Alfabética
+            </button>
+            <button className={`${styles.botaoFiltro} ${ordemFinanceira === "data" ? styles.botaoFiltroAtivo : ""}`} onClick={() => setOrdemFinanceira("data")}>
               <CalendarDays size={14} />
               Data
             </button>
+            <select className={styles.inputFiltro} value={filtroMetodoPagamento} onChange={(evento) => setFiltroMetodoPagamento(evento.target.value)}>
+              <option value="TODOS">Todos os pagamentos</option>
+              {FILTROS_PAGAMENTO.map((metodo) => (
+                <option key={metodo.value} value={metodo.value}>{metodo.label}</option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -311,6 +889,7 @@ export default function DetalhamentoObras() {
                 <th>VALOR</th>
                 <th>FUNCIONÁRIO</th>
                 <th>TIPO</th>
+                <th>REEMBOLSO</th>
                 <th>DESCRIÇÃO</th>
                 <th>ETAPA</th>
                 <th>MATERIAL</th>
@@ -339,7 +918,32 @@ export default function DetalhamentoObras() {
                         {gasto.funcionario.nome}
                       </div>
                     </td>
-                    <td>{gasto.metodoPagamento}</td>
+                    <td>
+                      <span className={gasto.reembolsoConcluido !== null ? styles.metodoReembolso : undefined}>
+                        {metodoPagamentoLabel(gasto.metodoPagamento)}
+                      </span>
+                    </td>
+                    <td>
+                      {gasto.reembolsoConcluido !== null ? (
+                        <button
+                          type="button"
+                          className={`${styles.badgeReembolso} ${
+                            gasto.reembolsoConcluido ? styles.reembolsoConcluido : styles.reembolsoPendente
+                          } ${podeEditarGasto ? styles.badgeReembolsoAcionavel : ""}`}
+                          onClick={() => alternarReembolso(gasto)}
+                          disabled={!podeEditarGasto || atualizandoReembolsoId === gasto.id}
+                          title={podeEditarGasto ? "Clique para alternar o status do reembolso" : "Sem permissão para editar reembolso"}
+                        >
+                          {atualizandoReembolsoId === gasto.id
+                            ? "Salvando..."
+                            : gasto.reembolsoConcluido
+                              ? "Concluído"
+                              : "Pendente"}
+                        </button>
+                      ) : (
+                        <span className={`${styles.badgeReembolso} ${styles.reembolsoNaoAplicavel}`}>Não</span>
+                      )}
+                    </td>
                     <td>
                       <span className={styles.descricaoDestaque}>{gasto.descricao}</span>
                     </td>
@@ -350,8 +954,8 @@ export default function DetalhamentoObras() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: "center", padding: "2rem" }}>
-                    Nenhum gasto registrado para esta obra.
+                  <td colSpan={8} style={{ textAlign: "center", padding: "2rem" }}>
+                    {buscaFinanceira ? "Nenhum lançamento encontrado para a busca." : "Nenhum gasto registrado para esta obra."}
                   </td>
                 </tr>
               )}
@@ -361,7 +965,7 @@ export default function DetalhamentoObras() {
           {/* Paginação */}
           <div className={styles.paginacao}>
             <span className={styles.paginacaoInfo}>
-              Mostrando {gastosExibidos.length} de {gastos.length} lançamentos
+              Mostrando {gastosExibidos.length} de {gastosFiltrados.length} lançamentos
             </span>
             <div className={styles.paginacaoBotoes}>
               <button

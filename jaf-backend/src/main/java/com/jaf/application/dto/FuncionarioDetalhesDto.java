@@ -1,6 +1,7 @@
 package com.jaf.application.dto;
 
 import com.jaf.application.enums.Cargo;
+import com.jaf.application.enums.Permissao;
 import com.jaf.application.model.Funcionario;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -15,12 +16,14 @@ public class FuncionarioDetalhesDto implements UserDetails {
     private final String email;
     private final String senha;
     private final Cargo cargo;
+    private final List<Permissao> permissoes;
 
-    public FuncionarioDetalhesDto(Funcionario funcionario) {
+    public FuncionarioDetalhesDto(Funcionario funcionario, List<Permissao> permissoes) {
         this.nome = funcionario.getNome();
         this.email = funcionario.getEmail();
         this.senha = funcionario.getSenha();
-        this.cargo = funcionario.getCargoGlobal() != null ? funcionario.getCargoGlobal() : Cargo.OPERADOR_LANCAMENTO;
+        this.cargo = funcionario.getCargoGlobal() != null ? funcionario.getCargoGlobal() : Cargo.ENGENHEIRO;
+        this.permissoes = permissoes != null ? permissoes : this.cargo.getPermissoes();
     }
 
     public String getNome() {
@@ -39,7 +42,7 @@ public class FuncionarioDetalhesDto implements UserDetails {
     public Collection<? extends GrantedAuthority> getAuthorities() {
         List<GrantedAuthority> authorities = new ArrayList<>();
         authorities.add(new SimpleGrantedAuthority("ROLE_" + cargo.name()));
-        cargo.getPermissoes().forEach(permissao ->
+        permissoes.forEach(permissao ->
                 authorities.add(new SimpleGrantedAuthority(permissao.name())));
         return authorities;
     }

@@ -1,9 +1,6 @@
 package com.jaf.application.dto;
 
-import jakarta.validation.constraints.FutureOrPresent;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 
 import java.time.LocalDate;
 
@@ -12,19 +9,21 @@ public class ObraDto {
 
     @NotBlank(message = "O título da obra é obrigatório")
     @Size(min = 5, max = 150, message = "O título deve ter entre 5 e 150 caracteres")
+    @Pattern(regexp = "^[a-zA-Z0-9À-ÿ\\s\\-]+$", message = "O título deve conter apenas letras, números, espaços e hífens")
     private String titulo;
 
     @NotBlank(message = "O orçamento é obrigatório")
+    @Pattern(regexp = "^\\d+(\\.\\d{1,2})?$", message = "O orçamento deve ser um valor numérico válido")
     private String orcamento;
 
     @NotBlank(message = "O status é obrigatório")
+    @Pattern(regexp = "^(EM_ANDAMENTO|CONCLUIDA|CANCELADA|PLANEJADA)$", message = "Status inválido. Use: EM_ANDAMENTO, CONCLUIDA, CANCELADA ou PLANEJADA")
     private String status;
 
     @NotNull(message = "A data de início é obrigatória")
     private LocalDate dtInicio;
 
     @NotNull(message = "A data de término prevista é obrigatória")
-    @FutureOrPresent(message = "A data de término prevista não pode estar no passado")
     private LocalDate dtTerminoPrevisto;
 
     public String getTitulo() {

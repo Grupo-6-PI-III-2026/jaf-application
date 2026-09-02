@@ -1,0 +1,1 @@
+ALTER TABLE gasto ADD COLUMN reembolso_concluido BOOLEAN DEFAULT NULL;

@@ -1,4 +1,5 @@
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
+import { isAxiosError } from "axios";
 import {
   FileText,
   MapPin,
@@ -12,6 +13,10 @@ import {
 import { useNavigate } from "react-router-dom";
 import styles from "./NovaObra.module.css";
 import { obraService, type ObraCriarDto } from "../../../Service/Obras/obraService";
+import { alocacaoService } from "../../../Service/Alocacoes/alocacaoService";
+import { funcionarioService } from "../../../Service/Funcionarios/funcionarioService";
+import type { FuncionarioPermissoes } from "../../../Types/permissoes";
+import { toast } from "sonner";
 
 interface ErrosFormulario {
   nomeObra?: string;
@@ -40,22 +45,41 @@ const ESTADOS = [
 ];
 
 const STATUS_OPCOES = [
-  { label: "Em Planejamento", value: "PLANEJAMENTO" },
+  { label: "Planejada", value: "PLANEJADA" },
   { label: "Em Andamento", value: "EM_ANDAMENTO" },
-  { label: "Pausada", value: "PAUSADA" },
   { label: "Concluída", value: "CONCLUIDA" },
+  { label: "Cancelada", value: "CANCELADA" },
 ];
+
+const CARGO_LABELS: Record<string, string> = {
+  ADMIN: "Administrador",
+  RESPONSAVEL_ADMINISTRATIVO: "Responsável Administrativo",
+  ENGENHEIRO: "Engenheiro",
+  GESTOR_OBRA: "Gestor de Obra",
+  ARQUITETO: "Arquiteto",
+  MESTRE_DE_OBRAS: "Mestre de Obras",
+  OPERADOR_LANCAMENTO: "Operador de Lançamento",
+  PEDREIRO: "Pedreiro",
+  PINTOR: "Pintor",
+  MARCENEIRO: "Marceneiro",
+  GESSEIRO: "Gesseiro",
+};
+
+const cargoLabel = (cargo: string | null | undefined) =>
+  cargo ? (CARGO_LABELS[cargo] ?? cargo.replace(/_/g, " ")) : "Sem cargo";
 
 export default function NovaObra() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [carregandoFuncionarios, setCarregandoFuncionarios] = useState(true);
   const [errors, setErrors] = useState<ErrosFormulario>({});
   const [arquivos, setArquivos] = useState<ArquivoUpload[]>([]);
+  const [funcionarios, setFuncionarios] = useState<FuncionarioPermissoes[]>([]);
 
   const [nomeObra, setNomeObra] = useState("");
-  const [status, setStatus] = useState("PLANEJAMENTO");
-  const [responsavel, setResponsavel] = useState("");
+  const [status, setStatus] = useState("PLANEJADA");
+  const [responsavelId, setResponsavelId] = useState("");
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
   const [endereco, setEndereco] = useState("");
@@ -63,15 +87,29 @@ export default function NovaObra() {
   const [estado, setEstado] = useState("");
   const [orcamento, setOrcamento] = useState("");
 
+  useEffect(() => {
+    const carregarFuncionarios = async () => {
+      try {
+        setCarregandoFuncionarios(true);
+        const data = await funcionarioService.listar();
+        setFuncionarios(data);
+        setResponsavelId((valorAtual) => valorAtual || String(data[0]?.id ?? ""));
+      } catch (error) {
+        console.error("Erro ao carregar funcionários:", error);
+        toast.error("Não foi possível carregar os usuários do sistema.");
+      } finally {
+        setCarregandoFuncionarios(false);
+      }
+    };
+
+    carregarFuncionarios();
+  }, []);
+
   const validateInputs = () => {
     const nextErrors: ErrosFormulario = {};
 
     if (!nomeObra.trim()) {
       nextErrors.nomeObra = "O nome da obra é obrigatório.";
-    }
-
-    if (!responsavel.trim()) {
-      nextErrors.responsavel = "Selecione um responsável.";
     }
 
     if (!dataInicio) {
@@ -86,20 +124,14 @@ export default function NovaObra() {
       nextErrors.dataFim = "A data de término deve ser após a data de início.";
     }
 
-    if (!endereco.trim()) {
-      nextErrors.endereco = "O endereço é obrigatório.";
-    }
-
-    if (!cidade.trim()) {
-      nextErrors.cidade = "A cidade é obrigatória.";
-    }
-
-    if (!estado) {
-      nextErrors.estado = "Selecione um estado.";
-    }
-
     if (!orcamento.trim()) {
       nextErrors.orcamento = "Defina o orçamento inicial.";
+    }
+
+    if (!responsavelId) {
+      nextErrors.responsavel = funcionarios.length
+        ? "Selecione um usuário responsável pela obra."
+        : "Nenhum usuário disponível para vincular à obra.";
     }
 
     setErrors(nextErrors);
@@ -154,14 +186,19 @@ export default function NovaObra() {
 
       
       const obraCriada = await obraService.criar(obraDto);
+
+      await alocacaoService.criar({
+        funcionarioId: Number(responsavelId),
+        obraId: obraCriada.id,
+        cargoNaObra: "GESTOR_OBRA",
+      });
       
-      console.log("Obra criada com sucesso:", obraCriada);
-      alert(`Obra "${obraCriada.titulo}" criada com sucesso!`);
+      toast.success(`Obra "${obraCriada.titulo}" criada com sucesso!`);
       
       // Limpar formulário
       setNomeObra("");
-      setStatus("PLANEJAMENTO");
-      setResponsavel("");
+      setStatus("PLANEJADA");
+      setResponsavelId(String(funcionarios[0]?.id ?? ""));
       setDataInicio("");
       setDataFim("");
       setEndereco("");
@@ -173,18 +210,18 @@ export default function NovaObra() {
 
       // Redirecionar para home (lista de obras)
       navigate("/home");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Erro ao criar obra:", error);
       
-      if (error.response?.data?.message) {
-        alert(`Erro: ${error.response.data.message}`);
-      } else if (error.response?.status === 401) {
-        alert("Sessão expirada. Faça login novamente.");
+      if (isAxiosError<{ message?: string }>(error) && error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else if (isAxiosError(error) && error.response?.status === 401) {
+        toast.error("Sessão expirada. Faça login novamente.");
         navigate("/");
-      } else if (error.response?.status === 403) {
-        alert("Você não tem permissão para criar obras. Apenas ADMINs podem criar obras.");
+      } else if (isAxiosError(error) && error.response?.status === 403) {
+        toast.error("Você não tem permissão para criar obras.");
       } else {
-        alert("Falha ao criar obra. Tente novamente.");
+        toast.error("Falha ao criar obra. Tente novamente.");
       }
     } finally {
       setIsLoading(false);
@@ -272,23 +309,34 @@ export default function NovaObra() {
 
                   <div className={styles.grupoCampo}>
                     <label className={styles.rotulo}>RESPONSÁVEL</label>
-                    <div className={styles.caixaCampo}>
+                    <div className={styles.selectWrapperComIcone}>
                       <User size={18} className={styles.icone} />
-                      <input
-                        type="text"
-                        placeholder="Ex: Rafael Pereira"
-                        value={responsavel}
+                      <select
+                        value={responsavelId}
                         onChange={(e) => {
-                          setResponsavel(e.target.value);
+                          setResponsavelId(e.target.value);
                           if (errors.responsavel)
                             setErrors((prev) => ({
                               ...prev,
                               responsavel: undefined,
                             }));
                         }}
-                        className={styles.campo}
-                        disabled={isLoading}
-                      />
+                        className={styles.selectComIcone}
+                        disabled={isLoading || carregandoFuncionarios || funcionarios.length === 0}
+                      >
+                        {carregandoFuncionarios ? (
+                          <option value="">Carregando usuários...</option>
+                        ) : funcionarios.length > 0 ? (
+                          funcionarios.map((funcionario) => (
+                            <option key={funcionario.id} value={funcionario.id}>
+                              {funcionario.nome} - {cargoLabel(funcionario.cargo)} - {funcionario.email}
+                            </option>
+                          ))
+                        ) : (
+                          <option value="">Nenhum usuário encontrado</option>
+                        )}
+                      </select>
+                      <ChevronDown size={20} className={styles.iconSelect} />
                     </div>
                     {errors.responsavel && (
                       <span className={styles.errorText}>
