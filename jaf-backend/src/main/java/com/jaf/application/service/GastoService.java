@@ -53,6 +53,7 @@ public class GastoService {
         gasto.setEtapa(dto.getEtapa());
         gasto.setValor(dto.getValor());
         gasto.setDtGasto(dto.getDtGasto());
+        gasto.setReembolsoConcluido(dto.getReembolsoConcluido());
         gasto.setFuncionario(funcionario);
         gasto.setObra(obra);
         return gastoRepository.save(gasto);
@@ -123,6 +124,7 @@ public class GastoService {
         existente.setEtapa(dto.getEtapa());
         existente.setValor(dto.getValor());
         existente.setDtGasto(dto.getDtGasto());
+        existente.setReembolsoConcluido(dto.getReembolsoConcluido());
         existente.setFuncionario(funcionario);
         existente.setObra(obra);
         return gastoRepository.save(existente);

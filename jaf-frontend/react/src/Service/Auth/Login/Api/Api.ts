@@ -12,11 +12,13 @@ const api = axios.create({
 
 api.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('token')
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`
-        }
-
+    // CORREÇÃO DE SEGURANÇA A07: Removida leitura de token do localStorage
+    // Antes: const token = localStorage.getItem('token') ?? localStorage.getItem('auth_token')
+    //        if (token) { config.headers.Authorization = `Bearer ${token}` }
+    // Agora: Token é enviado automaticamente via cookie HttpOnly pelo browser
+    // withCredentials: true deve ser configurado para enviar cookies
+    config.withCredentials = true
+    
         return config;
     },
     (error) => {
@@ -29,9 +31,13 @@ api.interceptors.response.use(
   (error) => {
    
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
+      // CORREÇÃO DE SEGURANÇA A07: Limpa dados do usuário do localStorage
+      // Token é gerenciado via cookie HttpOnly pelo backend
       localStorage.removeItem('userEmail');
-      window.location.href = '/login';
+      localStorage.removeItem('userName');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('userCargo');
+      window.location.href = '/';
     }
     return Promise.reject(error);
   }

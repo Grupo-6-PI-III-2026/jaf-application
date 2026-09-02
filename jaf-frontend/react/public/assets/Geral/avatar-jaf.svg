@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Avatar JAF">
+  <rect width="120" height="120" rx="60" fill="#43b89c"/>
+  <circle cx="60" cy="42" r="21" fill="#ffffff"/>
+  <path d="M25 102c7-24 22-36 35-36s28 12 35 36" fill="#ffffff"/>
+  <path d="M39 34l21-16 21 16v10H39z" fill="#2d2d2d"/>
+  <path d="M35 44h50v7H35z" fill="#2d2d2d"/>
+</svg>
