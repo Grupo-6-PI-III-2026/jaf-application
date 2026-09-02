@@ -10,4 +10,5 @@ public interface AlocacaoObraRepository extends JpaRepository<AlocacaoObra, Long
     List<AlocacaoObra> findByFuncionarioId(Long funcionarioId);
     List<AlocacaoObra> findByObraId(Long obraId);
     List<AlocacaoObra> findByFuncionarioIdAndObraId(Long funcionarioId, Long obraId);
+    void deleteByObraId(Long obraId);
 }

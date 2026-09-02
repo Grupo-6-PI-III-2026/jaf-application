@@ -11,10 +11,13 @@ import com.jaf.application.model.Funcionario;
 import com.jaf.application.model.Obra;
 import com.jaf.application.repository.AlocacaoObraRepository;
 import com.jaf.application.repository.FuncionarioRepository;
+import com.jaf.application.repository.GastoRepository;
 import com.jaf.application.repository.ObraRepository;
+import com.jaf.application.repository.PresencaRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -28,13 +31,19 @@ public class ObraService {
     private final ObraRepository obraRepository;
     private final AlocacaoObraRepository alocacaoObraRepository;
     private final FuncionarioRepository funcionarioRepository;
+    private final GastoRepository gastoRepository;
+    private final PresencaRepository presencaRepository;
 
     public ObraService(ObraRepository obraRepository,
                        AlocacaoObraRepository alocacaoObraRepository,
-                       FuncionarioRepository funcionarioRepository) {
+                       FuncionarioRepository funcionarioRepository,
+                       GastoRepository gastoRepository,
+                       PresencaRepository presencaRepository) {
         this.obraRepository = obraRepository;
         this.alocacaoObraRepository = alocacaoObraRepository;
         this.funcionarioRepository = funcionarioRepository;
+        this.gastoRepository = gastoRepository;
+        this.presencaRepository = presencaRepository;
     }
 
     public Obra criar(ObraDto dto) {
@@ -116,6 +125,7 @@ public class ObraService {
         return obraRepository.save(existente);
     }
 
+    @Transactional
     public void deletar(Long id) {
         logger.info("Tentando deletar obra: ID={}", id);
 
@@ -124,6 +134,18 @@ public class ObraService {
             throw new NotFoundException("Obra nao encontrada");
         }
 
+        logger.info("Deletando registros relacionados da obra ID={}", id);
+
+        logger.info("Deletando alocações da obra ID={}", id);
+        alocacaoObraRepository.deleteByObraId(id);
+
+        logger.info("Deletando gastos da obra ID={}", id);
+        gastoRepository.deleteByObraId(id);
+
+        logger.info("Deletando presenças da obra ID={}", id);
+        presencaRepository.deleteByObraId(id);
+
+        logger.info("Deletando obra ID={}", id);
         obraRepository.deleteById(id);
         logger.info("Obra deletada com sucesso: ID={}", id);
     }

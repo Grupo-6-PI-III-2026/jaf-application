@@ -12,4 +12,5 @@ public interface GastoRepository extends JpaRepository<Gasto, Long> {
     List<Gasto> findByObraIdAndEtapa(Long obraId, String etapa);
     List<Gasto> findByObraIdAndMetodoPagamento(Long obraId, String metodoPagamento);
     List<Gasto> findByObraIdAndReembolsoConcluidoIsNotNull(Long obraId);
+    void deleteByObraId(Long obraId);
 }
