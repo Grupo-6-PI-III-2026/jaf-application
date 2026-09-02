@@ -3,8 +3,6 @@ import type { Cargo, JwtPayload } from "../../../Types/user";
 import api from "./Api/Api";
 import axios from "axios";
 
-const TOKEN_KEYS = ["token", "auth_token"];
-
 export const authService = {
   // endpoint de login
   login: async (credentials: LoginCredentials): Promise<LoginResponse> => {
@@ -101,7 +99,7 @@ export const authService = {
     return cargo ? (cargo as Cargo) : null;
   },
 
-  hasAuthority: (authority: string): boolean => {
+  hasAuthority: (_authority: string): boolean => {
     // CORREÇÃO DE SEGURANÇA A07: Verificação básica de autoridade baseada no cargo
     // Em produção, isso deve ser validado no backend via endpoint dedicado
     const cargo = authService.getCargo();
