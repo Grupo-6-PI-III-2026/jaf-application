@@ -1,0 +1,36 @@
+.navbar {
+  height: 70px;
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  border-bottom: 1px solid #e9ecef;
+  position: fixed;
+  top: 0;
+  left: 250px; 
+  right: 0;
+  z-index: 100;
+}
+
+.backButton {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid #e9ecef;
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #495057;
+  transition: all 0.2s ease;
+}
+
+.backButton:hover {
+  background-color: #f8f9fa;
+  border-color: #dee2e6;
+}
+
+.spacer {
+  flex: 1;
+}

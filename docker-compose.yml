@@ -1,0 +1,56 @@
+services:
+  jaf-db:
+    image: mysql:8.0
+    container_name: jaf-db
+    restart: always
+    env_file:
+      - .env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+    ports:
+      - "3307:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h localhost -uroot -p$$DB_PASSWORD --silent",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 15s
+
+  backend:
+    build:
+      context: ./jaf-backend
+    container_name: jaf-backend
+    restart: on-failure:5
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      JAVA_TOOL_OPTIONS: -Xms256m -Xmx512m
+    volumes:
+      - ./data/uploads:/app/uploads
+    depends_on:
+      jaf-db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./jaf-frontend/react
+      args:
+        VITE_API_URL: /api
+    container_name: jaf-frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  db_data:

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OCR Nota Fiscal - OCR.space</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --muted: #94a3b8;
+      --text: #e2e8f0;
+      --accent: #3b82f6;
+      --error: #ef4444;
+      --ok: #22c55e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+    }
+    .card {
+      width: min(900px, 100%);
+      background: var(--card);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.35);
+    }
+    h1 { margin: 0 0 16px; font-size: 24px; }
+    .grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .full { grid-column: 1 / -1; }
+    label {
+      font-size: 13px;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 6px;
+    }
+    input, button, textarea {
+      width: 100%;
+      border: 1px solid #334155;
+      background: #0b1220;
+      color: var(--text);
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 14px;
+    }
+    button {
+      background: var(--accent);
+      border: none;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    button:disabled { opacity: 0.7; cursor: not-allowed; }
+    .status {
+      margin: 12px 0 0;
+      min-height: 22px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+    .status.error { color: var(--error); }
+    .status.ok { color: var(--ok); }
+    pre {
+      margin-top: 12px;
+      background: #020617;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 12px;
+      min-height: 180px;
+      max-height: 420px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>Leitura de Nota Fiscal</h1>
+    <form id="ocr-form" class="grid">
+      <div class="full">
+        <label for="file">Imagem/PDF da Nota Fiscal</label>
+        <input id="file" name="file" type="file" accept=".jpg,.jpeg,.png,.gif,.bmp,.webp,.tiff,.pdf" required />
+      </div>
+
+      <div class="full">
+        <button id="submit-btn" type="submit">Processar Nota Fiscal</button>
+      </div>
+    </form>
+
+    <div id="status" class="status">
+      Aguardando envio...
+    </div>
+    <pre id="output">{}</pre>
+  </main>
+
+  <script>
+    const form = document.getElementById("ocr-form");
+    const statusEl = document.getElementById("status");
+    const outputEl = document.getElementById("output");
+    const submitBtn = document.getElementById("submit-btn");
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      statusEl.textContent = "Enviando arquivo e processando Nota Fiscal...";
+      statusEl.className = "status";
+      submitBtn.disabled = true;
+      outputEl.textContent = "{}";
+
+      try {
+        const formData = new FormData(form);
+        const response = await fetch("/api/ocr", {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await response.json();
+        outputEl.textContent = JSON.stringify(data, null, 2);
+
+        if (!response.ok || data.status === "error") {
+          statusEl.textContent = data.message || "Erro ao processar Nota Fiscal.";
+          statusEl.className = "status error";
+          return;
+        }
+
+        statusEl.textContent = "Nota Fiscal processada com sucesso.";
+        statusEl.className = "status ok";
+      } catch (error) {
+        statusEl.textContent = "Falha de rede ou servidor indisponivel.";
+        statusEl.className = "status error";
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

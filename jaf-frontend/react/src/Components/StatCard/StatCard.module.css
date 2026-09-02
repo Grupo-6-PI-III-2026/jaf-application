@@ -1,0 +1,43 @@
+.statCard {
+  border-radius: 12px;
+  background: #243038;
+  padding: 20px;
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.statCardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.statCardLabel {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.statCardValue {
+  margin-top: 12px;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.progressBar {
+  margin-top: 16px;
+  height: 6px;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: 999px;
+  background: #F5C518;
+}

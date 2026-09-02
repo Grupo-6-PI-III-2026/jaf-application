@@ -1,0 +1,181 @@
+.dashboard {
+  padding: 0;
+}
+
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1F2A33;
+}
+
+.separator {
+  color: #9ca3af;
+}
+
+.addBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 6px;
+  background: #F5C518;
+  padding: 8px 16px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1F2A33;
+  border: none;
+  cursor: pointer;
+}
+
+.addBtn:hover {
+  background: #e5b800;
+}
+
+/* Filters */
+.filters {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.searchWrapper {
+  position: relative;
+  width: 320px;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  width: 16px;
+  height: 16px;
+}
+
+.searchInput {
+  height: 36px;
+  width: 100%;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  padding-left: 36px;
+  padding-right: 12px;
+  font-size: 0.875rem;
+  outline: none;
+}
+
+.searchInput:focus {
+  box-shadow: 0 0 0 2px #F5C518;
+}
+
+.filterBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  padding: 8px 12px;
+  font-size: 0.875rem;
+  color: #1F2A33;
+  cursor: pointer;
+}
+
+.filterBtn:hover {
+  background: #f3f4f6;
+}
+
+/* Stats Row */
+.statsRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 768px) {
+  .statsRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.etapaBtn {
+  border-radius: 4px;
+  background: #F5C518;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #1F2A33;
+  border: none;
+  cursor: pointer;
+}
+
+/* Charts Grid */
+.chartsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin-top: 20px;
+}
+
+@media (max-width: 1024px) {
+  .chartsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.chartFull {
+  margin-top: 20px;
+}
+
+.chartContainer {
+  height: 280px;
+}
+
+.chartContainerLarge {
+  height: 320px;
+}
+
+/* Etapa Tabs */
+.etapaTabs {
+  display: flex;
+  gap: 8px;
+}
+
+.etapaTab {
+  border-radius: 6px;
+  padding: 6px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  cursor: pointer;
+  border: none;
+  transition: background 0.2s, color 0.2s;
+}
+
+.etapaTabActive {
+  background: #F5C518;
+  color: #1F2A33;
+}
+
+.etapaTabInactive {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.etapaTabInactive:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
