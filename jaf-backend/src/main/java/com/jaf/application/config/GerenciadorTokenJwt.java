@@ -4,6 +4,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import com.jaf.application.dto.FuncionarioDetalhesDto;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -29,11 +30,22 @@ public class GerenciadorTokenJwt {
             .map(GrantedAuthority::getAuthority)
             .collect(Collectors.joining(","));
 
-        return Jwts.builder()
+        final Object principal = authentication.getPrincipal();
+        final String cargo = principal instanceof FuncionarioDetalhesDto funcionario
+            ? funcionario.getCargo().name()
+            : null;
+
+        var builder = Jwts.builder()
             .setSubject(authentication.getName())           // claim "sub": quem é o usuário
             .claim("authorities", authorities)              // claim customizado: perfis do usuário
             .setIssuedAt(new Date(System.currentTimeMillis()))                             // claim "iat"
-            .setExpiration(new Date(System.currentTimeMillis() + jwtTokenValidity * 1_000)) // claim "exp"
+            .setExpiration(new Date(System.currentTimeMillis() + jwtTokenValidity * 1_000)); // claim "exp"
+
+        if (cargo != null) {
+            builder.claim("cargo", cargo);
+        }
+
+        return builder
             .signWith(parseSecret())                        // assina com HMAC-SHA256
             .compact();                                     // serializa para String
     }

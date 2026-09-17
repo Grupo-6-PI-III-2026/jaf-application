@@ -34,3 +34,127 @@
 .spacer {
   flex: 1;
 }
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 14px;
+  color: #6c757d;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.breadcrumb span:not(:last-child)::after {
+  content: ">";
+  margin-left: 8px;
+  color: #adb5bd;
+}
+
+.breadcrumbAtivo {
+  color: #333;
+}
+
+.logoutButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #dc3545;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.logoutButton:hover {
+  background: #c82333;
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(31, 42, 51, 0.48);
+}
+
+.modalLogout {
+  width: min(420px, 100%);
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  box-shadow: 0 24px 60px rgba(31, 42, 51, 0.24);
+}
+
+.modalHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 22px;
+  background: #333;
+  color: #fff;
+}
+
+.modalHeader h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.modalHeader p {
+  margin: 4px 0 0;
+  color: #dee2e6;
+  font-size: 13px;
+}
+
+.modalClose {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 18px 22px 22px;
+}
+
+.cancelButton,
+.confirmButton {
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cancelButton {
+  border: 1px solid #e9ecef;
+  background: #fff;
+  color: #495057;
+}
+
+.confirmButton {
+  background: #dc3545;
+  color: #fff;
+}
+
+.confirmButton:hover {
+  background: #c82333;
+}

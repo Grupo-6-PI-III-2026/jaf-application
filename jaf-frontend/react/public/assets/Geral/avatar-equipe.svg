@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Avatar equipe">
+  <rect width="120" height="120" rx="60" fill="#f5c518"/>
+  <circle cx="60" cy="43" r="22" fill="#1f2937"/>
+  <path d="M24 102c7-23 23-35 36-35s29 12 36 35" fill="#1f2937"/>
+  <circle cx="40" cy="54" r="12" fill="#43b89c"/>
+  <circle cx="80" cy="54" r="12" fill="#43b89c"/>
+</svg>

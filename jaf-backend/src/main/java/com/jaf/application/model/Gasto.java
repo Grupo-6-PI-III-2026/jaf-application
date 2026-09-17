@@ -18,6 +18,8 @@ public class Gasto {
     private BigDecimal valor;
     private LocalDate dtGasto;
 
+    private Boolean reembolsoConcluido;
+
     @ManyToOne
     @JoinColumn(name = "funcionario_id")
     private Funcionario funcionario;
@@ -96,5 +98,13 @@ public class Gasto {
 
     public void setValor(BigDecimal valor) {
         this.valor = valor;
+    }
+
+    public Boolean getReembolsoConcluido() {
+        return reembolsoConcluido;
+    }
+
+    public void setReembolsoConcluido(Boolean reembolsoConcluido) {
+        this.reembolsoConcluido = reembolsoConcluido;
     }
 }

@@ -208,6 +208,20 @@
   align-items: center;
 }
 
+.selectWrapperComIcone {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background-color: #e5e2e1;
+  border-radius: 8px;
+  padding: 10px 12px;
+  transition: background-color 0.2s ease;
+}
+
+.selectWrapperComIcone:focus-within {
+  background-color: #ddd9d8;
+}
+
 .select {
   background-color: #e5e2e1;
   border: none;
@@ -228,6 +242,26 @@
 }
 
 .select:disabled {
+  color: #999;
+  cursor: not-allowed;
+}
+
+.selectComIcone {
+  min-width: 0;
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: #1c1b1b;
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  appearance: none;
+  padding-right: 28px;
+  cursor: pointer;
+}
+
+.selectComIcone:disabled {
   color: #999;
   cursor: not-allowed;
 }

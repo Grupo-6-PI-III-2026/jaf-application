@@ -53,7 +53,7 @@
 }
 
 .nomeEmpresa h1 {
-  font-weight: 7  00;
+  font-weight: 700;
   font-size: 14px;
   color: #333;
   margin: 0;
@@ -68,8 +68,23 @@
 .nav {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 18px;
   flex: 1;
+}
+
+.navSection {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.navSectionTitle {
+  padding: 0 16px 4px;
+  color: #adb5bd;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .menuItem a {
@@ -149,12 +164,12 @@
 }
 
 .notificationBtn {
-  background: none;
-  border: none;
+  background: #fff;
+  border: 1px solid #e9ecef;
   cursor: pointer;
   padding: 8px;
   color: #6c757d;
-  border-radius: 50%;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -163,4 +178,5 @@
 
 .notificationBtn:hover {
   background-color: #e9ecef;
+  color: #333;
 }
