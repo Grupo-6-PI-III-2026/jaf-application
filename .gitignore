@@ -5,3 +5,11 @@ _bmad
 _bmad-output
 .agents
 .github
+
+# Terraform
+terraform.tfvars
+*.tfvars
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
