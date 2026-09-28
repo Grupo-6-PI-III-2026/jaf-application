@@ -29,8 +29,8 @@ services:
     container_name: ocr-service
     env_file:
       - .env
-    expose:
-      - "8000"
+    ports:
+      - "8000:8000"
 
   backend:
     build:

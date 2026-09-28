@@ -34,6 +34,6 @@ public class OcrController {
     @PreAuthorize("hasAuthority('CRIAR_GASTO')")
     public ResponseEntity<JsonNode> processarNota(@RequestParam("arquivo") MultipartFile arquivo) 
             throws IOException {
-        return ResponseEntity.ok(ocrService.process(arquivo));
+        return ResponseEntity.ok(ocrService.processarNotaFiscal(arquivo));
     }
 }
