@@ -8,6 +8,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import java.time.LocalDate;
+import java.math.BigDecimal;
 
 @Component
 @ConditionalOnProperty(name = "app.seed.enabled", havingValue = "true", matchIfMissing = true)
@@ -67,11 +69,15 @@ public class DatabaseSeeder implements ApplicationRunner {
     }
 
     private void inserirObra(String titulo, String orcamento, String status, String inicio, String terminoPrevisto) {
+        // Converte as datas de String para LocalDate no lado do Java
+        LocalDate dataInicio = LocalDate.parse(inicio);
+        LocalDate dataTermino = LocalDate.parse(terminoPrevisto);
+
         jdbcTemplate.update("""
                 INSERT INTO obra (titulo, orcamento, status, dt_inicio, dt_termino_previsto)
                 SELECT ?, ?, ?, ?, ?
                 WHERE NOT EXISTS (SELECT 1 FROM obra WHERE titulo = ?)
-                """, titulo, orcamento, status, inicio, terminoPrevisto, titulo);
+                """, titulo, orcamento, status, dataInicio, dataTermino, titulo);
     }
 
     private void seedAlocacoes() {
@@ -232,6 +238,10 @@ public class DatabaseSeeder implements ApplicationRunner {
             String obraTitulo,
             Boolean reembolsoConcluido
     ) {
+        // Converte para os tipos corretos para evitar a exceção de tipagem do PostgreSQL
+        BigDecimal valorDecimal = new BigDecimal(valor);
+        LocalDate data = LocalDate.parse(dataGasto);
+
         jdbcTemplate.update("""
                 INSERT INTO gasto (descricao, categoria, metodo_pagamento, etapa, valor, dt_gasto, funcionario_id, obra_id, reembolso_concluido)
                 SELECT ?, ?, ?, ?, ?, ?, funcionario.id, obra.id, ?
@@ -244,7 +254,7 @@ public class DatabaseSeeder implements ApplicationRunner {
                     WHERE gasto_existente.descricao = ?
                       AND gasto_existente.obra_id = obra.id
                   )
-                """, descricao, categoria, metodoPagamento, etapa, valor, dataGasto, reembolsoConcluido, funcionarioEmail, obraTitulo, descricao);
+                """, descricao, categoria, metodoPagamento, etapa, valorDecimal, data, reembolsoConcluido, funcionarioEmail, obraTitulo, descricao);
     }
 
     private void registrarResumoSeed() {
