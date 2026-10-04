@@ -75,6 +75,16 @@ module "ec2" {
   sg_frontend_id = module.security_groups.sg_frontend_id
   sg_backend_id  = module.security_groups.sg_backend_id
   sg_ocr_id      = module.security_groups.sg_ocr_id
+
+  # GHCR — credenciais para pull das imagens Docker nas EC2
+  ghcr_token = var.ghcr_token
+  ghcr_user  = var.ghcr_user
+  repo_owner = var.repo_owner
+
+  # Variáveis de ambiente do Backend (banco de dados)
+  db_url      = var.db_url
+  db_username = var.db_username
+  db_password = var.db_password
 }
 
 # ── Módulo: RDS ───────────────────────────────────────────────

@@ -4,7 +4,6 @@ uploads/fotos/
 _bmad 
 _bmad-output
 .agents
-.github
 
 # Terraform
 terraform.tfvars
@@ -13,3 +12,4 @@ terraform.tfvars
 *.tfstate.*
 .terraform/
 .terraform.lock.hcl
+**/.terraform.lock.hcl

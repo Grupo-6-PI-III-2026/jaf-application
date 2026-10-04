@@ -69,3 +69,38 @@ variable "sg_ocr_id" {
   description = "ID do Security Group do OCR"
   type        = string
 }
+
+# ── GHCR (GitHub Container Registry) ─────────────────────────
+variable "ghcr_token" {
+  description = "Personal Access Token do GitHub com permissão read:packages"
+  type        = string
+  sensitive   = true
+}
+
+variable "ghcr_user" {
+  description = "Username/owner no ghcr.io"
+  type        = string
+}
+
+variable "repo_owner" {
+  description = "Owner do repositório GitHub"
+  type        = string
+}
+
+# ── Variáveis de ambiente do Backend ─────────────────────────
+variable "db_url" {
+  description = "JDBC URL do banco PostgreSQL"
+  type        = string
+  sensitive   = true
+}
+
+variable "db_username" {
+  description = "Usuário do banco de dados"
+  type        = string
+}
+
+variable "db_password" {
+  description = "Senha do banco de dados"
+  type        = string
+  sensitive   = true
+}

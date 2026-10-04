@@ -103,3 +103,31 @@ variable "rds_allocated_storage" {
   type        = number
   default     = 20
 }
+
+# ── GHCR (GitHub Container Registry) ─────────────────────────
+# Usado pelo user_data das EC2 para fazer pull das imagens Docker
+
+variable "ghcr_token" {
+  description = "Personal Access Token do GitHub com permissão read:packages — NUNCA commitar"
+  type        = string
+  sensitive   = true  # Oculto nos logs e outputs do Terraform
+}
+
+variable "ghcr_user" {
+  description = "Username ou organization owner no ghcr.io (ex: Grupo-6-PI-III-2026)"
+  type        = string
+}
+
+variable "repo_owner" {
+  description = "Owner do repositório GitHub (mesmo valor que ghcr_user na maioria dos casos)"
+  type        = string
+}
+
+# ── Variáveis de ambiente do Backend ─────────────────────────
+# Passadas via templatefile para o user_data da instância backend
+
+variable "db_url" {
+  description = "JDBC URL do banco PostgreSQL (ex: jdbc:postgresql://host:5432/appdb)"
+  type        = string
+  sensitive   = true  # Contém host e nome do banco — não expor
+}

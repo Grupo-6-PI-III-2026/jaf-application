@@ -24,35 +24,37 @@ data "aws_iam_instance_profile" "lab_profile" {
   name = "LabInstanceProfile"
 }
 
-# ── User Data: Docker + Docker Compose ────────────────────────
-# Script executado uma única vez na inicialização de cada instância.
-# Instala Docker e Docker Compose no Amazon Linux 2023 (dnf).
+# ── User Data via templatefile ────────────────────────────────
+# Cada instância recebe um script específico com suas variáveis.
+# Os scripts ficam em terraform/scripts/ e são processados pelo templatefile.
 locals {
-  user_data = <<-EOF
+  # Frontend: instala Docker, faz login no ghcr.io e sobe o container na porta 80
+  user_data_frontend = templatefile("${path.module}/../../scripts/frontend.sh", {
+    ghcr_user  = var.ghcr_user
+    ghcr_token = var.ghcr_token
+    repo_owner = var.repo_owner
+  })
+
+  # Backend: instala Docker, faz login no ghcr.io, sobe o container na porta 8080
+  # e injeta as variáveis de ambiente do banco de dados
+  user_data_backend = templatefile("${path.module}/../../scripts/backend.sh", {
+    ghcr_user   = var.ghcr_user
+    ghcr_token  = var.ghcr_token
+    repo_owner  = var.repo_owner
+    db_url      = var.db_url
+    db_username = var.db_username
+    db_password = var.db_password
+  })
+
+  # OCR: script genérico — apenas instala Docker (sem pull de imagem específica)
+  user_data_ocr = <<-EOF
     #!/bin/bash
     set -eux
-
-    # Atualizar pacotes do sistema
     dnf update -y
-
-    # Instalar Docker
     dnf install -y docker
-
-    # Habilitar e iniciar o serviço Docker
     systemctl enable docker
     systemctl start docker
-
-    # Adicionar ec2-user ao grupo docker (sem necessidade de sudo)
     usermod -aG docker ec2-user
-
-    # Instalar Docker Compose v2 (binário standalone)
-    curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" \
-      -o /usr/local/bin/docker-compose
-    chmod +x /usr/local/bin/docker-compose
-
-    # Verificar instalação
-    docker --version
-    docker-compose --version
   EOF
 }
 
@@ -66,8 +68,8 @@ resource "aws_instance" "frontend" {
   key_name               = aws_key_pair.main.key_name
   iam_instance_profile   = data.aws_iam_instance_profile.lab_profile.name
 
-  # Instalar Docker automaticamente na primeira inicialização
-  user_data = local.user_data
+  # Script específico do frontend: Docker + login ghcr.io + pull + run porta 80
+  user_data = local.user_data_frontend
 
   # Volume root com 20GB — adequado para imagens Docker
   root_block_device {
@@ -114,7 +116,8 @@ resource "aws_instance" "backend" {
   key_name               = aws_key_pair.main.key_name
   iam_instance_profile   = data.aws_iam_instance_profile.lab_profile.name
 
-  user_data = local.user_data
+  # Script específico do backend: Docker + login ghcr.io + pull + run porta 8080 + envs do DB
+  user_data = local.user_data_backend
 
   root_block_device {
     volume_type           = "gp3"
@@ -146,7 +149,8 @@ resource "aws_instance" "ocr" {
   key_name               = aws_key_pair.main.key_name
   iam_instance_profile   = data.aws_iam_instance_profile.lab_profile.name
 
-  user_data = local.user_data
+  # Script genérico do OCR: apenas instala Docker (sem pull de imagem específica)
+  user_data = local.user_data_ocr
 
   root_block_device {
     volume_type           = "gp3"

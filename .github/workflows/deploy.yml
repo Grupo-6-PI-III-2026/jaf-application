@@ -1,0 +1,42 @@
+name: Build e Push Docker
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write  
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Login no ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── Frontend ──────────────────────────────
+      - name: Build e Push — Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./jaf-frontend/react
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/jaf-frontend:latest
+
+      # ── Backend  ─────────────────────────────────
+      
+      - name: Build e Push — Backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./jaf-backend
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/jaf-backend:latest

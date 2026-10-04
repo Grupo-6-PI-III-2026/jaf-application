@@ -1,0 +1,51 @@
+﻿# ============================================================
+# terraform/terraform.tfvars.example
+# Template de variáveis — copie este arquivo para terraform.tfvars
+# e preencha com os valores reais ANTES de executar terraform apply.
+#
+# ATENÇÃO: terraform.tfvars está no .gitignore e NUNCA deve ser commitado.
+# ============================================================
+
+# ── Identificação do projeto ─────────────────────────────────
+project_name = "jaf-application"
+environment  = "producao"
+aws_region   = "us-east-1"
+
+# ── Rede ─────────────────────────────────────────────────────
+vpc_cidr                    = "10.0.0.0/16"
+public_subnet_cidr          = "10.0.1.0/24"
+private_subnet_backend_cidr = "10.0.2.0/24"
+private_subnet_ocr_cidr     = "10.0.3.0/24"
+private_subnet_rds_cidr     = "10.0.4.0/24"
+availability_zone           = "us-east-1a"
+secondary_availability_zone = "us-east-1b"
+
+# ── EC2 ──────────────────────────────────────────────────────
+instance_type   = "t3.micro"
+# Caminho para sua chave pública SSH (gere com: ssh-keygen -t rsa -b 4096)
+public_key_path = "~/.ssh/id_rsa.pub"
+
+# ── RDS PostgreSQL ────────────────────────────────────────────
+db_name     = "appdb"
+db_username = "appuser"
+# Use uma senha forte com letras, números e símbolos
+db_password = "SUBSTITUA_POR_SENHA_FORTE"
+
+rds_instance_class    = "db.t3.micro"
+rds_allocated_storage = 20
+
+# ── GHCR (GitHub Container Registry) ─────────────────────────
+# ghcr_user: seu username ou nome da organização no GitHub
+# Exemplo: "Grupo-6-PI-III-2026" ou "seu-usuario"
+ghcr_user  = "SUBSTITUA_PELO_OWNER_DO_GITHUB"
+repo_owner = "SUBSTITUA_PELO_OWNER_DO_GITHUB"
+
+# ghcr_token: Personal Access Token com permissão "read:packages"
+# Como criar: GitHub > Settings > Developer settings > Personal access tokens > Fine-grained
+# Permissões necessárias: read:packages
+ghcr_token = "SUBSTITUA_PELO_SEU_GITHUB_PAT"
+
+# ── Variáveis de ambiente do Backend ─────────────────────────
+# db_url: JDBC URL completa do RDS PostgreSQL
+# Substitua <RDS_ENDPOINT> pelo valor do output "rds_endpoint" após o apply
+db_url = "jdbc:postgresql://<RDS_ENDPOINT>:5432/appdb"
