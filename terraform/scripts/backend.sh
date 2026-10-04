@@ -1,4 +1,5 @@
-﻿set -eux
+#!/bin/bash
+set -eux
 dnf update -y
 dnf install -y docker
 
@@ -20,4 +21,6 @@ docker run -d \
   -e SPRING_DATASOURCE_URL="${db_url}" \
   -e SPRING_DATASOURCE_USERNAME="${db_username}" \
   -e SPRING_DATASOURCE_PASSWORD="${db_password}" \
+  -e JWT_SECRET="${jwt_secret}" \
+  -e JWT_EXPIRATION="${jwt_expiration}" \
   ghcr.io/${repo_owner}/jaf-backend:latest

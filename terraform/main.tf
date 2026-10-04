@@ -81,10 +81,12 @@ module "ec2" {
   ghcr_user  = var.ghcr_user
   repo_owner = var.repo_owner
 
-  # Variáveis de ambiente do Backend (banco de dados)
+  # Variáveis de ambiente do Backend (banco de dados e JWT)
   db_url      = var.db_url
-  db_username = var.db_username
-  db_password = var.db_password
+  db_username    = var.db_username
+  db_password    = var.db_password
+  jwt_secret     = var.jwt_secret
+  jwt_expiration = var.jwt_expiration
 }
 
 # ── Módulo: RDS ───────────────────────────────────────────────

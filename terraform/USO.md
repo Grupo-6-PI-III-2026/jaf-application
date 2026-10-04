@@ -20,6 +20,18 @@ db_password = "MinhaSenh@Forte123!"
 
 ## Executar o Terraform
 
+AWS Academy → abre o seu laboratório → clica em AWS Details → Show nas credenciais
+
+
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+AWS_SESSION_TOKEN=...
+
+Essas você coloca no arquivo ~/.aws/credentials na sua máquina
+
+----
+
+
 ```bash
 cd terraform/
 terraform init

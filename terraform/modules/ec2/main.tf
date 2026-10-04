@@ -33,6 +33,7 @@ locals {
     ghcr_user  = var.ghcr_user
     ghcr_token = var.ghcr_token
     repo_owner = var.repo_owner
+    backend_ip = aws_instance.backend.private_ip
   })
 
   # Backend: instala Docker, faz login no ghcr.io, sobe o container na porta 8080
@@ -44,6 +45,8 @@ locals {
     db_url      = var.db_url
     db_username = var.db_username
     db_password = var.db_password
+    jwt_secret  = var.jwt_secret
+    jwt_expiration = var.jwt_expiration
   })
 
   # OCR: script genérico — apenas instala Docker (sem pull de imagem específica)

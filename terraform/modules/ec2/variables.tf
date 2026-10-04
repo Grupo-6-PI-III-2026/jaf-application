@@ -104,3 +104,14 @@ variable "db_password" {
   type        = string
   sensitive   = true
 }
+
+variable "jwt_secret" {
+  description = "Segredo JWT para autenticação"
+  type        = string
+  sensitive   = true
+}
+
+variable "jwt_expiration" {
+  description = "Tempo de expiração do JWT (em milissegundos)"
+  type        = string
+}

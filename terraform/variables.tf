@@ -131,3 +131,15 @@ variable "db_url" {
   type        = string
   sensitive   = true  # Contém host e nome do banco — não expor
 }
+
+variable "jwt_secret" {
+  description = "Segredo usado para assinar e validar tokens JWT"
+  type        = string
+  sensitive   = true
+}
+
+variable "jwt_expiration" {
+  description = "Tempo de expiração do JWT (em milissegundos)"
+  type        = string
+  default     = "86400000" # 24 horas por padrão, se não for passado
+}
