@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - US83---front-back-aws
 
 jobs:
   build-and-push:
