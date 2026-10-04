@@ -1,5 +1,5 @@
 CREATE TABLE cargo_permissao (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     cargo VARCHAR(50) NOT NULL,
     permissao VARCHAR(50) NOT NULL,
     CONSTRAINT uk_cargo_permissao UNIQUE (cargo, permissao)
