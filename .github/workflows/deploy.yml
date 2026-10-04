@@ -1,4 +1,6 @@
 name: Build e Push Docker
+env:
+  OWNER: grupo-6-pi-iii-2026
 
 on:
   push:
@@ -31,7 +33,7 @@ jobs:
         with:
           context: ./jaf-frontend/react
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/jaf-frontend:latest
+          tags: ghcr.io/${{ env.OWNER  }}/jaf-frontend:latest
 
       # ── Backend  ─────────────────────────────────
       
@@ -40,4 +42,4 @@ jobs:
         with:
           context: ./jaf-backend
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/jaf-backend:latest
+          tags: ghcr.io/${{ env.OWNER }}/jaf-backend:latest
