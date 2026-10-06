@@ -1,7 +1,7 @@
 import api from "../Auth/Login/Api/Api";
 
 export interface Colaborador {
-  id: number;
+  id?: number;
   funcionarioId: number;
   funcionarioNome: string;
   funcionarioCargo: string;

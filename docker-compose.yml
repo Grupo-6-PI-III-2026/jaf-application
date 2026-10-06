@@ -23,6 +23,15 @@ services:
       retries: 20
       start_period: 15s
 
+
+  ocr-service:
+    build: ./POC-API
+    container_name: ocr-service
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+
   backend:
     build:
       context: ./jaf-backend
@@ -33,9 +42,26 @@ services:
     env_file:
       - .env
     environment:
-      JAVA_TOOL_OPTIONS: -Xms256m -Xmx512m
+      JAVA_TOOL_OPTIONS: "-Xms256m -Xmx512m"
+      OCR_SERVICE_URL: "http://ocr-service:8000/api/ocr"
     volumes:
       - ./data/uploads:/app/uploads
+    depends_on:
+      ocr-service:
+        condition: service_started
+      jaf-db:
+        condition: service_healthy
+
+  backend-test:
+    build:
+      context: ./jaf-backend
+      target: build
+    container_name: jaf-backend-test
+    command: ./mvnw clean test
+    env_file:
+      - .env
+    environment:
+      JAVA_TOOL_OPTIONS: -Xms256m -Xmx512m
     depends_on:
       jaf-db:
         condition: service_healthy

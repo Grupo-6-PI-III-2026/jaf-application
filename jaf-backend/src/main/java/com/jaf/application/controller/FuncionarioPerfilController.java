@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -38,6 +39,13 @@ public class FuncionarioPerfilController {
     private final FuncionarioService funcionarioService;
 
     private static final Path UPLOAD_DIR = Paths.get("uploads", "fotos");
+        private static final long FOTO_MAX_BYTES = 5L * 1024L * 1024L;
+        private static final Set<String> TIPOS_IMAGEM_ACEITOS = Set.of(
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "image/gif"
+        );
 
     public FuncionarioPerfilController(FuncionarioService funcionarioService) {
         this.funcionarioService = funcionarioService;
@@ -64,6 +72,12 @@ public class FuncionarioPerfilController {
 
         if (file == null || file.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Arquivo invalido.");
+        }
+        if (file.getSize() > FOTO_MAX_BYTES) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A foto deve ter no maximo 5 MB.");
+        }
+        if (file.getContentType() == null || !TIPOS_IMAGEM_ACEITOS.contains(file.getContentType())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Envie uma imagem JPG, PNG, WEBP ou GIF.");
         }
 
         String ext = getExtensao(file.getOriginalFilename());

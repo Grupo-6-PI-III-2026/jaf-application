@@ -16,15 +16,43 @@ export interface Gasto {
   valor: number;
   dtGasto: string;
   funcionario: Funcionario;
+  reembolsoConcluido: boolean | null;
   obra: {
     id: number;
     titulo: string;
   };
 }
 
+export interface GastoCriarDto {
+  descricao: string;
+  categoria: string;
+  metodoPagamento: string;
+  etapa?: string;
+  valor: number;
+  dtGasto: string;
+  funcionarioId: number;
+  obraId: number;
+  reembolsoConcluido?: boolean | null;
+}
+
 export const gastoService = {
   listar: async (): Promise<Gasto[]> => {
     const response = await api.get("/gastos");
+    return response.data;
+  },
+
+  listarPorObra: async (obraId: number): Promise<Gasto[]> => {
+    const response = await api.get(`/obras/${obraId}/gastos`);
+    return response.data;
+  },
+
+  criar: async (dto: GastoCriarDto): Promise<Gasto> => {
+    const response = await api.post("/gastos", dto);
+    return response.data;
+  },
+
+  atualizar: async (id: number, dto: GastoCriarDto): Promise<Gasto> => {
+    const response = await api.put(`/gastos/${id}`, dto);
     return response.data;
   },
 

@@ -52,6 +52,7 @@ public class SecurityConfiguracao {
             "/v3/api-docs/**",
             "/actuator/*",
             "/funcionarios/login",
+            "/funcionarios/logout", // CORREÇÃO DE SEGURANÇA A07: Endpoint de logout público
             "/h2-console/**",
             "/h2-console/*/**",
             "/error/**"
@@ -72,7 +73,9 @@ public class SecurityConfiguracao {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(URLS_PERMITIDAS).permitAll()  // rotas públicas
                         .requestMatchers(HttpMethod.POST, "/funcionarios/login").permitAll()  // login público
-                        .requestMatchers(HttpMethod.POST, "/funcionarios").permitAll()  // cadastro público
+                        // CORREÇÃO DE SEGURANÇA A01: Removido acesso público ao cadastro de funcionários
+                        // Antes: .requestMatchers(HttpMethod.POST, "/funcionarios").permitAll()
+                        // Agora: exige autenticação e permissão específica (ver @PreAuthorize no controller)
                         .requestMatchers("/uploads/**").permitAll()  // fotos públicas
                         .anyRequest().authenticated()                  // todas as outras exigem token
                 )

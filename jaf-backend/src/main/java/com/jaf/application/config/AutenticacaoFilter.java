@@ -69,11 +69,12 @@ public class AutenticacaoFilter extends OncePerRequestFilter {
     }
 
     private String extrairToken(HttpServletRequest request) {
-        // Prioridade 1: cookie HttpOnly (browser)
+        // CORREÇÃO DE SEGURANÇA A07: Suporte a cookie HttpOnly para JWT
+        // Prioridade 1: cookie "jwt" HttpOnly (browser - proteção contra XSS)
         Cookie[] cookies = request.getCookies();
         if (cookies != null) {
             for (Cookie cookie : cookies) {
-                if ("JWT_TOKEN".equals(cookie.getName())) {
+                if ("jwt".equals(cookie.getName())) {
                     return cookie.getValue();
                 }
             }

@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modelagem de Dados - JAF Application</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .section h2 {
+            color: #667eea;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .section h3 {
+            color: #764ba2;
+            font-size: 1.4em;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+
+        .entity-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .entity-card {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .entity-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            border-color: #667eea;
+        }
+
+        .entity-card h4 {
+            color: #667eea;
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .entity-card .icon {
+            font-size: 1.5em;
+        }
+
+        .field-list {
+            list-style: none;
+        }
+
+        .field-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .field-list li:last-child {
+            border-bottom: none;
+        }
+
+        .field-name {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .field-type {
+            color: #6c757d;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .pk {
+            color: #dc3545;
+            font-weight: 700;
+        }
+
+        .fk {
+            color: #ffc107;
+            font-weight: 700;
+        }
+
+        .relationship-diagram {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 30px;
+            margin-top: 20px;
+        }
+
+        .relationship {
+            display: flex;
+            align-items: center;
+            margin: 15px 0;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .relationship-entity {
+            font-weight: 600;
+            color: #667eea;
+            padding: 8px 15px;
+            background: #e7f3ff;
+            border-radius: 5px;
+        }
+
+        .relationship-arrow {
+            flex: 1;
+            text-align: center;
+            color: #6c757d;
+            font-size: 1.5em;
+            margin: 0 15px;
+        }
+
+        .enum-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .enum-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .enum-item {
+            background: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            border-left: 3px solid #764ba2;
+            font-weight: 500;
+        }
+
+        .permission-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .permission-item {
+            background: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 0.9em;
+            border: 1px solid #dee2e6;
+        }
+
+        .table-schema {
+            background: #2d3748;
+            color: #e2e8f0;
+            border-radius: 10px;
+            padding: 25px;
+            margin-top: 20px;
+            overflow-x: auto;
+        }
+
+        .table-schema h3 {
+            color: #667eea;
+            border-bottom: 1px solid #4a5568;
+            padding-bottom: 10px;
+        }
+
+        .sql-code {
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            line-height: 1.8;
+            white-space: pre-wrap;
+        }
+
+        .keyword {
+            color: #66d9ef;
+        }
+
+        .type {
+            color: #a6e22e;
+        }
+
+        .string {
+            color: #e6db74;
+        }
+
+        .number {
+            color: #ae81ff;
+        }
+
+        .comment {
+            color: #75715e;
+            font-style: italic;
+        }
+
+        .tech-stack {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin-top: 30px;
+        }
+
+        .tech-stack h3 {
+            color: white;
+            border-bottom: 1px solid rgba(255,255,255,0.3);
+            padding-bottom: 10px;
+        }
+
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .tech-item {
+            background: rgba(255,255,255,0.2);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .footer {
+            background: #2d3748;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            margin-top: 40px;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            .entity-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏗️ Modelagem de Dados</h1>
+            <p>Sistema de Gestão de Obras - JAF Application</p>
+        </div>
+
+        <div class="content">
+            <div class="section">
+                <h2>📊 Visão Geral do Sistema</h2>
+                <p>O JAF Application é um sistema completo para gestão de obras da construtora JAF, permitindo o controle de funcionários, alocações, gastos, presença e relatórios. O sistema utiliza uma arquitetura baseada em Spring Boot no backend e React no frontend, com persistência de dados em MySQL.</p>
+                
+                <div class="tech-stack">
+                    <h3>🛠️ Stack Tecnológico</h3>
+                    <div class="tech-grid">
+                        <div class="tech-item">Java 17+</div>
+                        <div class="tech-item">Spring Boot</div>
+                        <div class="tech-item">React</div>
+                        <div class="tech-item">MySQL</div>
+                        <div class="tech-item">JPA/Hibernate</div>
+                        <div class="tech-item">JWT Auth</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>🗂️ Entidades do Sistema</h2>
+                <div class="entity-grid">
+                    <div class="entity-card">
+                        <h4><span class="icon">👤</span> Funcionario</h4>
+                        <ul class="field-list">
+                            <li><span class="field-name pk">id</span> <span class="field-type">Long (PK)</span></li>
+                            <li><span class="field-name">nome</span> <span class="field-type">String(255)</span></li>
+                            <li><span class="field-name">email</span> <span class="field-type">String(255)</span></li>
+                            <li><span class="field-name">senha</span> <span class="field-type">String(255)</span></li>
+                            <li><span class="field-name">foto_url</span> <span class="field-type">String(512)</span></li>
+                            <li><span class="field-name">cargo_global</span> <span class="field-type">Cargo (Enum)</span></li>
+                        </ul>
+                    </div>
+
+                    <div class="entity-card">
+                        <h4><span class="icon">🏢</span> Obra</h4>
+                        <ul class="field-list">
+                            <li><span class="field-name pk">id</span> <span class="field-type">Long (PK)</span></li>
+                            <li><span class="field-name">titulo</span> <span class="field-type">String(255)</span></li>
+                            <li><span class="field-name">orcamento</span> <span class="field-type">String(255)</span></li>
+                            <li><span class="field-name">status</span> <span class="field-type">String(255)</span></li>
+                            <li><span class="field-name">dt_inicio</span> <span class="field-type">LocalDate</span></li>
+                            <li><span class="field-name">dt_termino_previsto</span> <span class="field-type">LocalDate</span></li>
+                        </ul>
+                    </div>
+
+                    <div class="entity-card">
+                        <h4><span class="icon">🔗</span> AlocacaoObra</h4>
+                        <ul class="field-list">
+                            <li><span class="field-name pk">id</span> <span class="field-type">Long (PK)</span></li>
+                            <li><span class="field-name fk">funcionario_id</span> <span class="field-type">Long (FK)</span></li>
+                            <li><span class="field-name fk">obra_id</span> <span class="field-type">Long (FK)</span></li>
+                            <li><span class="field-name">cargo</span> <span class="field-type">Cargo (Enum)</span></li>
+                        </ul>
+                    </div>
+
+                    <div class="entity-card">
+                        <h4><span class="icon">💰</span> Gasto</h4>
+                        <ul class="field-list">
+                            <li><span class="field-name pk">id</span> <span class="field-type">Long (PK)</span></li>
+                            <li><span class="field-name">descricao</span> <span class="field-type">String(255)</span></li>
+                            <li><span class="field-name">categoria</span> <span class="field-type">String(255)</span></li>
+                            <li><span class="field-name">metodo_pagamento</span> <span class="field-type">String(255)</span></li>
+                            <li><span class="field-name">etapa</span> <span class="field-type">String(255)</span></li>
+                            <li><span class="field-name">valor</span> <span class="field-type">BigDecimal(19,2)</span></li>
+                            <li><span class="field-name">dt_gasto</span> <span class="field-type">LocalDate</span></li>
+                            <li><span class="field-name">reembolso_concluido</span> <span class="field-type">Boolean</span></li>
+                            <li><span class="field-name fk">funcionario_id</span> <span class="field-type">Long (FK)</span></li>
+                            <li><span class="field-name fk">obra_id</span> <span class="field-type">Long (FK)</span></li>
+                        </ul>
+                    </div>
+
+                    <div class="entity-card">
+                        <h4><span class="icon">📅</span> Presenca</h4>
+                        <ul class="field-list">
+                            <li><span class="field-name pk">id</span> <span class="field-type">Long (PK)</span></li>
+                            <li><span class="field-name fk">funcionario_id</span> <span class="field-type">Long (FK)</span></li>
+                            <li><span class="field-name fk">obra_id</span> <span class="field-type">Long (FK)</span></li>
+                            <li><span class="field-name">data</span> <span class="field-type">LocalDate</span></li>
+                            <li><span class="field-name">presente</span> <span class="field-type">Boolean</span></li>
+                            <li><span class="field-name">horario_entrada</span> <span class="field-type">LocalTime</span></li>
+                            <li><span class="field-name">horario_saida</span> <span class="field-type">LocalTime</span></li>
+                        </ul>
+                    </div>
+
+                    <div class="entity-card">
+                        <h4><span class="icon">📋</span> Relatorio</h4>
+                        <ul class="field-list">
+                            <li><span class="field-name pk">id</span> <span class="field-type">Long (PK)</span></li>
+                            <li><span class="field-name">titulo</span> <span class="field-type">String(255)</span></li>
+                            <li><span class="field-name">dt_emissao</span> <span class="field-type">LocalDate</span></li>
+                            <li><span class="field-name fk">funcionario_responsavel</span> <span class="field-type">Long (FK)</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>🔗 Relacionamentos Entre Entidades</h2>
+                <div class="relationship-diagram">
+                    <div class="relationship">
+                        <span class="relationship-entity">Funcionario</span>
+                        <span class="relationship-arrow">1:N ↗</span>
+                        <span class="relationship-entity">AlocacaoObra</span>
+                        <span class="relationship-arrow">↙ N:1</span>
+                        <span class="relationship-entity">Obra</span>
+                    </div>
+                    <div class="relationship">
+                        <span class="relationship-entity">Funcionario</span>
+                        <span class="relationship-arrow">1:N ↗</span>
+                        <span class="relationship-entity">Gasto</span>
+                        <span class="relationship-arrow">↙ N:1</span>
+                        <span class="relationship-entity">Obra</span>
+                    </div>
+                    <div class="relationship">
+                        <span class="relationship-entity">Funcionario</span>
+                        <span class="relationship-arrow">1:N ↗</span>
+                        <span class="relationship-entity">Presenca</span>
+                        <span class="relationship-arrow">↙ N:1</span>
+                        <span class="relationship-entity">Obra</span>
+                    </div>
+                    <div class="relationship">
+                        <span class="relationship-entity">Funcionario</span>
+                        <span class="relationship-arrow">1:N ↗</span>
+                        <span class="relationship-entity">Relatorio</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>🎭 Enums e Permissões</h2>
+                
+                <h3>👥 Cargos Disponíveis</h3>
+                <div class="enum-section">
+                    <div class="enum-grid">
+                        <div class="enum-item">ADMIN - Administrador</div>
+                        <div class="enum-item">GESTOR_OBRA - Gestor de Obras</div>
+                        <div class="enum-item">OPERADOR_LANCAMENTO - Operador</div>
+                        <div class="enum-item">MESTRE_DE_OBRAS - Mestre de Obras</div>
+                        <div class="enum-item">ENGENHEIRO - Engenheiro</div>
+                        <div class="enum-item">ARQUITETO - Arquiteto</div>
+                        <div class="enum-item">PEDREIRO - Pedreiro</div>
+                    </div>
+                </div>
+
+                <h3>🔐 Sistema de Permissões</h3>
+                <div class="enum-section">
+                    <p>O sistema utiliza um controle de acesso baseado em permissões granulares, organizadas por módulos:</p>
+                    <div class="permission-grid">
+                        <div class="permission-item">CRIAR_OBRA</div>
+                        <div class="permission-item">EDITAR_OBRA</div>
+                        <div class="permission-item">DELETAR_OBRA</div>
+                        <div class="permission-item">VISUALIZAR_OBRA</div>
+                        <div class="permission-item">CRIAR_FUNCIONARIO</div>
+                        <div class="permission-item">EDITAR_FUNCIONARIO</div>
+                        <div class="permission-item">DELETAR_FUNCIONARIO</div>
+                        <div class="permission-item">VISUALIZAR_FUNCIONARIOS</div>
+                        <div class="permission-item">CRIAR_GASTO</div>
+                        <div class="permission-item">EDITAR_GASTO</div>
+                        <div class="permission-item">DELETAR_GASTO</div>
+                        <div class="permission-item">VISUALIZAR_GASTOS</div>
+                        <div class="permission-item">CRIAR_ALOCACAO</div>
+                        <div class="permission-item">EDITAR_ALOCACAO</div>
+                        <div class="permission-item">DELETAR_ALOCACAO</div>
+                        <div class="permission-item">VISUALIZAR_ALOCACOES</div>
+                        <div class="permission-item">GERAR_RELATORIO</div>
+                        <div class="permission-item">VISUALIZAR_RELATORIO</div>
+                        <div class="permission-item">REGISTRAR_PRESENCA</div>
+                        <div class="permission-item">EDITAR_PRESENCA</div>
+                        <div class="permission-item">DELETAR_PRESENCA</div>
+                        <div class="permission-item">VISUALIZAR_PRESENCAS</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>💾 Estrutura do Banco de Dados</h2>
+                <div class="table-schema">
+                    <h3>🗃️ Schema SQL - MySQL</h3>
+                    <pre class="sql-code"><span class="comment">-- Tabela de Funcionários</span>
+<span class="keyword">CREATE TABLE</span> funcionario (
+    <span class="keyword">id</span> <span class="type">BIGINT</span> <span class="keyword">AUTO_INCREMENT PRIMARY KEY</span>,
+    nome <span class="type">VARCHAR</span>(255),
+    email <span class="type">VARCHAR</span>(255),
+    senha <span class="type">VARCHAR</span>(255),
+    foto_url <span class="type">VARCHAR</span>(512),
+    cargo_global <span class="type">VARCHAR</span>(50)
+);
+
+<span class="comment">-- Tabela de Obras</span>
+<span class="keyword">CREATE TABLE</span> obra (
+    <span class="keyword">id</span> <span class="type">BIGINT</span> <span class="keyword">AUTO_INCREMENT PRIMARY KEY</span>,
+    titulo <span class="type">VARCHAR</span>(255),
+    orcamento <span class="type">VARCHAR</span>(255),
+    status <span class="type">VARCHAR</span>(255),
+    dt_inicio <span class="type">DATE</span>,
+    dt_termino_previsto <span class="type">DATE</span>
+);
+
+<span class="comment">-- Tabela de Alocação de Funcionários em Obras</span>
+<span class="keyword">CREATE TABLE</span> alocacao_obra (
+    <span class="keyword">id</span> <span class="type">BIGINT</span> <span class="keyword">AUTO_INCREMENT PRIMARY KEY</span>,
+    cargo <span class="type">VARCHAR</span>(50),
+    funcionario_id <span class="type">BIGINT</span>,
+    obra_id <span class="type">BIGINT</span>,
+    <span class="keyword">FOREIGN KEY</span> (funcionario_id) <span class="keyword">REFERENCES</span> funcionario(<span class="keyword">id</span>),
+    <span class="keyword">FOREIGN KEY</span> (obra_id) <span class="keyword">REFERENCES</span> obra(<span class="keyword">id</span>)
+);
+
+<span class="comment">-- Tabela de Gastos</span>
+<span class="keyword">CREATE TABLE</span> gasto (
+    <span class="keyword">id</span> <span class="type">BIGINT</span> <span class="keyword">AUTO_INCREMENT PRIMARY KEY</span>,
+    descricao <span class="type">VARCHAR</span>(255),
+    categoria <span class="type">VARCHAR</span>(255),
+    metodo_pagamento <span class="type">VARCHAR</span>(255),
+    etapa <span class="type">VARCHAR</span>(255),
+    valor <span class="type">DECIMAL</span>(19, 2),
+    dt_gasto <span class="type">DATE</span>,
+    reembolso_concluido <span class="type">BOOLEAN</span>,
+    funcionario_id <span class="type">BIGINT</span>,
+    obra_id <span class="type">BIGINT</span>,
+    <span class="keyword">FOREIGN KEY</span> (funcionario_id) <span class="keyword">REFERENCES</span> funcionario(<span class="keyword">id</span>),
+    <span class="keyword">FOREIGN KEY</span> (obra_id) <span class="keyword">REFERENCES</span> obra(<span class="keyword">id</span>)
+);
+
+<span class="comment">-- Tabela de Presença</span>
+<span class="keyword">CREATE TABLE</span> presenca (
+    <span class="keyword">id</span> <span class="type">BIGINT</span> <span class="keyword">AUTO_INCREMENT PRIMARY KEY</span>,
+    funcionario_id <span class="type">BIGINT</span>,
+    obra_id <span class="type">BIGINT</span>,
+    data <span class="type">DATE</span>,
+    presente <span class="type">BOOLEAN</span>,
+    horario_entrada <span class="type">TIME</span>,
+    horario_saida <span class="type">TIME</span>,
+    <span class="keyword">FOREIGN KEY</span> (funcionario_id) <span class="keyword">REFERENCES</span> funcionario(<span class="keyword">id</span>),
+    <span class="keyword">FOREIGN KEY</span> (obra_id) <span class="keyword">REFERENCES</span> obra(<span class="keyword">id</span>)
+);
+
+<span class="comment">-- Tabela de Relatórios</span>
+<span class="keyword">CREATE TABLE</span> relatorio (
+    <span class="keyword">id</span> <span class="type">BIGINT</span> <span class="keyword">AUTO_INCREMENT PRIMARY KEY</span>,
+    titulo <span class="type">VARCHAR</span>(255),
+    dt_emissao <span class="type">DATE</span>,
+    funcionario_id <span class="type">BIGINT</span>,
+    <span class="keyword">FOREIGN KEY</span> (funcionario_id) <span class="keyword">REFERENCES</span> funcionario(<span class="keyword">id</span>)
+);</pre>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>📐 Padrões de Projeto Utilizados</h2>
+                <div class="entity-grid">
+                    <div class="entity-card">
+                        <h4><span class="icon">🏗️</span> Arquitetura em Camadas</h4>
+                        <ul class="field-list">
+                            <li><span class="field-name">Controller</span> <span class="field-type">API REST</span></li>
+                            <li><span class="field-name">Service</span> <span class="field-type">Lógica de Negócio</span></li>
+                            <li><span class="field-name">Repository</span> <span class="field-type">Acesso a Dados</span></li>
+                            <li><span class="field-name">DTO</span> <span class="field-type">Transfer Objects</span></li>
+                            <li><span class="field-name">Entity</span> <span class="field-type">Modelo de Dados</span></li>
+                        </ul>
+                    </div>
+
+                    <div class="entity-card">
+                        <h4><span class="icon">🔒</span> Segurança</h4>
+                        <ul class="field-list">
+                            <li><span class="field-name">Autenticação</span> <span class="field-type">JWT Tokens</span></li>
+                            <li><span class="field-name">Autorização</span> <span class="field-type">RBAC por Permissões</span></li>
+                            <li><span class="field-name">Senhas</span> <span class="field-type">BCrypt Encryption</span></li>
+                            <li><span class="field-name">Escopo</span> <span class="field-type">Acesso por Obra</span></li>
+                        </ul>
+                    </div>
+
+                    <div class="entity-card">
+                        <h4><span class="icon">🔄</span> Padrões de Dados</h4>
+                        <ul class="field-list">
+                            <li><span class="field-name">ORM</span> <span class="field-type">Hibernate/JPA</span></li>
+                            <li><span class="field-name">Validação</span> <span class="field-type">Jakarta Validation</span></li>
+                            <li><span class="field-name">Migrations</span> <span class="field-type">Flyway</span></li>
+                            <li><span class="field-name">Mapper</span> <span class="field-type">Entity-DTO Mapping</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Documentação gerada automaticamente | JAF Application © 2024</p>
+        </div>
+    </div>
+</body>
+</html>

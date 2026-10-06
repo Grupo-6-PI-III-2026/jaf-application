@@ -1,10 +1,13 @@
-import { useRef, useState } from "react";
-import { useUser } from "../../Context/UserContext";
+import { useState } from "react";
+import { useUser } from "../../Context/useUser";
 import { funcionarioService } from "../../Service/Funcionarios/funcionarioService";
 import { authService } from "../../Service/Auth/Login/authService";
+import { toast } from "sonner";
+import axios from "axios";
 import {
   CargoLabel,
   DEFAULT_AVATAR_URL,
+  GENERIC_AVATARS,
   type AlterarSenhaDto,
 } from "../../Types/user";
 import styles from "./Profile.module.css";
@@ -115,16 +118,29 @@ const IconShield = () => (
 
 type Tab = "info" | "seguranca" | "excluir";
 
+const EMAIL_REGEX = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
+const SENHA_REGEX = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d).{6,}$/;
+const FOTO_MAX_BYTES = 5 * 1024 * 1024;
+
+const getApiMessage = (error: unknown, fallback: string) => {
+  if (axios.isAxiosError(error)) {
+    const data = error.response?.data as { message?: string; fields?: Record<string, string> } | undefined;
+    const fieldMessage = data?.fields ? Object.values(data.fields)[0] : null;
+    return fieldMessage || data?.message || fallback;
+  }
+  return error instanceof Error ? error.message : fallback;
+};
+
 export default function Profile() {
   const { user, isLoading, refreshUser, clearUser, error } = useUser();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [activeTab, setActiveTab] = useState<Tab>("info");
   const [isEditing, setIsEditing] = useState(false);
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
-  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+  const [fotoSelecionada, setFotoSelecionada] = useState<string>(DEFAULT_AVATAR_URL);
   const [fotoFile, setFotoFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -144,11 +160,54 @@ export default function Profile() {
     if (!user) return;
     setNome(user.nome);
     setEmail(user.email);
-    setFotoPreview(null);
+    setFotoSelecionada(user.fotoUrl || DEFAULT_AVATAR_URL);
     setFotoFile(null);
     setSaveError(null);
     setSaveSuccess(false);
     setIsEditing(true);
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith("image/")) {
+        setSaveError("Selecione um arquivo de imagem valido.");
+        event.target.value = "";
+        return;
+      }
+      if (file.size > FOTO_MAX_BYTES) {
+        setSaveError("A foto deve ter no maximo 5 MB.");
+        event.target.value = "";
+        return;
+      }
+      setSaveError(null);
+      setFotoFile(file);
+      const previewUrl = URL.createObjectURL(file);
+      setFotoSelecionada(previewUrl);
+    }
+  };
+
+  const handleUploadPhoto = async () => {
+    if (!fotoFile) return;
+    setIsUploading(true);
+    try {
+      const { url } = await funcionarioService.uploadFoto(fotoFile);
+      setFotoSelecionada(url);
+      setFotoFile(null);
+      toast.success("Foto enviada com sucesso!");
+    } catch (error: unknown) {
+      console.error("Erro ao fazer upload da foto:", error);
+      const message = getApiMessage(error, "Erro ao enviar foto");
+      setSaveError(message);
+      toast.error(message);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleRemovePhoto = () => {
+    setFotoSelecionada(DEFAULT_AVATAR_URL);
+    setFotoFile(null);
   };
 
   const handleCancelEdit = () => {
@@ -156,35 +215,35 @@ export default function Profile() {
     setSaveError(null);
   };
 
-  const handleFotoClick = () => {
-    if (isEditing) fileInputRef.current?.click();
-  };
-
-  const handleFotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setFotoFile(file);
-    const reader = new FileReader();
-    reader.onload = (ev) => setFotoPreview(ev.target?.result as string);
-    reader.readAsDataURL(file);
-  };
-
   const handleSaveProfile = async () => {
     if (!user) return;
+    if (fotoFile) {
+      setSaveError("Envie a foto selecionada antes de salvar o perfil.");
+      return;
+    }
+
+    const nomeNormalizado = nome.trim();
+    const emailNormalizado = email.trim().toLowerCase();
+
+    if (nomeNormalizado.length < 3 || nomeNormalizado.length > 100) {
+      setSaveError("Nome deve ter entre 3 e 100 caracteres.");
+      return;
+    }
+    if (!EMAIL_REGEX.test(emailNormalizado)) {
+      setSaveError("Informe um e-mail valido.");
+      return;
+    }
+
     setIsSaving(true);
     setSaveError(null);
     setSaveSuccess(false);
 
     try {
-      let fotoUrl: string | null = user.fotoUrl;
+      const fotoUrl = fotoSelecionada === DEFAULT_AVATAR_URL ? null : fotoSelecionada;
       const emailChanged =
-        email.trim().toLowerCase() !== user.email.toLowerCase();
+        emailNormalizado !== user.email.toLowerCase();
 
-      if (fotoFile) {
-        fotoUrl = await funcionarioService.uploadFoto(fotoFile);
-      }
-
-      await funcionarioService.atualizarPerfil({ nome, email, fotoUrl });
+      await funcionarioService.atualizarPerfil({ nome: nomeNormalizado, email: emailNormalizado, fotoUrl });
       if (emailChanged) {
         clearUser();
         authService.logout();
@@ -196,9 +255,7 @@ export default function Profile() {
       setSaveSuccess(true);
       setIsEditing(false);
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Erro ao salvar. Tente novamente.";
-      setSaveError(message);
+      setSaveError(getApiMessage(err, "Erro ao salvar. Tente novamente."));
     } finally {
       setIsSaving(false);
     }
@@ -208,12 +265,17 @@ export default function Profile() {
     setSenhaError(null);
     setSenhaSuccess(false);
 
+    if (!senhaAtual.trim()) {
+      setSenhaError("Informe sua senha atual.");
+      return;
+    }
+
     if (novaSenha !== confirmacaoSenha) {
       setSenhaError("Nova senha e confirmacao nao conferem.");
       return;
     }
-    if (novaSenha.length < 6) {
-      setSenhaError("A nova senha deve ter pelo menos 6 caracteres.");
+    if (!SENHA_REGEX.test(novaSenha)) {
+      setSenhaError("A nova senha deve ter pelo menos 6 caracteres, 1 letra maiuscula, 1 minuscula e 1 numero.");
       return;
     }
 
@@ -225,8 +287,8 @@ export default function Profile() {
       setSenhaAtual("");
       setNovaSenha("");
       setConfirmacaoSenha("");
-    } catch {
-      setSenhaError("Senha atual incorreta ou erro no servidor.");
+    } catch (error: unknown) {
+      setSenhaError(getApiMessage(error, "Senha atual incorreta ou erro no servidor."));
     } finally {
       setIsSavingSenha(false);
     }
@@ -243,14 +305,16 @@ export default function Profile() {
       await funcionarioService.excluirConta();
       clearUser();
       authService.logout();
-    } catch {
-      setDeleteError("Erro ao excluir a conta. Tente novamente.");
+    } catch (error: unknown) {
+      setDeleteError(getApiMessage(error, "Erro ao excluir a conta. Tente novamente."));
     } finally {
       setIsDeleting(false);
     }
   };
 
-  const avatarSrc = fotoPreview ?? user?.fotoUrl ?? DEFAULT_AVATAR_URL;
+  const avatarSrc = isEditing
+    ? fotoSelecionada
+    : user?.fotoUrl || DEFAULT_AVATAR_URL;
 
   if (isLoading) {
     return (
@@ -286,18 +350,7 @@ export default function Profile() {
         <aside className={styles.sideCard}>
           <div className={styles.avatarSection}>
             <div
-              className={`${styles.avatarWrapper} ${
-                isEditing ? styles.avatarEditable : ""
-              }`}
-              onClick={handleFotoClick}
-              role={isEditing ? "button" : undefined}
-              tabIndex={isEditing ? 0 : undefined}
-              onKeyDown={
-                isEditing
-                  ? (e) => e.key === "Enter" && handleFotoClick()
-                  : undefined
-              }
-              aria-label={isEditing ? "Alterar foto de perfil" : undefined}
+              className={styles.avatarWrapper}
             >
               {avatarSrc ? (
                 <img
@@ -310,19 +363,7 @@ export default function Profile() {
                   {user.nome.charAt(0).toUpperCase()}
                 </div>
               )}
-              {isEditing && (
-                <div className={styles.avatarEditOverlay}>
-                  <IconEdit />
-                </div>
-              )}
             </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className={styles.hiddenInput}
-              onChange={handleFotoChange}
-            />
             <h2 className={styles.userName}>{user.nome}</h2>
             <p className={styles.userCargo}>{CargoLabel[user.cargo]}</p>
           </div>
@@ -408,6 +449,108 @@ export default function Profile() {
                   Perfil atualizado com sucesso!
                 </div>
               )}
+
+              <div className={styles.formGroup}>
+                <label className={styles.fieldLabel}>ICONE DE PERFIL</label>
+                {isEditing ? (
+                  <>
+                    <div className={styles.avatarOptions}>
+                      {GENERIC_AVATARS.map((avatar) => (
+                        <button
+                          key={avatar.value}
+                          type="button"
+                          className={`${styles.avatarOption} ${
+                            fotoSelecionada === avatar.value
+                              ? styles.avatarOptionActive
+                              : ""
+                          }`}
+                          onClick={() => {
+                            setFotoSelecionada(avatar.value);
+                            setFotoFile(null);
+                          }}
+                          aria-label={`Selecionar avatar ${avatar.label}`}
+                        >
+                          <img src={avatar.value} alt="" />
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        className={`${styles.avatarOption} ${
+                          fotoFile ? styles.avatarOptionActive : ""
+                        }`}
+                        onClick={() => document.getElementById('foto-upload')?.click()}
+                        aria-label="Fazer upload de foto"
+                      >
+                        <div style={{ fontSize: '24px', textAlign: 'center', color: '#6b7280' }}>+</div>
+                      </button>
+                      <input
+                        id="foto-upload"
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={handleFileSelect}
+                      />
+                    </div>
+                    {fotoFile && (
+                      <div className={styles.uploadActions}>
+                        <button
+                          type="button"
+                          className={styles.uploadBtn}
+                          onClick={handleUploadPhoto}
+                          disabled={isUploading}
+                        >
+                          {isUploading ? "Enviando..." : "Enviar foto"}
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.removeBtn}
+                          onClick={handleRemovePhoto}
+                        >
+                          Remover foto
+                        </button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className={styles.avatarPreview}>
+                    {user?.fotoUrl && user.fotoUrl !== DEFAULT_AVATAR_URL ? (
+                      <div className={styles.fotoActions}>
+                        <img src={user.fotoUrl} alt="Foto atual" className={styles.currentFoto} />
+                        <button
+                          type="button"
+                          className={styles.changeFotoBtn}
+                          onClick={handleStartEdit}
+                        >
+                          Alterar foto
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.removeFotoBtn}
+                          onClick={async () => {
+                            try {
+                              await funcionarioService.atualizarPerfil({ nome: user.nome, email: user.email, fotoUrl: null });
+                              await refreshUser();
+                              toast.success("Foto removida com sucesso!");
+                            } catch (error: unknown) {
+                              toast.error(getApiMessage(error, "Erro ao remover foto"));
+                            }
+                          }}
+                        >
+                          Remover foto
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className={styles.addFotoBtn}
+                        onClick={handleStartEdit}
+                      >
+                        Adicionar foto
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
 
               <div className={styles.formGroup}>
                 <label className={styles.fieldLabel}>NOME</label>

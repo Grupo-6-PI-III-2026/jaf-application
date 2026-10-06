@@ -1,4 +1,7 @@
-export type CargoApi = "ADMIN" | "GESTOR_OBRA" | "OPERADOR_LANCAMENTO";
+export type CargoApi =
+  | "ADMIN"
+  | "RESPONSAVEL_ADMINISTRATIVO"
+  | "ENGENHEIRO";
 
 export interface NovoFuncionarioPayload {
   nome: string;
