@@ -17,7 +17,7 @@ import { alocacaoService } from "../../../Service/Alocacoes/alocacaoService";
 import { funcionarioService } from "../../../Service/Funcionarios/funcionarioService";
 import type { FuncionarioPermissoes } from "../../../Types/permissoes";
 import { toast } from "sonner";
-
+import { ocrService } from "../../../Service/Ocr/ocrService";
 interface ErrosFormulario {
   nomeObra?: string;
   status?: string;
@@ -33,6 +33,7 @@ interface ErrosFormulario {
 
 interface ArquivoUpload {
   id: string;
+  file: File;
   nome: string;
   tipo: string;
   tamanho: number;
@@ -152,6 +153,7 @@ export default function NovaObra() {
 
     const novoArquivos: ArquivoUpload[] = Array.from(files).map((file) => ({
       id: Math.random().toString(36).substr(2, 9),
+      file,
       nome: file.name,
       tipo: file.type,
       tamanho: file.size,
@@ -159,6 +161,37 @@ export default function NovaObra() {
 
     setArquivos((prev) => [...prev, ...novoArquivos]);
     setErrors((prev) => ({ ...prev, arquivos: undefined }));
+  };
+
+  const handleProcessarOcr = async (arquivo: ArquivoUpload) => {
+    setIsLoading(true);
+
+    try {
+      const resultado = await ocrService.processar(arquivo.file);
+      const item = resultado.dados_extraidos?.itens?.[0];
+      const tituloExtraido = item?.Nome_Produto || resultado.ocr?.raw_text
+        ?.split(/\r?\n/)
+        .map((linha) => linha.trim())
+        .find(Boolean);
+
+      if (tituloExtraido) {
+        setNomeObra(tituloExtraido);
+      }
+
+      if (item?.Preco) {
+        const preco = item.Preco.replace(/[^\d,.-]/g, "").replace(",", ".");
+        if (preco) {
+          setOrcamento(preco);
+        }
+      }
+
+      alert("OCR processado. Revise os campos antes de criar a obra.");
+    } catch (error: any) {
+      console.error("Erro ao processar OCR:", error);
+      alert(error.response?.data?.message || "Falha ao processar o arquivo com OCR.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const removeArquivo = (id: string) => {
@@ -592,6 +625,14 @@ export default function NovaObra() {
                           disabled={isLoading}
                         >
                           <X size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleProcessarOcr(arq)}
+                          className={styles.botaoProcessarOcr}
+                          disabled={isLoading}
+                        >
+                          Processar OCR
                         </button>
                       </div>
                     ))}
