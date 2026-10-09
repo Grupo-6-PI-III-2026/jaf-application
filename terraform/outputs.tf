@@ -51,3 +51,13 @@ output "ami_id_used" {
   description = "ID da AMI do Amazon Linux 2023 utilizada"
   value       = data.aws_ami.amazon_linux_2023.id
 }
+
+output "alb_dns_name" {
+  description = "DNS name do Application Load Balancer"
+  value       = module.alb.alb_dns_name
+}
+
+output "alb_url" {
+  description = "URL completa do ALB (http://alb-dns-name)"
+  value       = "http://${module.alb.alb_dns_name}"
+}

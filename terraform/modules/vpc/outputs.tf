@@ -12,6 +12,11 @@ output "public_subnet_id" {
   value       = aws_subnet.public.id
 }
 
+output "public_subnet_ids" {
+  description = "Lista de IDs das subnets públicas (para ALB)"
+  value       = [aws_subnet.public.id]
+}
+
 output "private_subnet_backend_id" {
   description = "ID da subnet privada do Backend"
   value       = aws_subnet.private_backend.id

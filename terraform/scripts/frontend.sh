@@ -18,6 +18,8 @@ docker rm temp
 
 # ── Substitui o hostname "jaf-backend" pelo IP privado do backend ──
 # O valor de ${backend_ip} é injetado pelo templatefile() do Terraform
+# Isso é necessário pois no Docker Compose usamos nome de container,
+# mas na AWS as instâncias EC2 se comunicam por IP privado
 sed -i "s/jaf-backend/${backend_ip}/g" /home/ec2-user/default.conf
 
 # ── Sobe o container montando o conf corrigido como volume ───

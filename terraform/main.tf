@@ -107,3 +107,16 @@ module "rds" {
   private_subnet_ocr_id     = module.vpc.private_subnet_ocr_id
   private_subnet_rds_id     = module.vpc.private_subnet_rds_id
 }
+
+# ── Módulo: Application Load Balancer ─────────────────────────
+module "alb" {
+  source = "./modules/alb"
+
+  project_name           = var.project_name
+  environment            = var.environment
+  vpc_id                 = module.vpc.vpc_id
+  public_subnet_ids      = module.vpc.public_subnet_ids
+  alb_security_group_id  = module.security_groups.sg_alb_id
+  frontend_instance_id   = module.ec2.frontend_instance_id
+  backend_instance_id    = module.ec2.backend_instance_id
+}
