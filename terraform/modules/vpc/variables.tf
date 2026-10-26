@@ -37,6 +37,22 @@ variable "private_subnet_rds_cidr" {
   type        = string
 }
 
+variable "public_subnet_secondary_cidr" {
+  type = string
+}
+
+variable "private_subnet_backend_secondary_cidr" {
+  type = string
+}
+
+variable "private_subnet_ocr_secondary_cidr" {
+  type = string
+}
+
+variable "private_subnet_rds_secondary_cidr" {
+  type = string
+}
+
 variable "availability_zone" {
   description = "Availability Zone dos recursos"
   type        = string

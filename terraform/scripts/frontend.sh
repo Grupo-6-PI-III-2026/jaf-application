@@ -16,11 +16,9 @@ docker create --name temp ghcr.io/${repo_owner}/jaf-frontend:latest
 docker cp temp:/etc/nginx/conf.d/default.conf /home/ec2-user/default.conf
 docker rm temp
 
-# ── Substitui o hostname "jaf-backend" pelo IP privado do backend ──
-# O valor de ${backend_ip} é injetado pelo templatefile() do Terraform
-# Isso é necessário pois no Docker Compose usamos nome de container,
-# mas na AWS as instâncias EC2 se comunicam por IP privado
-sed -i "s/jaf-backend/${backend_ip}/g" /home/ec2-user/default.conf
+# No AWS, o hostname aponta para o ALB interno do backend. O mesmo arquivo
+# continua compatível com Docker Compose, onde "jaf-backend" é resolvido pelo Docker.
+sed -i "s/jaf-backend/${backend_host}/g" /home/ec2-user/default.conf
 
 # ── Sobe o container montando o conf corrigido como volume ───
 # O :ro (read-only) garante que o Nginx não tente sobrescrever o arquivo

@@ -2,6 +2,11 @@
 # modules/rds/variables.tf
 # ============================================================
 
+variable "vpc_id" {
+  description = "ID da VPC atual do banco"
+  type        = string
+}
+
 variable "project_name" {
   description = "Nome do projeto"
   type        = string
@@ -46,17 +51,7 @@ variable "sg_rds_id" {
 }
 
 # ── Subnets ───────────────────────────────────────────────────
-variable "private_subnet_backend_id" {
-  description = "ID da subnet privada do Backend"
-  type        = string
-}
-
-variable "private_subnet_ocr_id" {
-  description = "ID da subnet privada do OCR"
-  type        = string
-}
-
-variable "private_subnet_rds_id" {
-  description = "ID da subnet privada dedicada ao RDS"
-  type        = string
+variable "private_subnet_rds_ids" {
+  description = "IDs de duas subnets privadas do RDS em AZs distintas"
+  type        = list(string)
 }

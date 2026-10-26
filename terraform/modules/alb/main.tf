@@ -6,7 +6,7 @@
 # ALB na subnet pública para distribuir tráfego para o frontend
 resource "aws_lb" "main" {
   name               = "${var.project_name}-alb"
-  internal           = false  # ALB público
+  internal           = false # ALB público
   load_balancer_type = "application"
   security_groups    = [var.alb_security_group_id]
   subnets            = var.public_subnet_ids
@@ -65,7 +65,7 @@ resource "aws_lb_target_group" "backend" {
     healthy_threshold   = 2
     interval            = 30
     matcher             = "200"
-    path                = "/actuator/health"  # Endpoint padrão do Spring Boot Actuator
+    path                = "/actuator/health" # Endpoint padrão do Spring Boot Actuator
     port                = "traffic-port"
     protocol            = "HTTP"
     timeout             = 5
@@ -80,50 +80,79 @@ resource "aws_lb_target_group" "backend" {
   }
 }
 
-# ── Listener HTTP (Porta 80) ──────────────────────────────────────
-# Listener principal que roteia baseado no path
-resource "aws_lb_listener" "http" {
-  load_balancer_arn = aws_lb.main.arn
-  port              = 80
+resource "aws_lb" "backend_internal" {
+  name               = "${var.project_name}-backend-int"
+  internal           = true
+  load_balancer_type = "application"
+  security_groups    = [var.backend_internal_security_group_id]
+  subnets            = var.private_backend_subnet_ids
+
+  enable_http2 = true
+
+  tags = {
+    Name        = "alb-backend-internal-${var.project_name}"
+    Environment = var.environment
+    Project     = var.project_name
+    ManagedBy   = "Terraform"
+  }
+}
+
+resource "aws_lb_listener" "backend_internal" {
+  load_balancer_arn = aws_lb.backend_internal.arn
+  port              = 8080
   protocol          = "HTTP"
 
-  # Rota padrão: tudo vai para o frontend
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.backend.arn
+  }
+}
+
+# ── Listener HTTPS (Porta 443) ────────────────────────────────────
+resource "aws_lb_listener" "https" {
+  count             = var.enable_https ? 1 : 0
+  load_balancer_arn = aws_lb.main.arn
+  port              = 443
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+  certificate_arn   = var.acm_certificate_arn
+
   default_action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.frontend.arn
   }
 }
 
-# ── Listener Rule para /api/* ─────────────────────────────────────
-# Requisições para /api/* são roteadas para o backend
-resource "aws_lb_listener_rule" "api" {
-  listener_arn = aws_lb_listener.http.arn
-  priority     = 100
+# ── Listener HTTP (Porta 80) ──────────────────────────────────────
+# Redireciona o tráfego para HTTPS.
+resource "aws_lb_listener" "http" {
+  load_balancer_arn = aws_lb.main.arn
+  port              = 80
+  protocol          = "HTTP"
 
-  action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.backend.arn
+  dynamic "default_action" {
+    for_each = var.enable_https ? [1] : []
+
+    content {
+      type = "redirect"
+
+      redirect {
+        port        = "443"
+        protocol    = "HTTPS"
+        status_code = "HTTP_301"
+      }
+    }
   }
 
-  condition {
-    path_pattern {
-      values = ["/api/*"]
+  dynamic "default_action" {
+    for_each = var.enable_https ? [] : [1]
+
+    content {
+      type             = "forward"
+      target_group_arn = aws_lb_target_group.frontend.arn
     }
   }
 }
 
-# ── Attachment do Frontend ao Target Group ───────────────────────
-# Anexa a instância EC2 do frontend ao target group
-resource "aws_lb_target_group_attachment" "frontend" {
-  target_group_arn = aws_lb_target_group.frontend.arn
-  target_id        = var.frontend_instance_id
-  port             = 80
-}
-
-# ── Attachment do Backend ao Target Group ────────────────────────
-# Anexa a instância EC2 do backend ao target group
-resource "aws_lb_target_group_attachment" "backend" {
-  target_group_arn = aws_lb_target_group.backend.arn
-  target_id        = var.backend_instance_id
-  port             = 8080
-}
+# ── Listener Rules para /api/* ────────────────────────────────────
+# Requisições HTTP de laboratório são roteadas para o backend.

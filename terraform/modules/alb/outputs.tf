@@ -26,3 +26,8 @@ output "backend_target_group_arn" {
   description = "ARN do target group do backend"
   value       = aws_lb_target_group.backend.arn
 }
+
+output "backend_internal_dns_name" {
+  description = "DNS do ALB interno do Backend"
+  value       = aws_lb.backend_internal.dns_name
+}

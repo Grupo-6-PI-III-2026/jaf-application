@@ -51,6 +51,30 @@ variable "private_subnet_rds_cidr" {
   default     = "10.0.4.0/24"
 }
 
+variable "public_subnet_secondary_cidr" {
+  description = "CIDR da segunda subnet pública"
+  type        = string
+  default     = "10.0.5.0/24"
+}
+
+variable "private_subnet_backend_secondary_cidr" {
+  description = "CIDR da segunda subnet privada do Backend"
+  type        = string
+  default     = "10.0.6.0/24"
+}
+
+variable "private_subnet_ocr_secondary_cidr" {
+  description = "CIDR da segunda subnet privada do OCR"
+  type        = string
+  default     = "10.0.7.0/24"
+}
+
+variable "private_subnet_rds_secondary_cidr" {
+  description = "CIDR da segunda subnet privada do RDS"
+  type        = string
+  default     = "10.0.8.0/24"
+}
+
 variable "availability_zone" {
   description = "Availability Zone principal dos recursos"
   type        = string
@@ -61,6 +85,25 @@ variable "secondary_availability_zone" {
   description = "Availability Zone secundaria (exigido pelo RDS)"
   type        = string
   default     = "us-east-1b"
+}
+
+variable "acm_certificate_arn" {
+  description = "ARN de um certificado ACM validado para o domínio público"
+  type        = string
+  default     = null
+  nullable    = true
+}
+
+variable "enable_https" {
+  description = "Habilita HTTPS no ALB quando houver certificado ACM válido"
+  type        = bool
+  default     = false
+}
+
+variable "backend_public_access" {
+  description = "Modo temporario de laboratorio: coloca o backend em subnets publicas com IP publico e SSH aberto"
+  type        = bool
+  default     = true
 }
 
 # ── EC2 ──────────────────────────────────────────────────────
@@ -89,7 +132,7 @@ variable "db_username" {
 variable "db_password" {
   description = "Senha do usuário administrador do RDS — NUNCA commitar este valor"
   type        = string
-  sensitive   = true  # Terraform ocultará este valor nos logs e outputs
+  sensitive   = true # Terraform ocultará este valor nos logs e outputs
 }
 
 variable "rds_instance_class" {
@@ -110,7 +153,7 @@ variable "rds_allocated_storage" {
 variable "ghcr_token" {
   description = "Personal Access Token do GitHub com permissão read:packages — NUNCA commitar"
   type        = string
-  sensitive   = true  # Oculto nos logs e outputs do Terraform
+  sensitive   = true # Oculto nos logs e outputs do Terraform
 }
 
 variable "ghcr_user" {
@@ -129,7 +172,7 @@ variable "repo_owner" {
 variable "db_url" {
   description = "JDBC URL do banco PostgreSQL (ex: jdbc:postgresql://host:5432/appdb)"
   type        = string
-  sensitive   = true  # Contém host e nome do banco — não expor
+  sensitive   = true # Contém host e nome do banco — não expor
 }
 
 variable "jwt_secret" {

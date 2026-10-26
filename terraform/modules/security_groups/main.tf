@@ -11,7 +11,7 @@ resource "aws_security_group" "alb" {
 
   # HTTP público
   ingress {
-    description = "HTTP público"
+    description = "HTTP publico"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
@@ -20,7 +20,7 @@ resource "aws_security_group" "alb" {
 
   # HTTPS público (preparado para futuro)
   ingress {
-    description = "HTTPS público"
+    description = "HTTPS publico"
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
@@ -41,6 +41,28 @@ resource "aws_security_group" "alb" {
     Environment = var.environment
     Project     = var.project_name
     ManagedBy   = "Terraform"
+  }
+}
+
+resource "aws_security_group" "backend_alb" {
+  name        = "${var.project_name}-backend-alb-sg"
+  description = "Security Group do ALB interno do Backend"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    description     = "Backend interno vindo do Frontend"
+    from_port       = 8080
+    to_port         = 8080
+    protocol        = "tcp"
+    security_groups = [aws_security_group.frontend.id]
+  }
+
+  egress {
+    description = "Saida para os backends"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
@@ -118,6 +140,46 @@ resource "aws_security_group" "backend" {
     to_port         = 8080
     protocol        = "tcp"
     security_groups = [aws_security_group.alb.id]
+  }
+
+  ingress {
+    description     = "Health check do ALB interno"
+    from_port       = 8080
+    to_port         = 8080
+    protocol        = "tcp"
+    security_groups = [aws_security_group.backend_alb.id]
+  }
+
+  ingress {
+    description     = "SSH via EC2 Instance Connect Endpoint"
+    from_port       = 22
+    to_port         = 22
+    protocol        = "tcp"
+    security_groups = [var.eic_security_group_id]
+  }
+
+  dynamic "ingress" {
+    for_each = var.backend_public_access ? [1] : []
+
+    content {
+      description = "SSH publico temporario de laboratorio"
+      from_port   = 22
+      to_port     = 22
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
+  }
+
+  dynamic "ingress" {
+    for_each = var.backend_public_access ? [1] : []
+
+    content {
+      description = "API publica temporaria de laboratorio"
+      from_port   = 8080
+      to_port     = 8080
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
   }
 
   # SSH via jump host — apenas o frontend pode iniciar a sessão

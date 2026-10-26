@@ -34,42 +34,52 @@ data "aws_ami" "amazon_linux_2023" {
 module "vpc" {
   source = "./modules/vpc"
 
-  project_name                = var.project_name
-  environment                 = var.environment
-  vpc_cidr                    = var.vpc_cidr
-  public_subnet_cidr          = var.public_subnet_cidr
-  private_subnet_backend_cidr = var.private_subnet_backend_cidr
-  private_subnet_ocr_cidr     = var.private_subnet_ocr_cidr
-  private_subnet_rds_cidr     = var.private_subnet_rds_cidr
-  availability_zone           = var.availability_zone
-  secondary_availability_zone = var.secondary_availability_zone
+  project_name                          = var.project_name
+  environment                           = var.environment
+  vpc_cidr                              = var.vpc_cidr
+  public_subnet_cidr                    = var.public_subnet_cidr
+  private_subnet_backend_cidr           = var.private_subnet_backend_cidr
+  private_subnet_ocr_cidr               = var.private_subnet_ocr_cidr
+  private_subnet_rds_cidr               = var.private_subnet_rds_cidr
+  public_subnet_secondary_cidr          = var.public_subnet_secondary_cidr
+  private_subnet_backend_secondary_cidr = var.private_subnet_backend_secondary_cidr
+  private_subnet_ocr_secondary_cidr     = var.private_subnet_ocr_secondary_cidr
+  private_subnet_rds_secondary_cidr     = var.private_subnet_rds_secondary_cidr
+  availability_zone                     = var.availability_zone
+  secondary_availability_zone           = var.secondary_availability_zone
 }
 
 # ── Módulo: Security Groups ───────────────────────────────────
 module "security_groups" {
   source = "./modules/security_groups"
 
-  project_name = var.project_name
-  environment  = var.environment
-  vpc_id       = module.vpc.vpc_id
+  project_name          = var.project_name
+  environment           = var.environment
+  vpc_id                = module.vpc.vpc_id
+  eic_security_group_id = module.vpc.sg_eic_endpoint_id
+  backend_public_access = var.backend_public_access
 }
 
 # ── Módulo: EC2 ───────────────────────────────────────────────
 module "ec2" {
   source = "./modules/ec2"
 
-  project_name           = var.project_name
-  environment            = var.environment
-  instance_type          = var.instance_type
-  ami_id                 = data.aws_ami.amazon_linux_2023.id
-  public_key_path        = var.public_key_path
-  lab_role_arn           = data.aws_iam_role.lab_role.arn
-  lab_role_name          = data.aws_iam_role.lab_role.name
+  project_name    = var.project_name
+  environment     = var.environment
+  instance_type   = var.instance_type
+  ami_id          = data.aws_ami.amazon_linux_2023.id
+  public_key_path = var.public_key_path
+  lab_role_arn    = data.aws_iam_role.lab_role.arn
+  lab_role_name   = data.aws_iam_role.lab_role.name
 
   # Subnets
-  public_subnet_id          = module.vpc.public_subnet_id
-  private_subnet_backend_id = module.vpc.private_subnet_backend_id
-  private_subnet_ocr_id     = module.vpc.private_subnet_ocr_id
+  public_subnet_ids          = module.vpc.public_subnet_ids
+  private_subnet_backend_ids = module.vpc.private_subnet_backend_ids
+  private_subnet_ocr_ids     = module.vpc.private_subnet_ocr_ids
+  frontend_target_group_arn  = module.alb.frontend_target_group_arn
+  backend_target_group_arn   = module.alb.backend_target_group_arn
+  backend_internal_dns_name  = module.alb.backend_internal_dns_name
+  backend_public_access      = var.backend_public_access
 
   # Security Groups
   sg_frontend_id = module.security_groups.sg_frontend_id
@@ -82,7 +92,7 @@ module "ec2" {
   repo_owner = var.repo_owner
 
   # Variáveis de ambiente do Backend (banco de dados e JWT)
-  db_url      = var.db_url
+  db_url         = var.db_url
   db_username    = var.db_username
   db_password    = var.db_password
   jwt_secret     = var.jwt_secret
@@ -93,6 +103,7 @@ module "ec2" {
 module "rds" {
   source = "./modules/rds"
 
+  vpc_id                = module.vpc.vpc_id
   project_name          = var.project_name
   environment           = var.environment
   db_name               = var.db_name
@@ -102,21 +113,21 @@ module "rds" {
   rds_allocated_storage = var.rds_allocated_storage
   sg_rds_id             = module.security_groups.sg_rds_id
 
-  # Subnet group usa as 3 subnets privadas
-  private_subnet_backend_id = module.vpc.private_subnet_backend_id
-  private_subnet_ocr_id     = module.vpc.private_subnet_ocr_id
-  private_subnet_rds_id     = module.vpc.private_subnet_rds_id
+  # Subnets privadas dedicadas em duas AZs
+  private_subnet_rds_ids = module.vpc.private_subnet_rds_ids
 }
 
 # ── Módulo: Application Load Balancer ─────────────────────────
 module "alb" {
   source = "./modules/alb"
 
-  project_name           = var.project_name
-  environment            = var.environment
-  vpc_id                 = module.vpc.vpc_id
-  public_subnet_ids      = module.vpc.public_subnet_ids
-  alb_security_group_id  = module.security_groups.sg_alb_id
-  frontend_instance_id   = module.ec2.frontend_instance_id
-  backend_instance_id    = module.ec2.backend_instance_id
+  project_name                       = var.project_name
+  environment                        = var.environment
+  vpc_id                             = module.vpc.vpc_id
+  public_subnet_ids                  = module.vpc.public_subnet_ids
+  private_backend_subnet_ids         = module.vpc.private_subnet_backend_ids
+  alb_security_group_id              = module.security_groups.sg_alb_id
+  backend_internal_security_group_id = module.security_groups.sg_backend_alb_id
+  acm_certificate_arn                = var.acm_certificate_arn
+  enable_https                       = var.enable_https
 }

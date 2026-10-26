@@ -1,10 +1,3 @@
-# ============================================================
-# modules/ec2/main.tf — Instâncias EC2, Key Pair, Instance Profile, EIP
-# ============================================================
-
-# ── Key Pair ──────────────────────────────────────────────────
-# A chave pública é lida do arquivo local e enviada à AWS.
-# A chave privada (~/.ssh/id_rsa) fica apenas na máquina local.
 resource "aws_key_pair" "main" {
   key_name   = "keypair-${var.project_name}"
   public_key = file(var.public_key_path)
@@ -17,39 +10,29 @@ resource "aws_key_pair" "main" {
   }
 }
 
-# ── Instance Profile (LabInstanceProfile nativo do Learner Lab) ──
-# RESTRIÇÃO Learner Lab: não criar instance profile novo (dá AccessDenied).
-# Reutilizamos o "LabInstanceProfile" pré-existente na conta.
 data "aws_iam_instance_profile" "lab_profile" {
   name = "LabInstanceProfile"
 }
 
-# ── User Data via templatefile ────────────────────────────────
-# Cada instância recebe um script específico com suas variáveis.
-# Os scripts ficam em terraform/scripts/ e são processados pelo templatefile.
 locals {
-  # Frontend: instala Docker, faz login no ghcr.io e sobe o container na porta 80
   user_data_frontend = templatefile("${path.module}/../../scripts/frontend.sh", {
-    ghcr_user  = var.ghcr_user
-    ghcr_token = var.ghcr_token
-    repo_owner = var.repo_owner
-    backend_ip = aws_instance.backend.private_ip
+    ghcr_user    = var.ghcr_user
+    ghcr_token   = var.ghcr_token
+    repo_owner   = var.repo_owner
+    backend_host = var.backend_internal_dns_name
   })
 
-  # Backend: instala Docker, faz login no ghcr.io, sobe o container na porta 8080
-  # e injeta as variáveis de ambiente do banco de dados
   user_data_backend = templatefile("${path.module}/../../scripts/backend.sh", {
-    ghcr_user   = var.ghcr_user
-    ghcr_token  = var.ghcr_token
-    repo_owner  = var.repo_owner
-    db_url      = var.db_url
-    db_username = var.db_username
-    db_password = var.db_password
-    jwt_secret  = var.jwt_secret
+    ghcr_user      = var.ghcr_user
+    ghcr_token     = var.ghcr_token
+    repo_owner     = var.repo_owner
+    db_url         = var.db_url
+    db_username    = var.db_username
+    db_password    = var.db_password
+    jwt_secret     = var.jwt_secret
     jwt_expiration = var.jwt_expiration
   })
 
-  # OCR: script genérico — apenas instala Docker (sem pull de imagem específica)
   user_data_ocr = <<-EOF
     #!/bin/bash
     set -eux
@@ -61,116 +44,173 @@ locals {
   EOF
 }
 
-# ── EC2 Frontend ──────────────────────────────────────────────
-# Subnet PÚBLICA — recebe Elastic IP para acesso externo
-resource "aws_instance" "frontend" {
-  ami                    = var.ami_id
-  instance_type          = var.instance_type
-  subnet_id              = var.public_subnet_id
+resource "aws_launch_template" "frontend" {
+  name_prefix   = "${var.project_name}-frontend-"
+  image_id      = var.ami_id
+  instance_type = var.instance_type
+  key_name      = aws_key_pair.main.key_name
+
+  iam_instance_profile {
+    name = data.aws_iam_instance_profile.lab_profile.name
+  }
+
   vpc_security_group_ids = [var.sg_frontend_id]
-  key_name               = aws_key_pair.main.key_name
-  iam_instance_profile   = data.aws_iam_instance_profile.lab_profile.name
+  user_data              = base64encode(local.user_data_frontend)
 
-  # Script específico do frontend: Docker + login ghcr.io + pull + run porta 80
-  user_data = local.user_data_frontend
+  block_device_mappings {
+    device_name = "/dev/xvda"
 
-  # Volume root com 20GB — adequado para imagens Docker
-  root_block_device {
-    volume_type           = "gp3"
-    volume_size           = 30
-    delete_on_termination = true
-
-    tags = {
-      Name      = "ebs-frontend-${var.project_name}"
-      ManagedBy = "Terraform"
+    ebs {
+      volume_type           = "gp3"
+      volume_size           = 30
+      delete_on_termination = true
     }
   }
 
-  tags = {
-    Name        = "frontend-ec2-${var.project_name}"
-    Role        = "frontend"
-    Environment = var.environment
-    Project     = var.project_name
-    ManagedBy   = "Terraform"
-  }
-}
-
-# ── Elastic IP do Frontend ────────────────────────────────────
-# IP público fixo para o frontend — não muda ao parar/iniciar a instância
-resource "aws_eip" "frontend" {
-  instance = aws_instance.frontend.id
-  domain   = "vpc"
-
-  tags = {
-    Name        = "eip-frontend-${var.project_name}"
-    Environment = var.environment
-    Project     = var.project_name
-    ManagedBy   = "Terraform"
-  }
-}
-
-# ── EC2 Backend (Spring Boot) ─────────────────────────────────
-# Subnet PRIVADA — sem IP público, acessível apenas via rede interna
-resource "aws_instance" "backend" {
-  ami                    = var.ami_id
-  instance_type          = var.instance_type
-  subnet_id              = var.private_subnet_backend_id
-  vpc_security_group_ids = [var.sg_backend_id]
-  key_name               = aws_key_pair.main.key_name
-  iam_instance_profile   = data.aws_iam_instance_profile.lab_profile.name
-
-  # Script específico do backend: Docker + login ghcr.io + pull + run porta 8080 + envs do DB
-  user_data = local.user_data_backend
-
-  root_block_device {
-    volume_type           = "gp3"
-    volume_size           = 30
-    delete_on_termination = true
+  tag_specifications {
+    resource_type = "instance"
 
     tags = {
-      Name      = "ebs-backend-${var.project_name}"
-      ManagedBy = "Terraform"
+      Name        = "frontend-asg-${var.project_name}"
+      Role        = "frontend"
+      Environment = var.environment
+      Project     = var.project_name
+      ManagedBy   = "Terraform"
+    }
+  }
+}
+
+resource "aws_autoscaling_group" "frontend" {
+  name                      = "${var.project_name}-frontend-asg"
+  min_size                  = 2
+  desired_capacity          = 2
+  max_size                  = 4
+  health_check_type         = "ELB"
+  health_check_grace_period = 300
+  vpc_zone_identifier       = var.public_subnet_ids
+  target_group_arns         = [var.frontend_target_group_arn]
+
+  launch_template {
+    id      = aws_launch_template.frontend.id
+    version = "$Latest"
+  }
+}
+
+resource "aws_launch_template" "backend" {
+  name_prefix   = "${var.project_name}-backend-"
+  image_id      = var.ami_id
+  instance_type = var.instance_type
+  key_name      = aws_key_pair.main.key_name
+
+  iam_instance_profile {
+    name = data.aws_iam_instance_profile.lab_profile.name
+  }
+
+  user_data = base64encode(local.user_data_backend)
+
+  dynamic "network_interfaces" {
+    for_each = var.backend_public_access ? [1] : []
+
+    content {
+      associate_public_ip_address = true
+      security_groups             = [var.sg_backend_id]
     }
   }
 
-  tags = {
-    Name        = "backend-ec2-${var.project_name}"
-    Role        = "backend"
-    Environment = var.environment
-    Project     = var.project_name
-    ManagedBy   = "Terraform"
+  dynamic "network_interfaces" {
+    for_each = var.backend_public_access ? [] : [1]
+
+    content {
+      security_groups = [var.sg_backend_id]
+    }
+  }
+
+  block_device_mappings {
+    device_name = "/dev/xvda"
+
+    ebs {
+      volume_type           = "gp3"
+      volume_size           = 30
+      delete_on_termination = true
+    }
+  }
+
+  tag_specifications {
+    resource_type = "instance"
+
+    tags = {
+      Name        = "backend-asg-${var.project_name}"
+      Role        = "backend"
+      Environment = var.environment
+      Project     = var.project_name
+      ManagedBy   = "Terraform"
+    }
   }
 }
 
-# ── EC2 OCR (Microsserviço) ───────────────────────────────────
-# Subnet PRIVADA — sem IP público, acessível apenas pelo backend
-resource "aws_instance" "ocr" {
-  ami                    = var.ami_id
-  instance_type          = var.instance_type
-  subnet_id              = var.private_subnet_ocr_id
+resource "aws_autoscaling_group" "backend" {
+  name                      = "${var.project_name}-backend-asg"
+  min_size                  = 2
+  desired_capacity          = 2
+  max_size                  = 4
+  health_check_type         = "ELB"
+  health_check_grace_period = 300
+  vpc_zone_identifier       = var.backend_public_access ? var.public_subnet_ids : var.private_subnet_backend_ids
+  target_group_arns         = [var.backend_target_group_arn]
+
+  launch_template {
+    id      = aws_launch_template.backend.id
+    version = "$Latest"
+  }
+}
+
+resource "aws_launch_template" "ocr" {
+  name_prefix   = "${var.project_name}-ocr-"
+  image_id      = var.ami_id
+  instance_type = var.instance_type
+  key_name      = aws_key_pair.main.key_name
+
+  iam_instance_profile {
+    name = data.aws_iam_instance_profile.lab_profile.name
+  }
+
   vpc_security_group_ids = [var.sg_ocr_id]
-  key_name               = aws_key_pair.main.key_name
-  iam_instance_profile   = data.aws_iam_instance_profile.lab_profile.name
+  user_data              = base64encode(local.user_data_ocr)
 
-  # Script genérico do OCR: apenas instala Docker (sem pull de imagem específica)
-  user_data = local.user_data_ocr
+  block_device_mappings {
+    device_name = "/dev/xvda"
 
-  root_block_device {
-    volume_type           = "gp3"
-    volume_size           = 30
-    delete_on_termination = true
-
-    tags = {
-      Name      = "ebs-ocr-${var.project_name}"
-      ManagedBy = "Terraform"
+    ebs {
+      volume_type           = "gp3"
+      volume_size           = 30
+      delete_on_termination = true
     }
   }
 
-  tags = {
-    Name        = "ocr-ec2-${var.project_name}"
-    Role        = "ocr"
-    Environment = var.environment
-    Project     = var.project_name
-    ManagedBy   = "Terraform"
+  tag_specifications {
+    resource_type = "instance"
+
+    tags = {
+      Name        = "ocr-asg-${var.project_name}"
+      Role        = "ocr"
+      Environment = var.environment
+      Project     = var.project_name
+      ManagedBy   = "Terraform"
+    }
+  }
+}
+
+resource "aws_autoscaling_group" "ocr" {
+  name                      = "${var.project_name}-ocr-asg"
+  min_size                  = 2
+  desired_capacity          = 2
+  max_size                  = 4
+  health_check_type         = "EC2"
+  health_check_grace_period = 300
+  vpc_zone_identifier       = var.private_subnet_ocr_ids
+
+  launch_template {
+    id      = aws_launch_template.ocr.id
+    version = "$Latest"
   }
 }

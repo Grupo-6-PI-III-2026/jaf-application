@@ -22,17 +22,30 @@ variable "public_subnet_ids" {
   type        = list(string)
 }
 
+variable "private_backend_subnet_ids" {
+  description = "Subnets privadas do ALB interno do Backend"
+  type        = list(string)
+}
+
 variable "alb_security_group_id" {
   description = "ID do Security Group do ALB (do módulo security_groups)"
   type        = string
 }
 
-variable "frontend_instance_id" {
-  description = "ID da instância EC2 do frontend para anexar ao target group"
+variable "acm_certificate_arn" {
+  description = "ARN do certificado ACM validado"
   type        = string
+  default     = null
+  nullable    = true
 }
 
-variable "backend_instance_id" {
-  description = "ID da instância EC2 do backend para anexar ao target group"
+variable "enable_https" {
+  description = "Habilita o listener HTTPS do ALB"
+  type        = bool
+  default     = false
+}
+
+variable "backend_internal_security_group_id" {
+  description = "Security Group do ALB interno do Backend"
   type        = string
 }

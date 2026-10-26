@@ -39,19 +39,37 @@ variable "lab_role_name" {
 }
 
 # ── Subnets ───────────────────────────────────────────────────
-variable "public_subnet_id" {
-  description = "ID da subnet pública (Frontend)"
+variable "public_subnet_ids" {
+  description = "IDs das subnets públicas em duas AZs"
+  type        = list(string)
+}
+
+variable "private_subnet_backend_ids" {
+  description = "IDs das subnets privadas do Backend em duas AZs"
+  type        = list(string)
+}
+
+variable "private_subnet_ocr_ids" {
+  description = "IDs das subnets privadas do OCR em duas AZs"
+  type        = list(string)
+}
+
+variable "frontend_target_group_arn" {
+  type = string
+}
+
+variable "backend_target_group_arn" {
+  type = string
+}
+
+variable "backend_internal_dns_name" {
+  description = "DNS do ALB interno do Backend usado pelo Nginx"
   type        = string
 }
 
-variable "private_subnet_backend_id" {
-  description = "ID da subnet privada do Backend"
-  type        = string
-}
-
-variable "private_subnet_ocr_id" {
-  description = "ID da subnet privada do OCR"
-  type        = string
+variable "backend_public_access" {
+  description = "Coloca temporariamente o backend em subnets publicas e associa IP publico"
+  type        = bool
 }
 
 # ── Security Groups ───────────────────────────────────────────
