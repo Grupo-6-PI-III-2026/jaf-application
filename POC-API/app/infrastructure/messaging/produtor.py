@@ -1,38 +1,48 @@
+import base64
+import json
+import sys
+import uuid
+from pathlib import Path
+
 import pika
-from config import (
-    RABBITMQ_HOST, 
-    RABBITMQ_PORT, 
-    RABBITMQ_USER, 
-    RABBITMQ_PASSWORD
+
+from app.infrastructure.messaging.conexao import abrir_conexao
+from app.infrastructure.messaging.topology import (
+    EXCHANGE,
+    RK_SOLICITAR,
+    declarar_topologia,
 )
 
-# Credencias do RabbitMQ
-credentials = pika.PlainCredentials(RABBITMQ_USER, RABBITMQ_PASSWORD)
 
-# Conexão com o RabbitMQ
-parametrosConexao = pika.ConnectionParameters(
-    host=RABBITMQ_HOST,
-    port=RABBITMQ_PORT,
-    credentials=credentials
-)
+def publicar_solicitacao(caminho_imagem: str) -> str:
+    imagem = Path(caminho_imagem)
+    job_id = str(uuid.uuid4())
+    mensagem = {
+        "jobId": job_id,
+        "filename": imagem.name,
+        "imagemBase64": base64.b64encode(imagem.read_bytes()).decode("ascii"),
+    }
 
-conexao = pika.BlockingConnection(parametrosConexao)
+    conexao = abrir_conexao()
+    try:
+        canal = conexao.channel()
+        declarar_topologia(canal)
+        canal.basic_publish(
+            exchange=EXCHANGE,
+            routing_key=RK_SOLICITAR,
+            body=json.dumps(mensagem),
+            properties=pika.BasicProperties(
+                content_type="application/json",
+                delivery_mode=2,
+            ),
+        )
+    finally:
+        conexao.close()
+    return job_id
 
-canal = conexao.channel()
 
-# Declaração da fila OCR
-canal.queue_declare(queue="ocr.fila", durable=True)
-
-# Publicação para exchange
-canal.basic_publish(
-    exchange='',
-    routing_key='ocr.fila',
-    body='Mensagem de teste',
-    properties=pika.BasicProperties(
-        delivery_mode=2,  # Torna a mensagem persistente
-    )
-)
-print("Mensagem publicada com sucesso.")
-
-# Fechamento da conexão com o RabbitMQ
-conexao.close()
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Uso: python -m app.infrastructure.messaging.produtor <caminho-da-imagem>")
+        sys.exit(1)
+    print(f"Solicitacao publicada. jobId={publicar_solicitacao(sys.argv[1])}")

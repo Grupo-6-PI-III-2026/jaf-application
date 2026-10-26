@@ -1,17 +1,19 @@
 package com.jaf.application.service;
 
+import com.jaf.application.config.RabbitMQConfig;
 import com.jaf.application.dto.OcrResponseDto;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import com.jaf.application.dto.OcrResultadoMensagem;
+import com.jaf.application.dto.OcrSolicitacaoMensagem;
+import com.jaf.application.enums.StatusOcr;
+import com.jaf.application.exceptions.NotFoundException;
+import com.jaf.application.model.OcrProcessamento;
+import com.jaf.application.repository.OcrProcessamentoRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.amqp.AmqpException;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -19,14 +21,15 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.Base64;
 import java.util.List;
-import java.util.Map;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
 public class OcrService {
-    private static final String OCR_SPACE_URL = "https://api.ocr.space/parse/image";
+    private static final Logger LOGGER = LoggerFactory.getLogger(OcrService.class);
     private static final long TAMANHO_MAXIMO = 10L * 1024L * 1024L;
     private static final List<String> TIPOS_ACEITOS = List.of(
             "image/jpeg",
@@ -38,45 +41,99 @@ public class OcrService {
             "application/pdf"
     );
 
-    @Value("${ocr.space.api-key:}")
-    private String ocrApiKey;
+    private final RabbitTemplate rabbitTemplate;
+    private final OcrProcessamentoRepository processamentoRepository;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    public OcrService(RabbitTemplate rabbitTemplate, OcrProcessamentoRepository processamentoRepository) {
+        this.rabbitTemplate = rabbitTemplate;
+        this.processamentoRepository = processamentoRepository;
+    }
 
-    public OcrResponseDto processarNota(MultipartFile arquivo) {
-        OcrResponseDto resposta = new OcrResponseDto();
-
+    public OcrResponseDto processarNota(MultipartFile arquivo, String solicitante) {
         String erroValidacao = validarArquivo(arquivo);
         if (erroValidacao != null) {
+            OcrResponseDto resposta = new OcrResponseDto();
+            resposta.setStatus(StatusOcr.ERRO);
             resposta.setSucesso(false);
             resposta.setMensagem(erroValidacao);
             return resposta;
         }
 
-        try {
-            String textoBruto = chamarOcrSpace(arquivo);
-            if (textoBruto == null || textoBruto.isBlank()) {
-                resposta.setSucesso(false);
-                resposta.setMensagem("Não foi possível extrair texto da nota fiscal.");
-                return resposta;
-            }
+        // Salvo antes de publicar: o resultado pode voltar antes deste método terminar.
+        OcrProcessamento processamento = processamentoRepository.save(
+                new OcrProcessamento(UUID.randomUUID().toString(), solicitante));
 
-            resposta.setTextoBruto(textoBruto);
-            extrairCampos(textoBruto, resposta);
-            resposta.setSucesso(true);
-            resposta.setMensagem("Nota fiscal processada. Revise os campos antes de salvar.");
-            return resposta;
-        } catch (Exception exception) {
-            resposta.setSucesso(false);
-            resposta.setMensagem("Erro ao processar a nota fiscal: " + exception.getMessage());
-            return resposta;
+        try {
+            OcrSolicitacaoMensagem mensagem = new OcrSolicitacaoMensagem(
+                    processamento.getId(),
+                    arquivo.getOriginalFilename() != null ? arquivo.getOriginalFilename() : "nota-fiscal.jpg",
+                    Base64.getEncoder().encodeToString(arquivo.getBytes())
+            );
+            rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, RabbitMQConfig.RK_SOLICITAR, mensagem);
+        } catch (IOException | AmqpException exception) {
+            LOGGER.error("Falha ao enviar nota fiscal {} para o OCR", processamento.getId(), exception);
+            processamento.marcarErro("Serviço de leitura de nota fiscal indisponível. Tente novamente em instantes.");
+            processamentoRepository.save(processamento);
         }
+
+        return paraResposta(processamento);
+    }
+
+    public OcrResponseDto consultar(String jobId, String solicitante) {
+        return processamentoRepository.findById(jobId)
+                .filter(processamento -> processamento.getSolicitante().equals(solicitante))
+                .map(this::paraResposta)
+                .orElseThrow(() -> new NotFoundException("Processamento de nota fiscal não encontrado."));
+    }
+
+    @RabbitListener(queues = RabbitMQConfig.FILA_RESULTADOS)
+    public void receberResultado(OcrResultadoMensagem resultado) {
+        if (resultado.jobId() == null) {
+            LOGGER.warn("Resultado de OCR descartado: mensagem sem jobId");
+            return;
+        }
+
+        OcrProcessamento processamento = processamentoRepository.findById(resultado.jobId()).orElse(null);
+        if (processamento == null) {
+            LOGGER.warn("Resultado de OCR descartado: job {} não encontrado", resultado.jobId());
+            return;
+        }
+
+        if (resultado.status() != StatusOcr.CONCLUIDO) {
+            processamento.marcarErro("Erro ao processar a nota fiscal: " + resultado.erro());
+        } else if (resultado.textoBruto() == null || resultado.textoBruto().isBlank()) {
+            processamento.marcarErro("Não foi possível extrair texto da nota fiscal.");
+        } else {
+            processamento.marcarConcluido(resultado.textoBruto());
+        }
+        processamentoRepository.save(processamento);
+    }
+
+    private OcrResponseDto paraResposta(OcrProcessamento processamento) {
+        OcrResponseDto resposta = new OcrResponseDto();
+        resposta.setJobId(processamento.getId());
+        resposta.setStatus(processamento.getStatus());
+
+        switch (processamento.getStatus()) {
+            case PROCESSANDO -> {
+                resposta.setSucesso(true);
+                resposta.setMensagem("Nota fiscal recebida. Processando leitura...");
+            }
+            case CONCLUIDO -> {
+                resposta.setSucesso(true);
+                resposta.setTextoBruto(processamento.getTextoBruto());
+                extrairCampos(processamento.getTextoBruto(), resposta);
+                resposta.setMensagem("Nota fiscal processada. Revise os campos antes de salvar.");
+            }
+            case ERRO -> {
+                resposta.setSucesso(false);
+                resposta.setMensagem(processamento.getMensagemErro());
+            }
+        }
+        return resposta;
     }
 
     private String validarArquivo(MultipartFile arquivo) {
-        if (ocrApiKey == null || ocrApiKey.isBlank()) {
-            return "OCR_SPACE_API_KEY não configurada no backend.";
-        }
         if (arquivo == null || arquivo.isEmpty()) {
             return "Selecione uma imagem ou PDF da nota fiscal.";
         }
@@ -88,54 +145,6 @@ public class OcrService {
             return "Formato inválido. Envie JPG, PNG, WEBP, TIFF ou PDF.";
         }
         return null;
-    }
-
-    @SuppressWarnings("unchecked")
-    private String chamarOcrSpace(MultipartFile arquivo) throws IOException {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-        headers.set("apikey", ocrApiKey.trim());
-
-        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-        body.add("file", new ByteArrayResource(arquivo.getBytes()) {
-            @Override
-            public String getFilename() {
-                return arquivo.getOriginalFilename() != null ? arquivo.getOriginalFilename() : "nota-fiscal.jpg";
-            }
-        });
-        body.add("language", "por");
-        body.add("isOverlayRequired", "false");
-        body.add("OCREngine", "2");
-        body.add("isTable", "true");
-        body.add("scale", "true");
-
-        HttpEntity<MultiValueMap<String, Object>> request = new HttpEntity<>(body, headers);
-        ResponseEntity<Map> response = restTemplate.postForEntity(OCR_SPACE_URL, request, Map.class);
-
-        if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
-            throw new RuntimeException("OCR.space retornou status " + response.getStatusCode());
-        }
-
-        Map<String, Object> payload = response.getBody();
-        if (Boolean.TRUE.equals(payload.get("IsErroredOnProcessing"))) {
-            throw new RuntimeException(String.valueOf(payload.getOrDefault("ErrorMessage", "erro desconhecido")));
-        }
-
-        Object parsedResultsObject = payload.get("ParsedResults");
-        if (!(parsedResultsObject instanceof List<?> parsedResults) || parsedResults.isEmpty()) {
-            return "";
-        }
-
-        StringBuilder textoTotal = new StringBuilder();
-        for (Object item : parsedResults) {
-            if (item instanceof Map<?, ?> resultado) {
-                Object parsedText = resultado.get("ParsedText");
-                if (parsedText instanceof String texto && !texto.isBlank()) {
-                    textoTotal.append(texto.trim()).append("\n");
-                }
-            }
-        }
-        return textoTotal.toString().trim();
     }
 
     private void extrairCampos(String texto, OcrResponseDto resposta) {
