@@ -9,10 +9,10 @@
 use_lab_role = false
 
 # Trava contra apply na conta errada: informe o ID da conta pessoal.
-allowed_account_ids = ["000000000000"]
+allowed_account_ids = ["0000000000"]
 
-# t3a é AMD (mesma imagem amd64) e mais barato; pode não ser permitido no Learner Lab.
-instance_type    = "t3a.micro"
+# t3.micro é elegível para a restrição Free Tier desta conta.
+instance_type    = "t3.micro"
 root_volume_size = 16
 
 frontend_asg = { min_size = 1, desired_capacity = 1, max_size = 2 }
@@ -25,8 +25,9 @@ single_nat_gateway = true
 # RDS Single-AZ; a mudança é aplicada na hora (há uma breve indisponibilidade)
 rds_multi_az          = false
 rds_apply_immediately = true
+rds_backup_retention_period = 0
 
-backend_public_access = false
+backend_public_access = true
 
 # SSH ao frontend: EIC Endpoint e SSM ja cobrem o acesso. O range abaixo e o
 # EC2_INSTANCE_CONNECT de us-east-1 (confira em https://ip-ranges.amazonaws.com/ip-ranges.json)

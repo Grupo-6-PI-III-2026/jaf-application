@@ -51,8 +51,8 @@ resource "aws_db_instance" "main" {
   multi_az          = var.multi_az
   apply_immediately = var.apply_immediately
 
-  # Backup automático — manter por 7 dias
-  backup_retention_period = 7
+  # Contas Free Tier podem exigir retenção zero.
+  backup_retention_period = var.backup_retention_period
   backup_window           = "03:00-04:00"         # UTC — janela de backup
   maintenance_window      = "mon:04:00-mon:05:00" # Manutenção fora do horário de pico
 

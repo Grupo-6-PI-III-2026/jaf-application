@@ -252,6 +252,12 @@ variable "rds_apply_immediately" {
   default     = false
 }
 
+variable "rds_backup_retention_period" {
+  description = "Quantidade de dias de retenção de backups automáticos do RDS; contas Free Tier podem exigir 0"
+  type        = number
+  default     = 7
+}
+
 # ── GHCR (GitHub Container Registry) ─────────────────────────
 # Usado pelo user_data das EC2 para fazer pull das imagens Docker
 

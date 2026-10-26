@@ -95,7 +95,7 @@ module "ec2" {
   repo_owner = var.repo_owner
 
   # Variáveis de ambiente do Backend (banco de dados e JWT)
-  db_url         = var.db_url
+  db_url         = "jdbc:postgresql://${module.rds.rds_host}:${module.rds.rds_port}/${var.db_name}"
   db_username    = var.db_username
   db_password    = var.db_password
   jwt_secret     = var.jwt_secret
@@ -106,17 +106,18 @@ module "ec2" {
 module "rds" {
   source = "./modules/rds"
 
-  vpc_id                = module.vpc.vpc_id
-  project_name          = var.project_name
-  environment           = var.environment
-  db_name               = var.db_name
-  db_username           = var.db_username
-  db_password           = var.db_password
-  rds_instance_class    = var.rds_instance_class
-  rds_allocated_storage = var.rds_allocated_storage
-  multi_az              = var.rds_multi_az
-  apply_immediately     = var.rds_apply_immediately
-  sg_rds_id             = module.security_groups.sg_rds_id
+  vpc_id                  = module.vpc.vpc_id
+  project_name            = var.project_name
+  environment             = var.environment
+  db_name                 = var.db_name
+  db_username             = var.db_username
+  db_password             = var.db_password
+  rds_instance_class      = var.rds_instance_class
+  rds_allocated_storage   = var.rds_allocated_storage
+  multi_az                = var.rds_multi_az
+  apply_immediately       = var.rds_apply_immediately
+  backup_retention_period = var.rds_backup_retention_period
+  sg_rds_id               = module.security_groups.sg_rds_id
 
   # Subnets privadas dedicadas em duas AZs
   private_subnet_rds_ids = module.vpc.private_subnet_rds_ids

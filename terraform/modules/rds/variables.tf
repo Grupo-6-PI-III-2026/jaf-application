@@ -57,6 +57,12 @@ variable "apply_immediately" {
   default     = false
 }
 
+variable "backup_retention_period" {
+  description = "Quantidade de dias de retenção de backups automáticos"
+  type        = number
+  default     = 7
+}
+
 variable "sg_rds_id" {
   description = "ID do Security Group do RDS"
   type        = string
