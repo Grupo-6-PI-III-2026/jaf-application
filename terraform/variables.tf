@@ -101,9 +101,34 @@ variable "enable_https" {
 }
 
 variable "backend_public_access" {
-  description = "Modo temporario de laboratorio: coloca o backend em subnets publicas com IP publico e SSH aberto"
+  description = "Modo temporario de diagnostico: coloca o backend em subnets publicas com IP publico e SSH/8080 abertos ao mundo. Mantenha false no uso normal"
+  type        = bool
+  default     = false
+}
+
+variable "frontend_ssh_cidrs" {
+  description = "CIDRs com acesso SSH (22) ao frontend. Padrao aberto (Learner Lab). Use [] para depender so do EIC Endpoint/SSM, ou o range EC2_INSTANCE_CONNECT da regiao para o EIC pelo console"
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
+}
+
+variable "single_nat_gateway" {
+  description = "true usa um unico NAT Gateway (AZ principal) para todas as subnets privadas; false usa um NAT por AZ"
+  type        = bool
+  default     = false
+}
+
+# ── Conta AWS / perfil ───────────────────────────────────────
+variable "use_lab_role" {
+  description = "true usa a LabRole/LabInstanceProfile do Learner Lab; false cria uma role e instance profile proprios (conta AWS normal)"
   type        = bool
   default     = true
+}
+
+variable "allowed_account_ids" {
+  description = "Contas AWS permitidas para este state. Lista vazia desativa a trava. Evita apply na conta errada"
+  type        = list(string)
+  default     = []
 }
 
 # ── EC2 ──────────────────────────────────────────────────────
@@ -111,6 +136,74 @@ variable "instance_type" {
   description = "Tipo de instância EC2 (limitado pelo Learner Lab)"
   type        = string
   default     = "t3.micro"
+}
+
+variable "root_volume_size" {
+  description = "Tamanho do disco raiz (GB) das instâncias EC2"
+  type        = number
+  default     = 30
+
+  validation {
+    condition     = var.root_volume_size >= 8
+    error_message = "root_volume_size deve ser >= 8 (tamanho minimo da AMI)."
+  }
+}
+
+variable "frontend_asg" {
+  description = "Capacidade do Auto Scaling Group do frontend"
+  type = object({
+    min_size         = number
+    desired_capacity = number
+    max_size         = number
+  })
+  default = {
+    min_size         = 2
+    desired_capacity = 2
+    max_size         = 4
+  }
+
+  validation {
+    condition     = var.frontend_asg.min_size <= var.frontend_asg.desired_capacity && var.frontend_asg.desired_capacity <= var.frontend_asg.max_size
+    error_message = "frontend_asg exige min_size <= desired_capacity <= max_size."
+  }
+}
+
+variable "backend_asg" {
+  description = "Capacidade do Auto Scaling Group do backend"
+  type = object({
+    min_size         = number
+    desired_capacity = number
+    max_size         = number
+  })
+  default = {
+    min_size         = 2
+    desired_capacity = 2
+    max_size         = 4
+  }
+
+  validation {
+    condition     = var.backend_asg.min_size <= var.backend_asg.desired_capacity && var.backend_asg.desired_capacity <= var.backend_asg.max_size
+    error_message = "backend_asg exige min_size <= desired_capacity <= max_size."
+  }
+}
+
+variable "ocr_asg" {
+  description = "Capacidade do Auto Scaling Group do OCR (0/0/0 desliga o OCR)"
+  type = object({
+    min_size         = number
+    desired_capacity = number
+    max_size         = number
+  })
+  default = {
+    min_size         = 2
+    desired_capacity = 2
+    max_size         = 4
+  }
+
+  validation {
+    condition     = var.ocr_asg.min_size <= var.ocr_asg.desired_capacity && var.ocr_asg.desired_capacity <= var.ocr_asg.max_size
+    error_message = "ocr_asg exige min_size <= desired_capacity <= max_size."
+  }
 }
 
 variable "public_key_path" {
@@ -145,6 +238,18 @@ variable "rds_allocated_storage" {
   description = "Tamanho do disco RDS em GB"
   type        = number
   default     = 20
+}
+
+variable "rds_multi_az" {
+  description = "true cria standby sincrono em outra AZ (failover automatico); false usa Single-AZ (mais barato)"
+  type        = bool
+  default     = true
+}
+
+variable "rds_apply_immediately" {
+  description = "true aplica mudancas do RDS (ex.: Multi-AZ) na hora; false aguarda a janela de manutencao"
+  type        = bool
+  default     = false
 }
 
 # ── GHCR (GitHub Container Registry) ─────────────────────────

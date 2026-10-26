@@ -47,8 +47,9 @@ resource "aws_db_instance" "main" {
   vpc_security_group_ids = [var.sg_rds_id]
   publicly_accessible    = false # Banco não deve ser acessível via internet
 
-  # Standby síncrono em uma segunda AZ para failover automático.
-  multi_az = true
+  # Standby síncrono em uma segunda AZ para failover automático (desligável via var.multi_az).
+  multi_az          = var.multi_az
+  apply_immediately = var.apply_immediately
 
   # Backup automático — manter por 7 dias
   backup_retention_period = 7

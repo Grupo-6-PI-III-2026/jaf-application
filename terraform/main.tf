@@ -4,10 +4,8 @@
 
 # ── Data sources globais ──────────────────────────────────────
 
-# IAM Role pré-existente do Learner Lab — NÃO criar nova role
-data "aws_iam_role" "lab_role" {
-  name = "LabRole"
-}
+# No Learner Lab, a LabRole/LabInstanceProfile ja existem e sao resolvidas no modulo EC2.
+# Em conta AWS normal (use_lab_role = false), o modulo EC2 cria role e instance profile proprios.
 
 # AMI mais recente do Amazon Linux 2023 (64-bit x86)
 data "aws_ami" "amazon_linux_2023" {
@@ -47,6 +45,7 @@ module "vpc" {
   private_subnet_rds_secondary_cidr     = var.private_subnet_rds_secondary_cidr
   availability_zone                     = var.availability_zone
   secondary_availability_zone           = var.secondary_availability_zone
+  single_nat_gateway                    = var.single_nat_gateway
 }
 
 # ── Módulo: Security Groups ───────────────────────────────────
@@ -58,19 +57,23 @@ module "security_groups" {
   vpc_id                = module.vpc.vpc_id
   eic_security_group_id = module.vpc.sg_eic_endpoint_id
   backend_public_access = var.backend_public_access
+  frontend_ssh_cidrs    = var.frontend_ssh_cidrs
 }
 
 # ── Módulo: EC2 ───────────────────────────────────────────────
 module "ec2" {
   source = "./modules/ec2"
 
-  project_name    = var.project_name
-  environment     = var.environment
-  instance_type   = var.instance_type
-  ami_id          = data.aws_ami.amazon_linux_2023.id
-  public_key_path = var.public_key_path
-  lab_role_arn    = data.aws_iam_role.lab_role.arn
-  lab_role_name   = data.aws_iam_role.lab_role.name
+  project_name     = var.project_name
+  environment      = var.environment
+  instance_type    = var.instance_type
+  ami_id           = data.aws_ami.amazon_linux_2023.id
+  public_key_path  = var.public_key_path
+  use_lab_role     = var.use_lab_role
+  root_volume_size = var.root_volume_size
+  frontend_asg     = var.frontend_asg
+  backend_asg      = var.backend_asg
+  ocr_asg          = var.ocr_asg
 
   # Subnets
   public_subnet_ids          = module.vpc.public_subnet_ids
@@ -111,6 +114,8 @@ module "rds" {
   db_password           = var.db_password
   rds_instance_class    = var.rds_instance_class
   rds_allocated_storage = var.rds_allocated_storage
+  multi_az              = var.rds_multi_az
+  apply_immediately     = var.rds_apply_immediately
   sg_rds_id             = module.security_groups.sg_rds_id
 
   # Subnets privadas dedicadas em duas AZs

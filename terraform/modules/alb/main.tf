@@ -154,5 +154,6 @@ resource "aws_lb_listener" "http" {
   }
 }
 
-# ── Listener Rules para /api/* ────────────────────────────────────
-# Requisições HTTP de laboratório são roteadas para o backend.
+# O ALB público NÃO possui regra para /api/*: todo o tráfego vai para o frontend (Nginx),
+# que remove o prefixo /api e repassa ao ALB interno do backend. Uma regra /api/* aqui
+# enviaria o path sem rewrite ao Spring e resultaria em 403.

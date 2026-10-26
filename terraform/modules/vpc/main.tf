@@ -52,6 +52,9 @@ locals {
       az   = var.secondary_availability_zone
     }
   }
+
+  # Com single_nat_gateway, apenas a chave "a" recebe NAT/EIP e todas as rotas privadas apontam para ele.
+  nat_subnets = { for k, v in local.public_subnets : k => v if !var.single_nat_gateway || k == "a" }
 }
 
 moved {
@@ -183,13 +186,13 @@ resource "aws_internet_gateway" "main" {
 }
 
 resource "aws_eip" "nat" {
-  for_each   = local.public_subnets
+  for_each   = local.nat_subnets
   domain     = "vpc"
   depends_on = [aws_internet_gateway.main]
 }
 
 resource "aws_nat_gateway" "main" {
-  for_each      = local.public_subnets
+  for_each      = local.nat_subnets
   allocation_id = aws_eip.nat[each.key].id
   subnet_id     = aws_subnet.public[each.key].id
   depends_on    = [aws_internet_gateway.main]
@@ -228,7 +231,7 @@ resource "aws_route_table" "private" {
 
   route {
     cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.main[each.key].id
+    nat_gateway_id = aws_nat_gateway.main[var.single_nat_gateway ? "a" : each.key].id
   }
 
   tags = {

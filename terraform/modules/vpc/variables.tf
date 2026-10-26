@@ -62,3 +62,9 @@ variable "secondary_availability_zone" {
   description = "Availability Zone secundaria para RDS"
   type        = string
 }
+
+variable "single_nat_gateway" {
+  description = "true cria um unico NAT Gateway (chave a) e roteia todas as subnets privadas por ele"
+  type        = bool
+  default     = false
+}

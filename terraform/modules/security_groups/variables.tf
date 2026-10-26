@@ -26,3 +26,9 @@ variable "backend_public_access" {
   description = "Libera SSH publico temporariamente no backend"
   type        = bool
 }
+
+variable "frontend_ssh_cidrs" {
+  description = "CIDRs com acesso SSH (porta 22) ao frontend; lista vazia desativa a regra por CIDR"
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
+}

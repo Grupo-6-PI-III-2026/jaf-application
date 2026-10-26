@@ -91,13 +91,26 @@ resource "aws_security_group" "frontend" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # SSH — método padrão de acesso no Learner Lab (sem SSM)
+  # SSH — navegador (EC2 Instance Connect) e SSH direto; restrinja via var.frontend_ssh_cidrs
+  dynamic "ingress" {
+    for_each = length(var.frontend_ssh_cidrs) > 0 ? [1] : []
+
+    content {
+      description = "SSH para administracao via Learner Lab"
+      from_port   = 22
+      to_port     = 22
+      protocol    = "tcp"
+      cidr_blocks = var.frontend_ssh_cidrs
+    }
+  }
+
+  # SSH via EC2 Instance Connect Endpoint (sem depender de IP publico ou CIDR)
   ingress {
-    description = "SSH para administracao via Learner Lab"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    description     = "SSH via EC2 Instance Connect Endpoint"
+    from_port       = 22
+    to_port         = 22
+    protocol        = "tcp"
+    security_groups = [var.eic_security_group_id]
   }
 
   # Saída irrestrita — necessário para pull de imagens Docker, updates etc.
@@ -230,6 +243,14 @@ resource "aws_security_group" "ocr" {
     to_port         = 22
     protocol        = "tcp"
     security_groups = [aws_security_group.frontend.id]
+  }
+
+  ingress {
+    description     = "SSH via EC2 Instance Connect Endpoint"
+    from_port       = 22
+    to_port         = 22
+    protocol        = "tcp"
+    security_groups = [var.eic_security_group_id]
   }
 
   egress {

@@ -36,16 +36,16 @@ Este documento descreve as mudanças implementadas para adicionar **Load Balance
 
 ### Recursos Criados
 - **Security Group do ALB**: Permite HTTP/HTTPS da internet
-- **Application Load Balancer**: ALB público na subnet pública
+- **Application Load Balancer**: ALB público nas subnets públicas
+- **ALB interno do backend** (porta 8080): recebe o tráfego do Nginx e distribui para o backend
 - **Target Group Frontend**: Para instâncias EC2 do frontend (porta 80)
 - **Target Group Backend**: Para instâncias EC2 do backend (porta 8080)
-- **Listener HTTP (Porta 80)**: Roteia tráfego baseado no path
-- **Listener Rule `/api/*`**: Roteia requisições de API para o backend
-- **Target Group Attachments**: Anexa instâncias EC2 aos target groups
+- **Listener HTTP (Porta 80)**: encaminha tudo para o frontend (sem regra por path)
 
-### Roteamento do ALB
-- `/api/*` → Backend Target Group (porta 8080)
-- `/*` → Frontend Target Group (porta 80)
+### Roteamento
+- ALB público: `/*` → Frontend Target Group (porta 80)
+- Nginx do frontend: `/api/*` → remove o prefixo `/api` e envia ao ALB interno do backend (porta 8080)
+- **Não deve existir regra `/api/*` no ALB público**: ela enviaria o path com `/api` direto ao Spring, que responde 403
 
 ### Health Checks
 - **Frontend**: GET `/` → espera HTTP 200
@@ -148,10 +148,9 @@ Internet → Frontend (Nginx:80) → Backend (8080) → PostgreSQL (5432)
 
 ### Ambiente AWS (com ALB)
 ```
-Internet → ALB (HTTP:80) → Frontend EC2 (Nginx:80) → Backend EC2 (8080) → RDS
-                  ↓                    ↓
-               /api/* → Backend     OCR EC2 (8081)
-               /* → React estático
+Internet → ALB público (HTTP:80) → Frontend EC2 (Nginx:80) → ALB interno (8080) → Backend EC2 (8080) → RDS
+                                          ↓
+                                   /* → React estático (/api/* → proxy para o backend)
 ```
 
 ---
@@ -204,10 +203,9 @@ http://<alb-dns-name>/health
 - O SG Frontend permite tráfego do ALB (porta 80) para health checks
 - SSH ainda funciona via jump host (frontend)
 
-### 3. Roteamento Duplo
-- **ALB**: Roteia `/api/*` para backend diretamente
-- **Nginx do Frontend**: Roteia `/api/*` para backend (caminho alternativo)
-- Isso permite flexibilidade e redundância
+### 3. Roteamento da API
+- **ALB público**: não roteia por path; envia tudo ao frontend
+- **Nginx do frontend**: único responsável por `/api/*`; remove o prefixo e repassa ao ALB interno do backend
 
 ### 4. SSL/HTTPS
 - O ALB está preparado para HTTPS (porta 443 aberta)
@@ -244,8 +242,9 @@ curl http://<alb-dns-name>/health
 # Testar frontend
 curl http://<alb-dns-name>/
 
-# Testar API via ALB
-curl http://<alb-dns-name>/api/actuator/health
+# Testar API via Nginx (deve retornar {"status":"UP"} e o header X-Frame-Options: SAMEORIGIN)
+# Um 403 aqui indica regra /api/* indevida no ALB público
+curl -i http://<alb-dns-name>/api/actuator/health
 ```
 
 ### 3. Testar Health Check do Backend

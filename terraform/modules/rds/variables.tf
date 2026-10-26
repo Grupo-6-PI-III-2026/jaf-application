@@ -45,6 +45,18 @@ variable "rds_allocated_storage" {
   default     = 20
 }
 
+variable "multi_az" {
+  description = "Habilita standby sincrono em outra AZ"
+  type        = bool
+  default     = true
+}
+
+variable "apply_immediately" {
+  description = "Aplica modificacoes imediatamente em vez de aguardar a janela de manutencao"
+  type        = bool
+  default     = false
+}
+
 variable "sg_rds_id" {
   description = "ID do Security Group do RDS"
   type        = string

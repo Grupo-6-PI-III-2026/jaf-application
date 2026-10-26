@@ -11,10 +11,45 @@ resource "aws_key_pair" "main" {
 }
 
 data "aws_iam_instance_profile" "lab_profile" {
-  name = "LabInstanceProfile"
+  count = var.use_lab_role ? 1 : 0
+  name  = "LabInstanceProfile"
+}
+
+# Conta AWS normal: role minima para as instancias (acesso via SSM Session Manager)
+resource "aws_iam_role" "instance" {
+  count = var.use_lab_role ? 0 : 1
+  name  = "${var.project_name}-instance-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "ec2.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+
+  tags = {
+    Environment = var.environment
+    Project     = var.project_name
+    ManagedBy   = "Terraform"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "instance_ssm" {
+  count      = var.use_lab_role ? 0 : 1
+  role       = aws_iam_role.instance[0].name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+resource "aws_iam_instance_profile" "instance" {
+  count = var.use_lab_role ? 0 : 1
+  name  = "${var.project_name}-instance-profile"
+  role  = aws_iam_role.instance[0].name
 }
 
 locals {
+  instance_profile_name = var.use_lab_role ? data.aws_iam_instance_profile.lab_profile[0].name : aws_iam_instance_profile.instance[0].name
   user_data_frontend = templatefile("${path.module}/../../scripts/frontend.sh", {
     ghcr_user    = var.ghcr_user
     ghcr_token   = var.ghcr_token
@@ -51,7 +86,7 @@ resource "aws_launch_template" "frontend" {
   key_name      = aws_key_pair.main.key_name
 
   iam_instance_profile {
-    name = data.aws_iam_instance_profile.lab_profile.name
+    name = local.instance_profile_name
   }
 
   vpc_security_group_ids = [var.sg_frontend_id]
@@ -62,7 +97,7 @@ resource "aws_launch_template" "frontend" {
 
     ebs {
       volume_type           = "gp3"
-      volume_size           = 30
+      volume_size           = var.root_volume_size
       delete_on_termination = true
     }
   }
@@ -82,9 +117,9 @@ resource "aws_launch_template" "frontend" {
 
 resource "aws_autoscaling_group" "frontend" {
   name                      = "${var.project_name}-frontend-asg"
-  min_size                  = 2
-  desired_capacity          = 2
-  max_size                  = 4
+  min_size                  = var.frontend_asg.min_size
+  desired_capacity          = var.frontend_asg.desired_capacity
+  max_size                  = var.frontend_asg.max_size
   health_check_type         = "ELB"
   health_check_grace_period = 300
   vpc_zone_identifier       = var.public_subnet_ids
@@ -103,7 +138,7 @@ resource "aws_launch_template" "backend" {
   key_name      = aws_key_pair.main.key_name
 
   iam_instance_profile {
-    name = data.aws_iam_instance_profile.lab_profile.name
+    name = local.instance_profile_name
   }
 
   user_data = base64encode(local.user_data_backend)
@@ -130,7 +165,7 @@ resource "aws_launch_template" "backend" {
 
     ebs {
       volume_type           = "gp3"
-      volume_size           = 30
+      volume_size           = var.root_volume_size
       delete_on_termination = true
     }
   }
@@ -150,9 +185,9 @@ resource "aws_launch_template" "backend" {
 
 resource "aws_autoscaling_group" "backend" {
   name                      = "${var.project_name}-backend-asg"
-  min_size                  = 2
-  desired_capacity          = 2
-  max_size                  = 4
+  min_size                  = var.backend_asg.min_size
+  desired_capacity          = var.backend_asg.desired_capacity
+  max_size                  = var.backend_asg.max_size
   health_check_type         = "ELB"
   health_check_grace_period = 300
   vpc_zone_identifier       = var.backend_public_access ? var.public_subnet_ids : var.private_subnet_backend_ids
@@ -171,7 +206,7 @@ resource "aws_launch_template" "ocr" {
   key_name      = aws_key_pair.main.key_name
 
   iam_instance_profile {
-    name = data.aws_iam_instance_profile.lab_profile.name
+    name = local.instance_profile_name
   }
 
   vpc_security_group_ids = [var.sg_ocr_id]
@@ -182,7 +217,7 @@ resource "aws_launch_template" "ocr" {
 
     ebs {
       volume_type           = "gp3"
-      volume_size           = 30
+      volume_size           = var.root_volume_size
       delete_on_termination = true
     }
   }
@@ -202,9 +237,9 @@ resource "aws_launch_template" "ocr" {
 
 resource "aws_autoscaling_group" "ocr" {
   name                      = "${var.project_name}-ocr-asg"
-  min_size                  = 2
-  desired_capacity          = 2
-  max_size                  = 4
+  min_size                  = var.ocr_asg.min_size
+  desired_capacity          = var.ocr_asg.desired_capacity
+  max_size                  = var.ocr_asg.max_size
   health_check_type         = "EC2"
   health_check_grace_period = 300
   vpc_zone_identifier       = var.private_subnet_ocr_ids

@@ -42,6 +42,23 @@ terraform apply
 
 Confirme digitando `yes` quando solicitado.
 
+### Perfis (Learner Lab x conta AWS normal)
+
+Os modelos estão em `terraform/profiles/*.tfvars.example` (copie para `lab.tfvars` / `personal.tfvars`):
+
+```bash
+# Learner Lab (comportamento original)
+terraform plan -var-file=profiles/lab.tfvars
+
+# Conta pessoal (custo reduzido) — use um workspace para não misturar o state
+terraform workspace new personal
+terraform plan -var-file=profiles/personal.tfvars
+```
+
+Sem `-var-file`, os padrões mantêm o Learner Lab, exceto `backend_public_access`, que agora é `false`.
+Defina `backend_public_access = true` apenas para diagnóstico temporário.
+Na conta pessoal, `use_lab_role = false` cria a role/instance profile das instâncias.
+
 ---
 
 ## Outputs apos o apply
