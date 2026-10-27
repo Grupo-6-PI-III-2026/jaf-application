@@ -46,7 +46,7 @@ export const authService = {
     } catch (error) {
       console.error("Erro ao fazer logout:", error);
     }
-    
+
     // Limpa dados do usuário do localStorage
     localStorage.removeItem("userEmail");
     localStorage.removeItem("userName");
@@ -103,7 +103,13 @@ export const authService = {
     // CORREÇÃO DE SEGURANÇA A07: Verificação básica de autoridade baseada no cargo
     // Em produção, isso deve ser validado no backend via endpoint dedicado
     const cargo = authService.getCargo();
+
+    // Lendo a variável 'authority' apenas para satisfazer a regra do TypeScript
+    if (!authority) {
+      return false;
+    }
+
     // Implementação simplificada - ajustar conforme necessidades de permissão
-    return authority.length > 0 && cargo !== null;
+    return cargo !== null;
   },
 };

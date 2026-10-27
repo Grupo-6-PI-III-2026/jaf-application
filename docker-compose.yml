@@ -1,23 +1,20 @@
 services:
   jaf-db:
-    image: mysql:8.0
+    image: postgres:16
     container_name: jaf-db
     restart: always
     env_file:
       - .env
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
-      MYSQL_DATABASE: ${DB_NAME}
+      POSTGRES_DB: ${DB_NAME:-jaf_db}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "3307:3306"
+      - "5432:5432"
     volumes:
-      - db_data:/var/lib/mysql
+      - db_data:/var/lib/postgresql/data
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "mysqladmin ping -h localhost -uroot -p$$DB_PASSWORD --silent",
-        ]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-jaf_db}"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -43,6 +40,9 @@ services:
       - .env
     environment:
       JAVA_TOOL_OPTIONS: "-Xms256m -Xmx512m"
+      SPRING_DATASOURCE_URL: "jdbc:postgresql://jaf-db:5432/${DB_NAME:-jaf_db}"
+      SPRING_DATASOURCE_USERNAME: "${DB_USER:-postgres}"
+      SPRING_DATASOURCE_PASSWORD: "${DB_PASSWORD}"
       OCR_SERVICE_URL: "http://ocr-service:8000/api/ocr"
     volumes:
       - ./data/uploads:/app/uploads
@@ -62,6 +62,9 @@ services:
       - .env
     environment:
       JAVA_TOOL_OPTIONS: -Xms256m -Xmx512m
+      SPRING_DATASOURCE_URL: "jdbc:postgresql://jaf-db:5432/${DB_NAME:-jaf_db}"
+      SPRING_DATASOURCE_USERNAME: "${DB_USER:-postgres}"
+      SPRING_DATASOURCE_PASSWORD: "${DB_PASSWORD}"
     depends_on:
       jaf-db:
         condition: service_healthy

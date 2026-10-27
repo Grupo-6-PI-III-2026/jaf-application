@@ -1,0 +1,25 @@
+# ============================================================
+# terraform/.gitignore — Arquivos que NÃO devem ser commitados
+# ============================================================
+
+# Estado do Terraform — contém IDs de recursos e dados sensíveis
+terraform.tfstate
+terraform.tfstate.backup
+
+# Arquivo de variáveis com senhas
+terraform.tfvars
+*.auto.tfvars
+
+# Diretório de cache do Terraform
+.terraform/
+.terraform.lock.hcl
+
+# Chaves SSH — NUNCA commitar chaves privadas
+*.pem
+id_rsa
+id_rsa.pub
+
+# Logs e temporários
+*.tfplan
+crash.log
+crash.*.log

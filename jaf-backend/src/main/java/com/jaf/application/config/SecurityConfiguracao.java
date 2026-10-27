@@ -77,6 +77,7 @@ public class SecurityConfiguracao {
                         // Antes: .requestMatchers(HttpMethod.POST, "/funcionarios").permitAll()
                         // Agora: exige autenticação e permissão específica (ver @PreAuthorize no controller)
                         .requestMatchers("/uploads/**").permitAll()  // fotos públicas
+                        .requestMatchers(HttpMethod.POST, "/ocr").authenticated()
                         .anyRequest().authenticated()                  // todas as outras exigem token
                 )
 
