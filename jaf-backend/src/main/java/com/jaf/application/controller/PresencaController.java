@@ -5,6 +5,7 @@ import com.jaf.application.dto.PresencaListarDto;
 import com.jaf.application.dto.PresencaResponseDto;
 import com.jaf.application.service.PresencaService;
 import jakarta.validation.Valid;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -38,6 +39,15 @@ public class PresencaController {
             @PathVariable String data) {
         LocalDate dataLocalDate = LocalDate.parse(data);
         return ResponseEntity.ok(presencaService.listarPorObraEData(obraId, dataLocalDate));
+    }
+
+    @GetMapping("/obra/{obraId}/periodo")
+    @PreAuthorize("hasAuthority('VISUALIZAR_PRESENCAS')")
+    public ResponseEntity<List<PresencaListarDto>> listarPorObraEPeriodo(
+            @PathVariable Long obraId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return ResponseEntity.ok(presencaService.listarPorObraEPeriodo(obraId, from, to));
     }
 
     @GetMapping("/{id}")

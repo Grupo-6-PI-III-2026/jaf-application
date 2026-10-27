@@ -15,9 +15,25 @@ export interface DashboardStats {
   gastosPorCategoria: BarItem[];
 }
 
+export interface DashboardPeriodoParams {
+  from?: string | null;
+  to?: string | null;
+}
+
 export const dashboardService = {
-  buscarStats: async (obraId: number, etapa: string): Promise<DashboardStats> => {
-    const response = await api.get("/dashboard/stats", { params: { obraId, etapa } });
+  buscarStats: async (
+    obraId: number,
+    etapa: string,
+    periodo?: DashboardPeriodoParams,
+  ): Promise<DashboardStats> => {
+    const response = await api.get("/dashboard/stats", {
+      params: {
+        obraId,
+        etapa,
+        ...(periodo?.from ? { from: periodo.from } : {}),
+        ...(periodo?.to ? { to: periodo.to } : {}),
+      },
+    });
     return response.data;
   },
 };

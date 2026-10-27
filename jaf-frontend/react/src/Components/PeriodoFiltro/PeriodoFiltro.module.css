@@ -1,0 +1,97 @@
+.periodoFiltro {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  background: #fff;
+  color: #495057;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.chip:hover {
+  background: #e9ecef;
+  border-color: #dee2e6;
+}
+
+.chipAtivo {
+  border-color: #ffc107;
+  background: #fffbeb;
+  color: #333;
+}
+
+.ranges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.ranges label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #6c757d;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ranges input {
+  min-height: 36px;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  background: #fff;
+  color: #495057;
+  font-size: 13px;
+  padding: 6px 10px;
+  outline: none;
+}
+
+.ranges input:focus {
+  border-color: #ffc107;
+  box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.16);
+}
+
+.temaEscuro .chip {
+  border-color: #4d4d4d;
+  background: #3d3d3d;
+  color: #fff;
+}
+
+.temaEscuro .chip:hover {
+  background: #4d4d4d;
+  border-color: #6c757d;
+}
+
+.temaEscuro .chipAtivo {
+  border-color: #ffc107;
+  background: #4a3f1a;
+  color: #ffc107;
+}
+
+.temaEscuro .ranges label {
+  color: #adb5bd;
+}
+
+.temaEscuro .ranges input {
+  border-color: #4d4d4d;
+  background: #3d3d3d;
+  color: #fff;
+}
+
+.temaEscuro .ranges input:focus {
+  border-color: #ffc107;
+  box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.16);
+}
