@@ -18,7 +18,7 @@ public class DatabaseSeeder implements ApplicationRunner {
     private static final Logger LOGGER = LoggerFactory.getLogger(DatabaseSeeder.class);
     
     // CORREÇÃO DE SEGURANÇA A02: Senha padrão já está em hash BCrypt
-    // Hash BCrypt da senha "senha123" (todos os usuários criados no seed usam esta senha)
+    // Hash BCrypt da senha "Admin@123" (todos os usuários criados no seed usam esta senha)
     // Recomendação: Em produção, cada usuário deve ter senha única ou ser forçado a trocar no primeiro login
     private static final String SENHA_PADRAO_HASH = "$2a$10$yPsrDB3hR4NRGdCKaTxrz.CNjwgz2LjEZnUMw9ttY00GHSDfhLcdW";
 

@@ -19,8 +19,8 @@ public class OcrProcessamento {
     @Column(nullable = false)
     private String solicitante;
 
-    @Lob
-    @Column(name = "texto_bruto")
+    // Sem @Lob: no PostgreSQL o Hibernate mapearia String @Lob para oid (large object), não TEXT.
+    @Column(name = "texto_bruto", columnDefinition = "TEXT")
     private String textoBruto;
 
     @Column(name = "mensagem_erro", length = 1000)

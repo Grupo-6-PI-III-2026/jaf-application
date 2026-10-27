@@ -1,8 +1,6 @@
 package com.jaf.application.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.jaf.application.config.RabbitMQConfig;
 import com.jaf.application.dto.OcrResponseDto;
 import com.jaf.application.dto.OcrResultadoMensagem;
@@ -21,7 +19,6 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -45,24 +42,27 @@ public class OcrService {
     private static final Logger LOGGER = LoggerFactory.getLogger(OcrService.class);
     private static final long TAMANHO_MAXIMO = 10L * 1024L * 1024L;
     private static final List<String> TIPOS_ACEITOS = List.of(
-            "image/jpeg", "image/png", "image/gif", "image/bmp",
-            "image/webp", "image/tiff", "application/pdf");
+            "image/jpeg",
+            "image/png",
+            "image/gif",
+            "image/bmp",
+            "image/webp",
+            "image/tiff",
+            "application/pdf"
+    );
 
-    private final RestTemplate restTemplate;
-    private final String ocrServiceUrl;
-    private final ObjectMapper mapper;
     private final RabbitTemplate rabbitTemplate;
     private final OcrProcessamentoRepository processamentoRepository;
+    private final RestTemplate restTemplate;
+    private final String ocrServiceUrl;
 
-    public OcrService(
-            @Value("${ocr.service.url:http://localhost:8000/api/ocr}") String ocrServiceUrl,
-            RabbitTemplate rabbitTemplate,
-            OcrProcessamentoRepository processamentoRepository) {
-        this.restTemplate = new RestTemplate();
-        this.ocrServiceUrl = ocrServiceUrl;
-        this.mapper = new ObjectMapper();
+    public OcrService(RabbitTemplate rabbitTemplate,
+                      OcrProcessamentoRepository processamentoRepository,
+                      @Value("${ocr.service.url:http://localhost:8000/api/ocr}") String ocrServiceUrl) {
         this.rabbitTemplate = rabbitTemplate;
         this.processamentoRepository = processamentoRepository;
+        this.restTemplate = new RestTemplate();
+        this.ocrServiceUrl = ocrServiceUrl;
     }
 
     public JsonNode process(MultipartFile file) throws IOException {
@@ -78,78 +78,52 @@ public class OcrService {
         };
 
         HttpHeaders fileHeaders = new HttpHeaders();
-        fileHeaders.setContentType(MediaType.parseMediaType(
-                file.getContentType() != null
+        fileHeaders.setContentType(
+                MediaType.parseMediaType(file.getContentType() != null
                         ? file.getContentType()
                         : MediaType.APPLICATION_OCTET_STREAM_VALUE));
 
-        HttpEntity<ByteArrayResource> filePart = new HttpEntity<>(resource, fileHeaders);
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-        body.add("file", filePart);
+        body.add("file", new HttpEntity<>(resource, fileHeaders));
 
         HttpHeaders requestHeaders = new HttpHeaders();
         requestHeaders.setContentType(MediaType.MULTIPART_FORM_DATA);
 
         try {
-            ResponseEntity<JsonNode> response = restTemplate.postForEntity(
-                    ocrServiceUrl,
-                    new HttpEntity<>(body, requestHeaders),
-                    JsonNode.class);
-            return response.getBody();
+            return restTemplate.postForEntity(ocrServiceUrl, new HttpEntity<>(body, requestHeaders), JsonNode.class)
+                    .getBody();
         } catch (RestClientException exception) {
             throw new IllegalStateException("Falha ao comunicar com o servico de OCR.", exception);
         }
     }
 
-    public JsonNode processarNotaFiscal(MultipartFile file) throws IOException {
-        JsonNode response = process(file);
-        ObjectNode result = mapper.createObjectNode();
-
-        String rawText = "";
-        JsonNode parsedResults = response == null
-                ? null
-                : response.path("ocr").path("provider_payload").path("ParsedResults");
-        if (parsedResults.isArray() && !parsedResults.isEmpty()) {
-            rawText = parsedResults.get(0).path("ParsedText").asText("");
-        }
-
-        result.put("sucesso", true);
-        result.put("mensagem", "Nota fiscal processada com sucesso");
-        result.put("textoBruto", rawText);
-
-        Matcher valorMatcher = Pattern.compile("R\\$\\s*([0-9.,]+)").matcher(rawText);
-        if (valorMatcher.find()) {
-            result.put("valor", converterValor(valorMatcher.group(1)).doubleValue());
-        }
-
-        Matcher dataMatcher = Pattern.compile("([0-9]{2})/([0-9]{2})/([0-9]{4})").matcher(rawText);
-        if (dataMatcher.find()) {
-            result.put("dtGasto", dataMatcher.group(3) + "-" + dataMatcher.group(2) + "-" + dataMatcher.group(1));
-        }
-        result.put("metodoPagamento", "Boleto");
-        result.put("materialInsumo", "CONSTRUIR MATERIAIS PARA CONSTRUÇÃO");
-        return result;
-    }
-
     public OcrResponseDto processarNota(MultipartFile arquivo, String solicitante) {
         String erroValidacao = validarArquivo(arquivo);
         if (erroValidacao != null) {
-            return respostaErro(erroValidacao);
+            OcrResponseDto resposta = new OcrResponseDto();
+            resposta.setStatus(StatusOcr.ERRO);
+            resposta.setSucesso(false);
+            resposta.setMensagem(erroValidacao);
+            return resposta;
         }
 
+        // Salvo antes de publicar: o resultado pode voltar antes deste método terminar.
         OcrProcessamento processamento = processamentoRepository.save(
                 new OcrProcessamento(UUID.randomUUID().toString(), solicitante));
+
         try {
             OcrSolicitacaoMensagem mensagem = new OcrSolicitacaoMensagem(
                     processamento.getId(),
                     arquivo.getOriginalFilename() != null ? arquivo.getOriginalFilename() : "nota-fiscal.jpg",
-                    Base64.getEncoder().encodeToString(arquivo.getBytes()));
+                    Base64.getEncoder().encodeToString(arquivo.getBytes())
+            );
             rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, RabbitMQConfig.RK_SOLICITAR, mensagem);
         } catch (IOException | AmqpException exception) {
             LOGGER.error("Falha ao enviar nota fiscal {} para o OCR", processamento.getId(), exception);
             processamento.marcarErro("Serviço de leitura de nota fiscal indisponível. Tente novamente em instantes.");
             processamentoRepository.save(processamento);
         }
+
         return paraResposta(processamento);
     }
 
@@ -166,11 +140,13 @@ public class OcrService {
             LOGGER.warn("Resultado de OCR descartado: mensagem sem jobId");
             return;
         }
+
         OcrProcessamento processamento = processamentoRepository.findById(resultado.jobId()).orElse(null);
         if (processamento == null) {
             LOGGER.warn("Resultado de OCR descartado: job {} não encontrado", resultado.jobId());
             return;
         }
+
         if (resultado.status() != StatusOcr.CONCLUIDO) {
             processamento.marcarErro("Erro ao processar a nota fiscal: " + resultado.erro());
         } else if (resultado.textoBruto() == null || resultado.textoBruto().isBlank()) {
@@ -185,6 +161,7 @@ public class OcrService {
         OcrResponseDto resposta = new OcrResponseDto();
         resposta.setJobId(processamento.getId());
         resposta.setStatus(processamento.getStatus());
+
         switch (processamento.getStatus()) {
             case PROCESSANDO -> {
                 resposta.setSucesso(true);
@@ -204,14 +181,6 @@ public class OcrService {
         return resposta;
     }
 
-    private OcrResponseDto respostaErro(String mensagem) {
-        OcrResponseDto resposta = new OcrResponseDto();
-        resposta.setStatus(StatusOcr.ERRO);
-        resposta.setSucesso(false);
-        resposta.setMensagem(mensagem);
-        return resposta;
-    }
-
     private String validarArquivo(MultipartFile arquivo) {
         if (arquivo == null || arquivo.isEmpty()) {
             return "Selecione uma imagem ou PDF da nota fiscal.";
@@ -219,7 +188,8 @@ public class OcrService {
         if (arquivo.getSize() > TAMANHO_MAXIMO) {
             return "A nota fiscal deve ter no máximo 10 MB.";
         }
-        if (arquivo.getContentType() == null || !TIPOS_ACEITOS.contains(arquivo.getContentType())) {
+        String contentType = arquivo.getContentType();
+        if (contentType == null || !TIPOS_ACEITOS.contains(contentType)) {
             return "Formato inválido. Envie JPG, PNG, WEBP, TIFF ou PDF.";
         }
         return null;
@@ -229,32 +199,127 @@ public class OcrService {
         resposta.setValor(extrairValor(texto));
         resposta.setDtGasto(extrairData(texto));
         resposta.setMetodoPagamento(extrairMetodoPagamento(texto));
-        resposta.setMaterialInsumo("CONSTRUIR MATERIAIS PARA CONSTRUÇÃO");
+        resposta.setMaterialInsumo(extrairMaterialInsumo(texto));
+        resposta.setDescricaoAdicional(extrairDescricaoAdicional(texto));
     }
 
     private BigDecimal extrairValor(String texto) {
-        Matcher matcher = Pattern.compile("R\\$\\s*([0-9.,]+)").matcher(texto);
-        return matcher.find() ? converterValor(matcher.group(1)) : null;
-    }
+        List<Pattern> padroes = List.of(
+                Pattern.compile("(?i)(?:total\\s*a\\s*pagar|total\\s*geral)[\\s:R$]*([\\d]{1,3}(?:[.,]\\d{3})*[.,]\\d{2})"),
+                Pattern.compile("(?i)(?:vl\\.?\\s*total|valor\\s*total|total)[\\s:R$]*([\\d]{1,3}(?:[.,]\\d{3})*[.,]\\d{2})"),
+                Pattern.compile("R\\$\\s*([\\d]{1,3}(?:[.,]\\d{3})*[.,]\\d{2})")
+        );
 
-    private BigDecimal converterValor(String valor) {
-        return new BigDecimal(valor.replace(".", "").replace(",", "."));
+        for (Pattern padrao : padroes) {
+            Matcher matcher = padrao.matcher(texto);
+            if (matcher.find()) {
+                String valor = matcher.group(1).replace(".", "").replace(",", ".");
+                try {
+                    return new BigDecimal(valor);
+                } catch (NumberFormatException ignored) {
+                }
+            }
+        }
+        return null;
     }
 
     private LocalDate extrairData(String texto) {
-        Matcher matcher = Pattern.compile("(\\d{2}/\\d{2}/\\d{4})").matcher(texto);
-        if (!matcher.find()) {
-            return null;
+        List<String[]> tentativas = List.of(
+                new String[]{"(?i)(?:data|emissao|emissão|dt\\.?\\s*emis)[\\s:./]*([\\d]{2}/[\\d]{2}/[\\d]{4})", "dd/MM/yyyy"},
+                new String[]{"([\\d]{2}/[\\d]{2}/[\\d]{4})", "dd/MM/yyyy"},
+                new String[]{"([\\d]{2}-[\\d]{2}-[\\d]{4})", "dd-MM-yyyy"},
+                new String[]{"([\\d]{4}-[\\d]{2}-[\\d]{2})", "yyyy-MM-dd"}
+        );
+
+        for (String[] tentativa : tentativas) {
+            Matcher matcher = Pattern.compile(tentativa[0]).matcher(texto);
+            if (matcher.find()) {
+                try {
+                    return LocalDate.parse(matcher.group(1), DateTimeFormatter.ofPattern(tentativa[1]));
+                } catch (DateTimeParseException ignored) {
+                }
+            }
         }
-        try {
-            return LocalDate.parse(matcher.group(1), DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-        } catch (DateTimeParseException exception) {
-            return null;
-        }
+        return null;
     }
 
     private String extrairMetodoPagamento(String texto) {
-        Matcher matcher = Pattern.compile("(?i)(PIX|CART[AÃ]O|BOLETO|DINHEIRO)").matcher(texto);
-        return matcher.find() ? matcher.group(1).toUpperCase() : null;
+        String normalizado = normalizar(texto);
+        if (normalizado.contains("pix")) return "PIX";
+        if (normalizado.contains("debito")) return "CARTAO_DEBITO";
+        if (normalizado.contains("cartao") || normalizado.contains("credito") || normalizado.contains("visa")
+                || normalizado.contains("mastercard") || normalizado.contains("elo") || normalizado.contains("hipercard")) {
+            return "CARTAO_CREDITO";
+        }
+        if (normalizado.contains("dinheiro") || normalizado.contains("especie")) return "DINHEIRO";
+        return null;
+    }
+
+    private String extrairMaterialInsumo(String texto) {
+        List<Pattern> padroes = List.of(
+                Pattern.compile("(?i)(?:item|produto|descricao|descrição|material|insumo)[:\\s]+(.{5,80})"),
+                Pattern.compile("(?i)(?:servico|serviço)[:\\s]+(.{5,80})")
+        );
+
+        for (Pattern padrao : padroes) {
+            Matcher matcher = padrao.matcher(texto);
+            if (matcher.find()) {
+                String candidato = matcher.group(1).trim().split("\\r?\\n")[0].trim();
+                if (candidato.length() >= 5) {
+                    return limitar(candidato, 255);
+                }
+            }
+        }
+
+        Matcher matcherCupom = Pattern.compile("(?m)^([A-ZÀ-Ú][A-ZÀ-Ú0-9 ]{4,50})\\s+\\d+\\s+(?:UN|KG|MT|PC|CX|SC|LT|GL)")
+                .matcher(texto.toUpperCase());
+        if (matcherCupom.find()) {
+            return limitar(matcherCupom.group(1).trim(), 255);
+        }
+
+        return null;
+    }
+
+    private String extrairDescricaoAdicional(String texto) {
+        StringBuilder info = new StringBuilder();
+        for (String linha : texto.split("\\r?\\n")) {
+            String limpa = linha.trim();
+            if (limpa.length() > 5 && !limpa.matches("[\\d\\s.,/*:R$()-]+")
+                    && !limpa.toUpperCase().matches(".*(CNPJ|CPF|IE|CEP|TEL|FAX|HTTP|WWW).*")) {
+                info.append("Estabelecimento: ").append(limpa).append("\n");
+                break;
+            }
+        }
+
+        Matcher cnpj = Pattern.compile("\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2}").matcher(texto);
+        if (cnpj.find()) {
+            info.append("CNPJ: ").append(cnpj.group()).append("\n");
+        }
+
+        Matcher nf = Pattern.compile("(?i)(?:nf-?e?|nota\\s*fiscal)[\\s:nº#]*([\\d]{1,9})").matcher(texto);
+        if (nf.find()) {
+            info.append("NF: ").append(nf.group(1)).append("\n");
+        }
+
+        String resultado = info.toString().trim();
+        return resultado.isEmpty() ? null : limitar(resultado, 500);
+    }
+
+    private String normalizar(String texto) {
+        return texto.toLowerCase()
+                .replace("ã", "a")
+                .replace("á", "a")
+                .replace("â", "a")
+                .replace("é", "e")
+                .replace("ê", "e")
+                .replace("í", "i")
+                .replace("ó", "o")
+                .replace("ô", "o")
+                .replace("ú", "u")
+                .replace("ç", "c");
+    }
+
+    private String limitar(String valor, int maximo) {
+        return valor.length() > maximo ? valor.substring(0, maximo - 3) + "..." : valor;
     }
 }
