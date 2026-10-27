@@ -1,0 +1,35 @@
+# ============================================================
+# Perfil conta AWS normal — custo reduzido (até ~7 usuários simultâneos).
+# Uso: copie para profiles/personal.tfvars e rode:
+#   terraform workspace new personal      # state separado do Learner Lab
+#   terraform plan -var-file=profiles/personal.tfvars
+# Segredos (db_password, ghcr_token, jwt_secret...) continuam no terraform.tfvars.
+# ============================================================
+
+use_lab_role = false
+
+# Trava contra apply na conta errada: informe o ID da conta pessoal.
+allowed_account_ids = ["0000000000"]
+
+# t3.micro é elegível para a restrição Free Tier desta conta.
+instance_type    = "t3.micro"
+root_volume_size = 16
+
+frontend_asg = { min_size = 1, desired_capacity = 1, max_size = 2 }
+backend_asg  = { min_size = 1, desired_capacity = 1, max_size = 2 }
+ocr_asg      = { min_size = 0, desired_capacity = 0, max_size = 0 }
+
+# Um único NAT Gateway (AZ a) para todas as subnets privadas
+single_nat_gateway = true
+
+# RDS Single-AZ; a mudança é aplicada na hora (há uma breve indisponibilidade)
+rds_multi_az          = false
+rds_apply_immediately = true
+rds_backup_retention_period = 0
+
+backend_public_access = true
+
+# SSH ao frontend: EIC Endpoint e SSM ja cobrem o acesso. O range abaixo e o
+# EC2_INSTANCE_CONNECT de us-east-1 (confira em https://ip-ranges.amazonaws.com/ip-ranges.json)
+# e permite o botao "Connect > EC2 Instance Connect" do console.
+frontend_ssh_cidrs = ["18.206.107.24/29"]

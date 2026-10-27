@@ -28,30 +28,77 @@ variable "public_key_path" {
 }
 
 # ── IAM ──────────────────────────────────────────────────────
-variable "lab_role_arn" {
-  description = "ARN da LabRole existente no Learner Lab"
-  type        = string
+variable "use_lab_role" {
+  description = "true usa LabInstanceProfile (Learner Lab); false cria role e instance profile proprios"
+  type        = bool
+  default     = true
 }
 
-variable "lab_role_name" {
-  description = "Nome da LabRole existente no Learner Lab"
-  type        = string
+variable "root_volume_size" {
+  description = "Tamanho do disco raiz (GB)"
+  type        = number
+  default     = 30
+}
+
+variable "frontend_asg" {
+  description = "Capacidade do ASG do frontend"
+  type = object({
+    min_size         = number
+    desired_capacity = number
+    max_size         = number
+  })
+}
+
+variable "backend_asg" {
+  description = "Capacidade do ASG do backend"
+  type = object({
+    min_size         = number
+    desired_capacity = number
+    max_size         = number
+  })
+}
+
+variable "ocr_asg" {
+  description = "Capacidade do ASG do OCR"
+  type = object({
+    min_size         = number
+    desired_capacity = number
+    max_size         = number
+  })
 }
 
 # ── Subnets ───────────────────────────────────────────────────
-variable "public_subnet_id" {
-  description = "ID da subnet pública (Frontend)"
+variable "public_subnet_ids" {
+  description = "IDs das subnets públicas em duas AZs"
+  type        = list(string)
+}
+
+variable "private_subnet_backend_ids" {
+  description = "IDs das subnets privadas do Backend em duas AZs"
+  type        = list(string)
+}
+
+variable "private_subnet_ocr_ids" {
+  description = "IDs das subnets privadas do OCR em duas AZs"
+  type        = list(string)
+}
+
+variable "frontend_target_group_arn" {
+  type = string
+}
+
+variable "backend_target_group_arn" {
+  type = string
+}
+
+variable "backend_internal_dns_name" {
+  description = "DNS do ALB interno do Backend usado pelo Nginx"
   type        = string
 }
 
-variable "private_subnet_backend_id" {
-  description = "ID da subnet privada do Backend"
-  type        = string
-}
-
-variable "private_subnet_ocr_id" {
-  description = "ID da subnet privada do OCR"
-  type        = string
+variable "backend_public_access" {
+  description = "Coloca temporariamente o backend em subnets publicas e associa IP publico"
+  type        = bool
 }
 
 # ── Security Groups ───────────────────────────────────────────

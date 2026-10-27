@@ -9,6 +9,7 @@ import com.jaf.application.service.GastoService;
 import com.jaf.application.service.ObraService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -43,6 +44,19 @@ public class ObraController {
     @PreAuthorize("hasAuthority('VISUALIZAR_OBRA')")
     public ResponseEntity<List<Obra>> listar(Authentication authentication) {
         return ResponseEntity.ok(obraService.listarPorUsuario(authentication.getName()));
+    }
+
+    @GetMapping("/paginado")
+    @PreAuthorize("hasAuthority('VISUALIZAR_OBRA')")
+    public ResponseEntity<Page<Obra>> listarPaginado(
+            Authentication authentication,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "titulo") String sortBy,
+            @RequestParam(defaultValue = "asc") String sortDir,
+            @RequestParam(required = false) String status) {
+        return ResponseEntity.ok(obraService.listarPaginadoPorUsuario(
+                authentication.getName(), page, size, sortBy, sortDir, status));
     }
 
     @GetMapping("/{id}")

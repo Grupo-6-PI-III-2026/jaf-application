@@ -2,14 +2,78 @@
 # modules/security_groups/main.tf — Security Groups por camada
 # ============================================================
 
+# ── SG ALB ────────────────────────────────────────────────────
+# Application Load Balancer - aceita tráfego da internet
+resource "aws_security_group" "alb" {
+  name        = "${var.project_name}-alb-sg"
+  description = "Security Group do Application Load Balancer"
+  vpc_id      = var.vpc_id
+
+  # HTTP público
+  ingress {
+    description = "HTTP publico"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # HTTPS público (preparado para futuro)
+  ingress {
+    description = "HTTPS publico"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Saída irrestrita
+  egress {
+    description = "Saida irrestrita"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name        = "sg-alb-${var.project_name}"
+    Environment = var.environment
+    Project     = var.project_name
+    ManagedBy   = "Terraform"
+  }
+}
+
+resource "aws_security_group" "backend_alb" {
+  name        = "${var.project_name}-backend-alb-sg"
+  description = "Security Group do ALB interno do Backend"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    description     = "Backend interno vindo do Frontend"
+    from_port       = 8080
+    to_port         = 8080
+    protocol        = "tcp"
+    security_groups = [aws_security_group.frontend.id]
+  }
+
+  egress {
+    description = "Saida para os backends"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
 # ── SG Frontend ───────────────────────────────────────────────
-# Acesso HTTP, HTTPS e SSH direto da internet
+# Acesso HTTP, HTTPS e SSH direto da internet e do ALB
 resource "aws_security_group" "frontend" {
   name        = "${var.project_name}-frontend-sg"
   description = "Security Group do Frontend React - acesso publico HTTP/HTTPS/SSH"
   vpc_id      = var.vpc_id
 
-  # HTTP — acesso público ao frontend
+  # HTTP — acesso público ao frontend (ALB)
   ingress {
     description = "HTTP publico"
     from_port   = 80
@@ -27,13 +91,26 @@ resource "aws_security_group" "frontend" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # SSH — método padrão de acesso no Learner Lab (sem SSM)
+  # SSH — navegador (EC2 Instance Connect) e SSH direto; restrinja via var.frontend_ssh_cidrs
+  dynamic "ingress" {
+    for_each = length(var.frontend_ssh_cidrs) > 0 ? [1] : []
+
+    content {
+      description = "SSH para administracao via Learner Lab"
+      from_port   = 22
+      to_port     = 22
+      protocol    = "tcp"
+      cidr_blocks = var.frontend_ssh_cidrs
+    }
+  }
+
+  # SSH via EC2 Instance Connect Endpoint (sem depender de IP publico ou CIDR)
   ingress {
-    description = "SSH para administracao via Learner Lab"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    description     = "SSH via EC2 Instance Connect Endpoint"
+    from_port       = 22
+    to_port         = 22
+    protocol        = "tcp"
+    security_groups = [var.eic_security_group_id]
   }
 
   # Saída irrestrita — necessário para pull de imagens Docker, updates etc.
@@ -60,13 +137,62 @@ resource "aws_security_group" "backend" {
   description = "Security Group do Backend Spring Boot - acesso restrito ao Frontend"
   vpc_id      = var.vpc_id
 
-  # Porta da API Spring Boot — somente o frontend pode chamar
+  # Porta da API Spring Boot — permite acesso do Frontend e do ALB
   ingress {
     description     = "API Spring Boot vinda do Frontend"
     from_port       = 8080
     to_port         = 8080
     protocol        = "tcp"
     security_groups = [aws_security_group.frontend.id]
+  }
+
+  # Health check do ALB (porta 8080)
+  ingress {
+    description     = "Health check do ALB"
+    from_port       = 8080
+    to_port         = 8080
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id]
+  }
+
+  ingress {
+    description     = "Health check do ALB interno"
+    from_port       = 8080
+    to_port         = 8080
+    protocol        = "tcp"
+    security_groups = [aws_security_group.backend_alb.id]
+  }
+
+  ingress {
+    description     = "SSH via EC2 Instance Connect Endpoint"
+    from_port       = 22
+    to_port         = 22
+    protocol        = "tcp"
+    security_groups = [var.eic_security_group_id]
+  }
+
+  dynamic "ingress" {
+    for_each = var.backend_public_access ? [1] : []
+
+    content {
+      description = "SSH publico temporario de laboratorio"
+      from_port   = 22
+      to_port     = 22
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
+  }
+
+  dynamic "ingress" {
+    for_each = var.backend_public_access ? [1] : []
+
+    content {
+      description = "API publica temporaria de laboratorio"
+      from_port   = 8080
+      to_port     = 8080
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
   }
 
   # SSH via jump host — apenas o frontend pode iniciar a sessão
@@ -117,6 +243,14 @@ resource "aws_security_group" "ocr" {
     to_port         = 22
     protocol        = "tcp"
     security_groups = [aws_security_group.frontend.id]
+  }
+
+  ingress {
+    description     = "SSH via EC2 Instance Connect Endpoint"
+    from_port       = 22
+    to_port         = 22
+    protocol        = "tcp"
+    security_groups = [var.eic_security_group_id]
   }
 
   egress {

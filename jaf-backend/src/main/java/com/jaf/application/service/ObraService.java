@@ -14,6 +14,10 @@ import com.jaf.application.repository.FuncionarioRepository;
 import com.jaf.application.repository.ObraRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
@@ -77,6 +81,34 @@ public class ObraService {
         Set<Long> obraIds = new HashSet<>();
         alocacoes.forEach(alocacao -> obraIds.add(alocacao.getObra().getId()));
         return obraRepository.findByIdIn(obraIds);
+    }
+
+    public Page<Obra> listarPaginadoPorUsuario(String email, int page, int size, String sortBy, String sortDir, String status) {
+        Funcionario funcionario = funcionarioRepository.findByEmailIgnoreCase(email)
+                .orElseThrow(() -> new NotFoundException("Usuario nao encontrado."));
+
+        Sort sort = sortDir.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        if (funcionario.getCargoGlobal() == Cargo.ADMIN) {
+            if (status != null && !status.isEmpty()) {
+                return obraRepository.findAllByStatus(status, pageable);
+            }
+            return obraRepository.findAll(pageable);
+        }
+
+        List<AlocacaoObra> alocacoes = alocacaoObraRepository.findByFuncionarioId(funcionario.getId());
+        if (alocacoes.isEmpty()) {
+            return Page.empty();
+        }
+
+        Set<Long> obraIds = new HashSet<>();
+        alocacoes.forEach(alocacao -> obraIds.add(alocacao.getObra().getId()));
+
+        if (status != null && !status.isEmpty()) {
+            return obraRepository.findByIdInAndStatus(obraIds, status, pageable);
+        }
+        return obraRepository.findByIdIn(obraIds, pageable);
     }
 
     public Obra buscarPorIdComEscopo(Long id, String email) {

@@ -116,11 +116,13 @@ public class SecurityConfiguracao {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuracao = new CorsConfiguration();
 
-        // Origens permitidas — deve ser explícita quando allowCredentials=true
-        // Em produção: List.of("https://meuapp.com.br")
-        configuracao.setAllowedOrigins(List.of(
+        // O frontend local e o ALB público usam origens diferentes.
+        // allowedOriginPatterns permite manter cookies com credenciais sem usar "*".
+        configuracao.setAllowedOriginPatterns(List.of(
                 "http://localhost:5173",  // Vite dev server
-                "http://localhost:3000"   // Create React App (alternativa)
+                "http://localhost:3000",  // Create React App (alternativa)
+                "http://*.elb.amazonaws.com",
+                "https://*.elb.amazonaws.com"
         ));
 
         // Necessário para que o browser envie/receba cookies nas requisições cross-origin

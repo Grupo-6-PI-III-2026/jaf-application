@@ -37,6 +37,22 @@ variable "private_subnet_rds_cidr" {
   type        = string
 }
 
+variable "public_subnet_secondary_cidr" {
+  type = string
+}
+
+variable "private_subnet_backend_secondary_cidr" {
+  type = string
+}
+
+variable "private_subnet_ocr_secondary_cidr" {
+  type = string
+}
+
+variable "private_subnet_rds_secondary_cidr" {
+  type = string
+}
+
 variable "availability_zone" {
   description = "Availability Zone dos recursos"
   type        = string
@@ -45,4 +61,10 @@ variable "availability_zone" {
 variable "secondary_availability_zone" {
   description = "Availability Zone secundaria para RDS"
   type        = string
+}
+
+variable "single_nat_gateway" {
+  description = "true cria um unico NAT Gateway (chave a) e roteia todas as subnets privadas por ele"
+  type        = bool
+  default     = false
 }
