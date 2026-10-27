@@ -21,3 +21,13 @@ output "sg_rds_id" {
   description = "ID do Security Group do RDS"
   value       = aws_security_group.rds.id
 }
+
+output "sg_alb_id" {
+  description = "ID do Security Group do ALB"
+  value       = aws_security_group.alb.id
+}
+
+output "sg_backend_alb_id" {
+  description = "ID do Security Group do ALB interno do Backend"
+  value       = aws_security_group.backend_alb.id
+}

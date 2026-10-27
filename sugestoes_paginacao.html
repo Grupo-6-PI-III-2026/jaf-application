@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sugestões de Paginação - JAF Backend</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .intro {
+            padding: 30px 40px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .intro h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .benefits {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .benefit-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #667eea;
+        }
+
+        .benefit-card h3 {
+            color: #764ba2;
+            margin-bottom: 10px;
+        }
+
+        .suggestion {
+            margin: 40px;
+            padding: 30px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .suggestion-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .suggestion-number {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-right: 20px;
+        }
+
+        .suggestion-title {
+            flex: 1;
+        }
+
+        .suggestion-title h3 {
+            color: #333;
+            font-size: 1.4em;
+        }
+
+        .suggestion-title .file {
+            color: #666;
+            font-size: 0.9em;
+            font-family: 'Courier New', monospace;
+        }
+
+        .importance {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .importance h4 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .importance ul {
+            margin-left: 20px;
+            color: #856404;
+        }
+
+        .importance li {
+            margin-bottom: 5px;
+        }
+
+        .code-comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .code-block {
+            background: #f8f9fa;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .code-header {
+            background: #333;
+            color: white;
+            padding: 10px 15px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .code-header.before {
+            background: #dc3545;
+        }
+
+        .code-header.after {
+            background: #28a745;
+        }
+
+        .code-content {
+            padding: 15px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            line-height: 1.5;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .code-content pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .highlight {
+            background: #ffeb3b;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        .added {
+            background: #d4edda;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        .removed {
+            background: #f8d7da;
+            padding: 2px 4px;
+            border-radius: 3px;
+            text-decoration: line-through;
+        }
+
+        .footer {
+            background: #333;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .code-comparison {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 1.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Sugestões de Paginação</h1>
+            <p>Projeto JAF - Backend (Spring Boot)</p>
+        </div>
+
+        <div class="intro">
+            <h2>Por que implementar paginação?</h2>
+            <p>A paginação é essencial para aplicações que lidam com grandes volumes de dados. Atualmente, o projeto JAF retorna todas as registros de uma vez, o que pode causar problemas de performance e usabilidade.</p>
+
+            <div class="benefits">
+                <div class="benefit-card">
+                    <h3>Performance</h3>
+                    <p>Reduz a carga no banco de dados e na rede, carregando apenas os dados necessários</p>
+                </div>
+                <div class="benefit-card">
+                    <h3>Experiência do Usuário</h3>
+                    <p>Interface mais responsiva com carregamento progressivo de dados</p>
+                </div>
+                <div class="benefit-card">
+                    <h3>Escalabilidade</h3>
+                    <p>Permite que a aplicação cresça sem degradação de performance</p>
+                </div>
+                <div class="benefit-card">
+                    <h3>Redução de Custos</h3>
+                    <p>Menor consumo de memória e bandwidth no servidor e cliente</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sugestão 1: FuncionarioController -->
+        <div class="suggestion">
+            <div class="suggestion-header">
+                <div class="suggestion-number">1</div>
+                <div class="suggestion-title">
+                    <h3>FuncionarioController - Listar Funcionários</h3>
+                    <div class="file">FuncionarioController.java (linha 101-105)</div>
+                </div>
+            </div>
+
+            <div class="importance">
+                <h4>Por que é importante:</h4>
+                <ul>
+                    <li>Atualmente retorna TODOS os funcionários de uma vez</li>
+                    <li>Em uma empresa com 1000+ funcionários, isso pode causar lentidão</li>
+                    <li>Consumo excessivo de memória no servidor e no cliente</li>
+                    <li>Sem filtro ou ordenação, dificulta encontrar funcionários específicos</li>
+                </ul>
+            </div>
+
+            <div class="code-comparison">
+                <div class="code-block">
+                    <div class="code-header before">ANTES (Sem Paginação)</div>
+                    <div class="code-content">
+<pre>
+@GetMapping
+@PreAuthorize("hasAnyAuthority('VISUALIZAR_FUNCIONARIOS', 'CRIAR_ALOCACAO')")
+public ResponseEntity&lt;List&lt;FuncionarioListarDto&gt;&gt; listar() {
+    return ResponseEntity.ok(funcionarioService.listarTodos());
+}
+</pre>
+                    </div>
+                </div>
+                <div class="code-block">
+                    <div class="code-header after">DEPOIS (Com Paginação)</div>
+                    <div class="code-content">
+<pre>
+@GetMapping
+@PreAuthorize("hasAnyAuthority('VISUALIZAR_FUNCIONARIOS', 'CRIAR_ALOCACAO')")
+public ResponseEntity&lt;Page&lt;FuncionarioListarDto&gt;&gt; listar(
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "10") int size,
+        @RequestParam(defaultValue = "nome") String sortBy,
+        @RequestParam(defaultValue = "asc") String sortDir) {
+    return ResponseEntity.ok(funcionarioService.listarPaginado(page, size, sortBy, sortDir));
+}
+</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sugestão 2: FuncionarioService -->
+        <div class="suggestion">
+            <div class="suggestion-header">
+                <div class="suggestion-number">2</div>
+                <div class="suggestion-title">
+                    <h3>FuncionarioService - Implementação da Paginação</h3>
+                    <div class="file">FuncionarioService.java</div>
+                </div>
+            </div>
+
+            <div class="importance">
+                <h4>Por que é importante:</h4>
+                <ul>
+                    <li>Camada de serviço deve implementar a lógica de paginação</li>
+                    <li>Usar Pageable do Spring Data para facilitar implementação</li>
+                    <li>Permite ordenação dinâmica por diferentes campos</li>
+                    <li>Retorna metadados (total de páginas, total de elementos) para o frontend</li>
+                </ul>
+            </div>
+
+            <div class="code-comparison">
+                <div class="code-block">
+                    <div class="code-header before">ANTES (Sem Paginação)</div>
+                    <div class="code-content">
+<pre>
+public List&lt;FuncionarioListarDto&gt; listarTodos() {
+    List&lt;Funcionario&gt; funcionariosEncontrados = funcionarioRepository.findAll();
+    return funcionariosEncontrados.stream().map(FuncionarioMapper::of).toList();
+}
+</pre>
+                    </div>
+                </div>
+                <div class="code-block">
+                    <div class="code-header after">DEPOIS (Com Paginação)</div>
+                    <div class="code-content">
+<pre>
+public Page&lt;FuncionarioListarDto&gt; listarPaginado(int page, int size, String sortBy, String sortDir) {
+    Sort sort = sortDir.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
+    Pageable pageable = PageRequest.of(page, size, sort);
+    Page&lt;Funcionario&gt; funcionarios = funcionarioRepository.findAll(pageable);
+    return funcionarios.map(FuncionarioMapper::of);
+}
+</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sugestão 3: FuncionarioRepository -->
+        <div class="suggestion">
+            <div class="suggestion-header">
+                <div class="suggestion-number">3</div>
+                <div class="suggestion-title">
+                    <h3>FuncionarioRepository - Suporte a Pageable</h3>
+                    <div class="file">FuncionarioRepository.java</div>
+                </div>
+            </div>
+
+            <div class="importance">
+                <h4>Por que é importante:</h4>
+                <ul>
+                    <li>JpaRepository já suporta Pageable nativamente</li>
+                    <li>O Spring Data gera automaticamente a query SQL com LIMIT e OFFSET</li>
+                    <li>Adicionar método customizado para busca com filtros</li>
+                    <li>Melhora performance com índices no banco de dados</li>
+                </ul>
+            </div>
+
+            <div class="code-comparison">
+                <div class="code-block">
+                    <div class="code-header before">ANTES</div>
+                    <div class="code-content">
+<pre>
+public interface FuncionarioRepository extends JpaRepository&lt;Funcionario, Long&gt; {
+    boolean existsByNome(String nome);
+    Optional&lt;Funcionario&gt; findByEmailIgnoreCase(String email);
+}
+</pre>
+                    </div>
+                </div>
+                <div class="code-block">
+                    <div class="code-header after">DEPOIS</div>
+                    <div class="code-content">
+<pre>
+public interface FuncionarioRepository extends JpaRepository&lt;Funcionario, Long&gt; {
+    boolean existsByNome(String nome);
+    Optional&lt;Funcionario&gt; findByEmailIgnoreCase(String email);
+
+    // Adicionar métodos de busca com paginação
+    Page&lt;Funcionario&gt; findByNomeContainingIgnoreCase(String nome, Pageable pageable);
+    Page&lt;Funcionario&gt; findByCargoGlobal(Cargo cargo, Pageable pageable);
+}
+</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sugestão 4: ObraController -->
+        <div class="suggestion">
+            <div class="suggestion-header">
+                <div class="suggestion-number">4</div>
+                <div class="suggestion-title">
+                    <h3>ObraController - Listar Obras</h3>
+                    <div class="file">ObraController.java (linha 42-46)</div>
+                </div>
+            </div>
+
+            <div class="importance">
+                <h4>Por que é importante:</h4>
+                <ul>
+                    <li>Retorna todas as obras do usuário/admin de uma vez</li>
+                    <li>Admin pode ter acesso a centenas de obras</li>
+                    <li>Interface ficaria lenta ao renderizar muitas cards de obras</li>
+                    <li>Necessário filtrar por status, data, etc.</li>
+                </ul>
+            </div>
+
+            <div class="code-comparison">
+                <div class="code-block">
+                    <div class="code-header before">ANTES (Sem Paginação)</div>
+                    <div class="code-content">
+<pre>
+@GetMapping
+@PreAuthorize("hasAuthority('VISUALIZAR_OBRA')")
+public ResponseEntity&lt;List&lt;Obra&gt;&gt; listar(Authentication authentication) {
+    return ResponseEntity.ok(obraService.listarPorUsuario(authentication.getName()));
+}
+</pre>
+                    </div>
+                </div>
+                <div class="code-block">
+                    <div class="code-header after">DEPOIS (Com Paginação)</div>
+                    <div class="code-content">
+<pre>
+@GetMapping
+@PreAuthorize("hasAuthority('VISUALIZAR_OBRA')")
+public ResponseEntity&lt;Page&lt;Obra&gt;&gt; listar(
+        Authentication authentication,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "10") int size,
+        @RequestParam(required = false) String status) {
+    return ResponseEntity.ok(obraService.listarPaginadoPorUsuario(
+        authentication.getName(), page, size, status));
+}
+</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sugestão 5: GastoController -->
+        <div class="suggestion">
+            <div class="suggestion-header">
+                <div class="suggestion-number">5</div>
+                <div class="suggestion-title">
+                    <h3>GastoController - Listar Gastos</h3>
+                    <div class="file">GastoController.java (linha 32-37)</div>
+                </div>
+            </div>
+
+            <div class="importance">
+                <h4>Por que é importante:</h4>
+                <ul>
+                    <li>Gastos podem acumular rapidamente (milhares de registros)</li>
+                    <li>Atualmente usa findAll() sem paginação</li>
+                    <li>Relatórios financeiros precisam de filtros e paginação</li>
+                    <li>Impacto direto na performance de relatórios</li>
+                </ul>
+            </div>
+
+            <div class="code-comparison">
+                <div class="code-block">
+                    <div class="code-header before">ANTES (Sem Paginação)</div>
+                    <div class="code-content">
+<pre>
+@GetMapping
+@PreAuthorize("hasAuthority('VISUALIZAR_GASTOS')")
+public ResponseEntity&lt;List&lt;Gasto&gt;&gt; listar(Authentication authentication,
+                                          @RequestParam(required = false) Long obraId) {
+    return ResponseEntity.ok(gastoService.listarPorUsuario(authentication.getName(), obraId));
+}
+</pre>
+                    </div>
+                </div>
+                <div class="code-block">
+                    <div class="code-header after">DEPOIS (Com Paginação)</div>
+                    <div class="code-content">
+<pre>
+@GetMapping
+@PreAuthorize("hasAuthority('VISUALIZAR_GASTOS')")
+public ResponseEntity&lt;Page&lt;Gasto&gt;&gt; listar(
+        Authentication authentication,
+        @RequestParam(required = false) Long obraId,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size,
+        @RequestParam(defaultValue = "dtGasto") String sortBy,
+        @RequestParam(required = false) String categoria,
+        @RequestParam(required = false) String metodoPagamento) {
+    return ResponseEntity.ok(gastoService.listarPaginadoPorUsuario(
+        authentication.getName(), obraId, page, size, sortBy, categoria, metodoPagamento));
+}
+</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sugestão 6: GastoRepository -->
+        <div class="suggestion">
+            <div class="suggestion-header">
+                <div class="suggestion-number">6</div>
+                <div class="suggestion-title">
+                    <h3>GastoRepository - Queries Paginadas</h3>
+                    <div class="file">GastoRepository.java</div>
+                </div>
+            </div>
+
+            <div class="importance">
+                <h4>Por que é importante:</h4>
+                <ul>
+                    <li>Atualmente tem métodos que retornam List completa</li>
+                    <li>Adicionar versões paginadas dos métodos existentes</li>
+                    <li>Métodos com filtros compostos (categoria + obra + data)</li>
+                    <li>Melhora performance drasticamente em consultas financeiras</li>
+                </ul>
+            </div>
+
+            <div class="code-comparison">
+                <div class="code-block">
+                    <div class="code-header before">ANTES</div>
+                    <div class="code-content">
+<pre>
+public interface GastoRepository extends JpaRepository&lt;Gasto, Long&gt; {
+    List&lt;Gasto&gt; findByObraId(Long obraId);
+    List&lt;Gasto&gt; findByObraIdIn(Collection&lt;Long&gt; obraIds);
+    List&lt;Gasto&gt; findByObraIdAndEtapa(Long obraId, String etapa);
+    List&lt;Gasto&gt; findByObraIdAndMetodoPagamento(Long obraId, String metodoPagamento);
+    List&lt;Gasto&gt; findByObraIdAndReembolsoConcluidoIsNotNull(Long obraId);
+}
+</pre>
+                    </div>
+                </div>
+                <div class="code-block">
+                    <div class="code-header after">DEPOIS</div>
+                    <div class="code-content">
+<pre>
+public interface GastoRepository extends JpaRepository&lt;Gasto, Long&gt; {
+    // Manter métodos existentes para compatibilidade
+    List&lt;Gasto&gt; findByObraId(Long obraId);
+    List&lt;Gasto&gt; findByObraIdIn(Collection&lt;Long&gt; obraIds);
+
+    // Adicionar versões paginadas
+    Page&lt;Gasto&gt; findByObraId(Long obraId, Pageable pageable);
+    Page&lt;Gasto&gt; findByObraIdIn(Collection&lt;Long&gt; obraIds, Pageable pageable);
+    Page&lt;Gasto&gt; findByObraIdAndCategoria(Long obraId, String categoria, Pageable pageable);
+    Page&lt;Gasto&gt; findByObraIdAndMetodoPagamento(Long obraId, String metodoPagamento, Pageable pageable);
+    Page&lt;Gasto&gt; findByObraIdAndDtGastoBetween(Long obraId, LocalDate inicio, LocalDate fim, Pageable pageable);
+}
+</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sugestão 7: PresencaController -->
+        <div class="suggestion">
+            <div class="suggestion-header">
+                <div class="suggestion-number">7</div>
+                <div class="suggestion-title">
+                    <h3>PresencaController - Listar Presenças</h3>
+                    <div class="file">PresencaController.java (linha 34-41)</div>
+                </div>
+            </div>
+
+            <div class="importance">
+                <h4>Por que é importante:</h4>
+                <ul>
+                    <li>Este endpoint lista por obra e data específica (menos crítico)</li>
+                    <li>Mas seria útil adicionar endpoint para histórico completo</li>
+                    <li>Permitir paginação por período de tempo</li>
+                    <li>Filtros por funcionário específico ou status</li>
+                </ul>
+            </div>
+
+            <div class="code-comparison">
+                <div class="code-block">
+                    <div class="code-header before">ANTES (Apenas por data específica)</div>
+                    <div class="code-content">
+<pre>
+@GetMapping("/obra/{obraId}/data/{data}")
+@PreAuthorize("hasAuthority('VISUALIZAR_PRESENCAS')")
+public ResponseEntity&lt;List&lt;PresencaListarDto&gt;&gt; listarPorObraEData(
+        @PathVariable Long obraId,
+        @PathVariable String data) {
+    LocalDate dataLocalDate = LocalDate.parse(data);
+    return ResponseEntity.ok(presencaService.listarPorObraEData(obraId, dataLocalDate));
+}
+</pre>
+                    </div>
+                </div>
+                <div class="code-block">
+                    <div class="code-header after">DEPOIS (Adicionar endpoint histórico)</div>
+                    <div class="code-content">
+<pre>
+// Manter endpoint existente para dia específico
+@GetMapping("/obra/{obraId}/data/{data}")
+@PreAuthorize("hasAuthority('VISUALIZAR_PRESENCAS')")
+public ResponseEntity&lt;List&lt;PresencaListarDto&gt;&gt; listarPorObraEData(
+        @PathVariable Long obraId,
+        @PathVariable String data) {
+    LocalDate dataLocalDate = LocalDate.parse(data);
+    return ResponseEntity.ok(presencaService.listarPorObraEData(obraId, dataLocalDate));
+}
+
+// NOVO: Endpoint para histórico com paginação
+@GetMapping("/obra/{obraId}/historico")
+@PreAuthorize("hasAuthority('VISUALIZAR_PRESENCAS')")
+public ResponseEntity&lt;Page&lt;PresencaListarDto&gt;&gt; listarHistorico(
+        @PathVariable Long obraId,
+        @RequestParam String dataInicio,
+        @RequestParam String dataFim,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size) {
+    LocalDate inicio = LocalDate.parse(dataInicio);
+    LocalDate fim = LocalDate.parse(dataFim);
+    return ResponseEntity.ok(presencaService.listarHistoricoPaginado(obraId, inicio, fim, page, size));
+}
+</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sugestão 8: DTO de Resposta Paginada -->
+        <div class="suggestion">
+            <div class="suggestion-header">
+                <div class="suggestion-number">8</div>
+                <div class="suggestion-title">
+                    <h3>DTO de Resposta Paginada Personalizada</h3>
+                    <div class="file">Novo arquivo: PaginatedResponseDto.java</div>
+                </div>
+            </div>
+
+            <div class="importance">
+                <h4>Por que é importante:</h4>
+                <ul>
+                    <li>Page do Spring Data tem estrutura complexa</li>
+                    <li>DTO customizado simplifica resposta para o frontend</li>
+                    <li>Permite adicionar metadados customizados</li>
+                    <li>Melhor controle sobre o que é exposto na API</li>
+                </ul>
+            </div>
+
+            <div class="code-comparison">
+                <div class="code-block">
+                    <div class="code-header before">ANTES (Usar Page diretamente)</div>
+                    <div class="code-content">
+<pre>
+// Response padrão do Spring Data Page:
+{
+  "content": [...],
+  "pageable": {
+    "pageNumber": 0,
+    "pageSize": 10,
+    "sort": {...},
+    "offset": 0,
+    "paged": true,
+    "unpaged": false
+  },
+  "totalPages": 5,
+  "totalElements": 50,
+  "last": false,
+  "first": true,
+  "size": 10,
+  "number": 0,
+  "sort": {...},
+  "numberOfElements": 10,
+  "empty": false
+}
+</pre>
+                    </div>
+                </div>
+                <div class="code-block">
+                    <div class="code-header after">DEPOIS (DTO Customizado)</div>
+                    <div class="code-content">
+<pre>
+public class PaginatedResponseDto&lt;T&gt; {
+    private List&lt;T&gt; data;
+    private int currentPage;
+    private int pageSize;
+    private long totalElements;
+    private int totalPages;
+    private boolean hasNext;
+    private boolean hasPrevious;
+    
+    // Construtor estático para converter Page
+    public static &lt;T&gt; PaginatedResponseDto&lt;T&gt; of(Page&lt;T&gt; page) {
+        PaginatedResponseDto&lt;T&gt; dto = new PaginatedResponseDto&lt;&gt;();
+        dto.setData(page.getContent());
+        dto.setCurrentPage(page.getNumber());
+        dto.setPageSize(page.getSize());
+        dto.setTotalElements(page.getTotalElements());
+        dto.setTotalPages(page.getTotalPages());
+        dto.setHasNext(page.hasNext());
+        dto.setHasPrevious(page.hasPrevious());
+        return dto;
+    }
+}
+
+// Response simplificada:
+{
+  "data": [...],
+  "currentPage": 0,
+  "pageSize": 10,
+  "totalElements": 50,
+  "totalPages": 5,
+  "hasNext": true,
+  "hasPrevious": false
+}
+</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sugestão 9: Tratamento de Exceções -->
+        <div class="suggestion">
+            <div class="suggestion-header">
+                <div class="suggestion-number">9</div>
+                <div class="suggestion-title">
+                    <h3>Validação de Parâmetros de Paginação</h3>
+                    <div class="file">GlobalExceptionHandler.java</div>
+                </div>
+            </div>
+
+            <div class="importance">
+                <h4>Por que é importante:</h4>
+                <ul>
+                    <li>Prevenir page negativo ou size muito grande</li>
+                    <li>Evitar ataques de negação de serviço</li>
+                    <li>Validar campos de ordenação</li>
+                    <li>Mensagens de erro claras para o cliente</li>
+                </ul>
+            </div>
+
+            <div class="code-comparison">
+                <div class="code-block">
+                    <div class="code-header before">ANTES (Sem validação específica)</div>
+                    <div class="code-content">
+<pre>
+// Parâmetros não validados podem causar:
+// - page = -100 (erro)
+// - size = 1000000 (sobrecarga)
+// - sortBy = campo_inexistente (erro SQL)
+</pre>
+                    </div>
+                </div>
+                <div class="code-block">
+                    <div class="code-header after">DEPOIS (Com validação)</div>
+                    <div class="code-content">
+<pre>
+@ExceptionHandler(MethodArgumentNotValidException.class)
+public ResponseEntity&lt;ErrorResponse&gt; handleValidationExceptions(
+        MethodArgumentNotValidException ex) {
+    // Validação existente
+}
+
+// NOVO: Handler para parâmetros de paginação inválidos
+@ExceptionHandler(IllegalArgumentException.class)
+public ResponseEntity&lt;ErrorResponse&gt; handleIllegalArgument(
+        IllegalArgumentException ex) {
+    ErrorResponse error = new ErrorResponse();
+    error.setMessage("Parâmetro inválido: " + ex.getMessage());
+    error.setStatus(HttpStatus.BAD_REQUEST.value());
+    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+}
+
+// Adicionar validação no controller:
+@GetMapping
+public ResponseEntity&lt;Page&lt;FuncionarioListarDto&gt;&gt; listar(
+        @RequestParam(defaultValue = "0") @Min(0) int page,
+        @RequestParam(defaultValue = "10") @Min(1) @Max(100) int size,
+        @RequestParam(defaultValue = "nome") String sortBy) {
+    // Validar sortBy contra lista de campos permitidos
+    if (!isValidSortField(sortBy)) {
+        throw new IllegalArgumentException("Campo de ordenação inválido: " + sortBy);
+    }
+    return ResponseEntity.ok(funcionarioService.listarPaginado(page, size, sortBy));
+}
+</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sugestão 10: Frontend Integration -->
+        <div class="suggestion">
+            <div class="suggestion-header">
+                <div class="suggestion-number">10</div>
+                <div class="suggestion-title">
+                    <h3>Integração com Frontend</h3>
+                    <div class="file">Exemplo de chamada API (React)</div>
+                </div>
+            </div>
+
+            <div class="importance">
+                <h4>Por que é importante:</h4>
+                <ul>
+                    <li>Frontend precisa adaptar para usar paginação</li>
+                    <li>Implementar componentes de paginação (paginator)</li>
+                    <li>Gerenciar estado de paginação</li>
+                    <li>Implementar infinite scroll ou paginação tradicional</li>
+                </ul>
+            </div>
+
+            <div class="code-comparison">
+                <div class="code-block">
+                    <div class="code-header before">ANTES (Chamada simples)</div>
+                    <div class="code-content">
+<pre>
+// React - Antes
+const fetchFuncionarios = async () => {
+    const response = await api.get('/funcionarios');
+    setFuncionarios(response.data);
+};
+
+// Renderiza todos de uma vez
+{funcionarios.map(func => (
+    &lt;FuncionarioCard key={func.id} funcionario={func} /&gt;
+))}
+</pre>
+                    </div>
+                </div>
+                <div class="code-block">
+                    <div class="code-header after">DEPOIS (Com paginação)</div>
+                    <div class="code-content">
+<pre>
+// React - Depois
+const [page, setPage] = useState(0);
+const [totalPages, setTotalPages] = useState(0);
+
+const fetchFuncionarios = async (pageNum = 0) => {
+    const response = await api.get('/funcionarios', {
+        params: {
+            page: pageNum,
+            size: 10,
+            sortBy: 'nome',
+            sortDir: 'asc'
+        }
+    });
+    setFuncionarios(response.data.data);
+    setTotalPages(response.data.totalPages);
+    setPage(response.data.currentPage);
+};
+
+// Componente de paginação
+&lt;Pagination&gt;
+    &lt;Pagination.Prev onClick={() => fetchFuncionarios(page - 1)} disabled={page === 0} /&gt;
+    &lt;Pagination.Item active&gt;{page + 1}&lt;/Pagination.Item&gt;
+    &lt;Pagination.Next onClick={() => fetchFuncionarios(page + 1)} disabled={page === totalPages - 1} /&gt;
+&lt;/Pagination&gt;
+</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Documentação gerada para análise de implementação de paginação no projeto JAF</p>
+            <p>Total de sugestões: 10 endpoints e melhorias identificadas</p>
+        </div>
+    </div>
+</body>
+</html>

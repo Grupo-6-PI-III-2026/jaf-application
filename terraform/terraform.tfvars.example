@@ -20,6 +20,12 @@ private_subnet_rds_cidr     = "10.0.4.0/24"
 availability_zone           = "us-east-1a"
 secondary_availability_zone = "us-east-1b"
 
+# Laboratório: HTTP habilitado, sem certificado ACM
+enable_https = false
+backend_public_access = true
+# Produção: informe um ARN ACM válido e altere enable_https para true
+# acm_certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/SEU-CERTIFICADO"
+
 # ── EC2 ──────────────────────────────────────────────────────
 instance_type   = "t3.micro"
 # Caminho para sua chave pública SSH (gere com: ssh-keygen -t rsa -b 4096)

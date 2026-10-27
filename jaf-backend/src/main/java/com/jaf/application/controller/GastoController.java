@@ -5,6 +5,7 @@ import com.jaf.application.model.Gasto;
 import com.jaf.application.service.GastoService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,12 +29,27 @@ public class GastoController {
     public ResponseEntity<Gasto> criar(@Valid @RequestBody GastoDto dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(gastoService.criar(dto));
     }
-
+ 
     @GetMapping
     @PreAuthorize("hasAuthority('VISUALIZAR_GASTOS')")
     public ResponseEntity<List<Gasto>> listar(Authentication authentication,
                                               @RequestParam(required = false) Long obraId) {
         return ResponseEntity.ok(gastoService.listarPorUsuario(authentication.getName(), obraId));
+    }
+
+    @GetMapping("/paginado")
+    @PreAuthorize("hasAuthority('VISUALIZAR_GASTOS')")
+    public ResponseEntity<Page<Gasto>> listarPaginado(
+            Authentication authentication,
+            @RequestParam(required = false) Long obraId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "dtGasto") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir,
+            @RequestParam(required = false) String categoria,
+            @RequestParam(required = false) String metodoPagamento) {
+        return ResponseEntity.ok(gastoService.listarPaginadoPorUsuario(
+                authentication.getName(), obraId, page, size, sortBy, sortDir, categoria, metodoPagamento));
     }
 
     @GetMapping("/{id}")
