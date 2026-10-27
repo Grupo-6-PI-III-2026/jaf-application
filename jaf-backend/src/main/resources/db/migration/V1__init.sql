@@ -1,5 +1,5 @@
 CREATE TABLE funcionario (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     nome VARCHAR(255),
     email VARCHAR(255),
     senha VARCHAR(255),
@@ -7,7 +7,7 @@ CREATE TABLE funcionario (
 );
 
 CREATE TABLE obra (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     titulo VARCHAR(255),
     orcamento VARCHAR(255),
     status VARCHAR(255),
@@ -16,7 +16,7 @@ CREATE TABLE obra (
 );
 
 CREATE TABLE alocacao_obra (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     cargo VARCHAR(50),
     funcionario_id BIGINT,
     obra_id BIGINT,
@@ -25,7 +25,7 @@ CREATE TABLE alocacao_obra (
 );
 
 CREATE TABLE gasto (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     descricao VARCHAR(255),
     categoria VARCHAR(255),
     metodo_pagamento VARCHAR(255),
@@ -39,7 +39,7 @@ CREATE TABLE gasto (
 );
 
 CREATE TABLE relatorio (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     titulo VARCHAR(255),
     dt_emissao DATE,
     funcionario_id BIGINT,

@@ -8,10 +8,10 @@ import com.jaf.application.enums.StatusOcr;
 import com.jaf.application.exceptions.NotFoundException;
 import com.jaf.application.model.OcrProcessamento;
 import com.jaf.application.repository.OcrProcessamentoRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.amqp.AmqpConnectException;
@@ -40,11 +40,24 @@ class OcrServiceTest {
     @Mock
     private OcrProcessamentoRepository processamentoRepository;
 
-    @InjectMocks
     private OcrService ocrService;
 
     private final MockMultipartFile notaValida =
             new MockMultipartFile("arquivo", "nota.png", "image/png", new byte[]{1, 2, 3, 4});
+
+    @BeforeEach
+    void setUp() {
+        ocrService = new OcrService(rabbitTemplate, processamentoRepository, "http://ocr.invalid/api/ocr");
+    }
+
+    @Test
+    void process_arquivoVazio_lancaErroSemChamarServicoExterno() {
+        MockMultipartFile vazio = new MockMultipartFile("file", "vazio.png", "image/png", new byte[0]);
+
+        assertThrows(IllegalArgumentException.class, () -> ocrService.process(vazio));
+        assertThrows(IllegalArgumentException.class, () -> ocrService.process(null));
+        verifyNoInteractions(rabbitTemplate, processamentoRepository);
+    }
 
     @Test
     void processarNota_publicaSolicitacaoERetornaProcessando() {
