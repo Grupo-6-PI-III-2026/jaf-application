@@ -23,6 +23,12 @@
   overflow-y: auto;
 }
 
+.cardsUsuarios {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .listaUsuarios h2 {
   color: #fff;
   font-size: 16px;
@@ -490,7 +496,7 @@
   font-size: 14px;
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1279.98px) {
   .container {
     flex-direction: column;
   }
@@ -498,21 +504,25 @@
   .listaUsuarios {
     width: 100%;
     min-width: unset;
-    max-height: 200px;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    overflow-y: hidden;
+    max-height: none;
+    overflow: visible;
     padding: 16px;
+  }
+
+  .cardsUsuarios {
+    flex-direction: row;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    padding-bottom: 4px;
   }
 
   .usuarioCard {
     min-width: 240px;
+    flex-shrink: 0;
+    scroll-snap-align: start;
   }
 
-  .listaUsuarios h2,
-  .listaUsuarios > p,
-  .buscaUsuarios {
+  .listaUsuarios > p {
     display: none;
   }
 
@@ -521,14 +531,14 @@
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
   .container {
-    padding: 12px;
+    padding: 0;
     gap: 12px;
   }
 
-  .listaUsuarios {
-    max-height: 160px;
+  .usuarioCard {
+    min-width: min(240px, 80vw);
   }
 
   .seletorCargo {

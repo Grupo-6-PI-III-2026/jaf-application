@@ -12,6 +12,7 @@ import {
   resolverPeriodo,
   type PeriodoFiltroValue,
 } from "../../Components/PeriodoFiltro/periodUtils";
+import { Responsive } from "../../Components/Responsive/Responsive";
 
 const formatarCargoObra = (cargo: string) =>
   cargo.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (letra) => letra.toUpperCase());
@@ -193,6 +194,34 @@ export default function GestaoPresenca() {
     }
   }
 
+  function renderizarStatus(colaborador: Colaborador) {
+    const [texto, classe] = colaborador.id
+      ? colaborador.presente ? ["Presente", styles.presente] : ["Ausente", styles.ausente]
+      : ["Sem registro", styles.semRegistro];
+    return <span className={`${styles.status} ${classe}`}>{texto}</span>;
+  }
+
+  function renderizarAcoes(colaborador: Colaborador) {
+    const salvando = salvandoId === chaveLinha(colaborador);
+    const semPermissao = colaborador.id ? !podeEditar : !podeRegistrar || modoPeriodo;
+
+    return (
+      <div className={styles.acoes}>
+        <button type="button" onClick={() => salvarStatus(colaborador, true)} disabled={salvando || semPermissao}>
+          Presente
+        </button>
+        <button type="button" onClick={() => salvarStatus(colaborador, false)} disabled={salvando || semPermissao}>
+          Ausente
+        </button>
+        {colaborador.id && (
+          <button type="button" className={styles.botaoPerigo} onClick={() => excluirRegistro(colaborador)} disabled={salvando || !podeDeletar} aria-label={`Excluir presença de ${colaborador.funcionarioNome}`}>
+            <Trash2 size={14} />
+          </button>
+        )}
+      </div>
+    );
+  }
+
   return (
     <main className={styles.pagina}>
       <header className={styles.header}>
@@ -289,6 +318,27 @@ export default function GestaoPresenca() {
         ) : colaboradoresFiltrados.length === 0 ? (
           <div className={styles.estado}>Nenhum colaborador encontrado para os filtros selecionados.</div>
         ) : (
+          <>
+          <Responsive max="sm">
+            <ul className={styles.listaCards}>
+              {colaboradoresFiltrados.map((colaborador) => (
+                <li key={colaborador.funcionarioId} className={styles.itemCard}>
+                  <div className={styles.itemCardTopo}>
+                    <div className={styles.funcionarioCell}>
+                      <span>{colaborador.funcionarioNome.charAt(0).toUpperCase()}</span>
+                      <div>
+                        <strong>{colaborador.funcionarioNome}</strong>
+                        <small>{formatarCargoObra(colaborador.funcionarioCargo)}</small>
+                      </div>
+                    </div>
+                    {renderizarStatus(colaborador)}
+                  </div>
+                  {renderizarAcoes(colaborador)}
+                </li>
+              ))}
+            </ul>
+          </Responsive>
+          <Responsive min="md">
           <div className={styles.tabelaScroll}>
             <table className={styles.tabela}>
               <thead>
@@ -375,6 +425,8 @@ export default function GestaoPresenca() {
               </tbody>
             </table>
           </div>
+          </Responsive>
+          </>
         )}
       </section>
     </main>

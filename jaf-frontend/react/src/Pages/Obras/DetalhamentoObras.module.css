@@ -868,18 +868,107 @@
   color: #333 !important; 
 }
 
-@media (max-width: 900px) {
-  .cabecalho,
-  .financeiroTopo,
-  .paginacao {
+.inputDataPresenca {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  background: #fff;
+}
+
+/* ---------- Lista em cards (telas menores que lg) ---------- */
+.listaCards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.itemCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #e9ecef;
+  font-size: 13.5px;
+}
+
+.itemCardTopo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.itemCardTopo .descricaoDestaque {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.itemCardTopo .celulaValor {
+  flex-shrink: 0;
+}
+
+.itemCardData {
+  flex-shrink: 0;
+  color: #6c757d;
+  font-size: 12px;
+}
+
+.itemCardDetalhes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px 16px;
+  margin: 0;
+}
+
+.itemCardDetalhes dt {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #6c757d;
+  text-transform: uppercase;
+}
+
+.itemCardDetalhes dd {
+  margin: 2px 0 0;
+  color: #495057;
+}
+
+.itemCardVazio {
+  padding: 2rem 16px;
+  text-align: center;
+  color: #495057;
+}
+
+@media (max-width: 1023.98px) {
+  .financeiroTopo {
     align-items: flex-start;
     flex-direction: column;
     gap: 14px;
   }
 
-  .cardObra,
-  .metricas {
-    grid-template-columns: 1fr;
+  .financeiroControles {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .pagina {
+    padding: 0;
+    background: transparent;
+    min-height: auto;
+  }
+
+  .cabecalho,
+  .paginacao {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .cabecalhoEsquerda {
+    display: none;
   }
 
   .cardObra {
@@ -888,27 +977,81 @@
 
   .cardObraImagem {
     width: 100%;
-    height: 190px;
+    height: 180px;
+  }
+
+  .cardObraInformacoes {
+    padding: 18px;
+  }
+
+  .cardObraTitulo {
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .cardObraTitulo h1 {
+    font-size: 20px;
   }
 
   .metricas {
-    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
   }
 
-  .financeiroControles,
+  .metricaCard {
+    padding: 18px;
+  }
+
+  .metricaValor,
+  .metricaValorDestaque {
+    font-size: 22px;
+  }
+
   .cabecalhoAcoes {
     width: 100%;
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .botaoAdicionarGasto {
+    justify-content: center;
+  }
+
+  .financeiroControles > * {
+    flex: 1 1 auto;
+  }
+
+  .botaoFiltro {
+    justify-content: center;
   }
 
   .campoBusca,
   .inputBusca,
   .inputFiltro {
     width: 100%;
+    flex-basis: 100%;
+  }
+
+  .paginacaoBotoes {
+    flex-wrap: wrap;
+  }
+
+  .modalOverlay {
+    padding: 12px;
+    align-items: flex-end;
+  }
+
+  .modalGasto {
+    max-height: calc(100dvh - 24px);
+  }
+
+  .modalHeader {
+    padding: 18px;
   }
 
   .modalGrid {
     grid-template-columns: 1fr;
+    padding: 18px;
   }
 
   .notaFiscalBox {
@@ -918,5 +1061,14 @@
 
   .checkboxLinha {
     grid-column: span 1;
+  }
+
+  .modalFooter {
+    flex-direction: column-reverse;
+    padding: 0 18px 18px;
+  }
+
+  .modalFooter button {
+    justify-content: center;
   }
 }

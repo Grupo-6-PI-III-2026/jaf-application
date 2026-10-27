@@ -289,7 +289,8 @@ export default function Permissoes() {
         {isLoading ? (
           <div className={styles.loading}>Carregando...</div>
         ) : (
-          funcionariosFiltrados.map((user) => (
+          <div className={styles.cardsUsuarios}>
+          {funcionariosFiltrados.map((user) => (
             <div
               key={user.id}
               className={`${styles.usuarioCard} ${selectedUser?.id === user.id ? styles.usuarioCardAtivo : ""}`}
@@ -314,7 +315,8 @@ export default function Permissoes() {
                 </span>
               )}
             </div>
-          ))
+          ))}
+          </div>
         )}
       </div>
 

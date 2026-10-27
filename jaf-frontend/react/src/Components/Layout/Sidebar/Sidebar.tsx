@@ -5,6 +5,7 @@ import {
   UserPlus,
   HardHat,
   Shield,
+  X,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import styles from "./Sidebar.module.css";
@@ -30,7 +31,13 @@ const menuSections = [
   },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  recolhivel?: boolean;
+  aberta?: boolean;
+  onNavegar?: () => void;
+}
+
+export function Sidebar({ recolhivel = false, aberta = false, onNavegar }: SidebarProps) {
   const { user } = useUser();
   const avatarUrl = user?.fotoUrl || DEFAULT_AVATAR_URL;
   const userName = user?.nome ?? "Usuario";
@@ -43,7 +50,12 @@ export function Sidebar() {
     .filter((section) => section.items.length > 0);
 
   return (
-    <div className={styles.sidebar}>
+    <aside
+      id="menu-principal"
+      aria-label="Menu principal"
+      className={`${styles.sidebar} ${recolhivel ? styles.recolhivel : ""} ${aberta ? styles.aberta : ""}`}
+      inert={recolhivel && !aberta}
+    >
       {/* Logo e nome da empresa */}
       <div className={styles.margin}>
         <div className={styles.container}>
@@ -54,6 +66,11 @@ export function Sidebar() {
             <h1>JAF CONSTRUTORA</h1>
             <p> Gestão de gastos</p>
           </div>
+          {recolhivel && (
+            <button type="button" className={styles.botaoFechar} onClick={onNavegar} aria-label="Fechar menu">
+              <X size={20} />
+            </button>
+          )}
         </div>
       </div>
       {/* Menu de navegação */}
@@ -63,7 +80,7 @@ export function Sidebar() {
             <span className={styles.navSectionTitle}>{section.title}</span>
             {section.items.map((item) => (
               <div key={item.label} className={styles.menuItem}>
-                <NavLink to={item.path}>
+                <NavLink to={item.path} onClick={onNavegar}>
                   <item.icon />
                   <span>{item.label}</span>
                 </NavLink>
@@ -83,12 +100,13 @@ export function Sidebar() {
         <NavLink
           className={styles.notificationBtn}
           to="/perfil"
+          onClick={onNavegar}
           title="Perfil"
           aria-label="Ir para perfil"
         >
           <Settings />
         </NavLink>
       </div>
-    </div>
+    </aside>
   );
 }

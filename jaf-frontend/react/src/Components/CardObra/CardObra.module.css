@@ -60,6 +60,7 @@
   font-size: 18px;
   font-weight: 700;
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .local {
@@ -180,7 +181,7 @@
   transform: translateY(-1px);
 }
 
-@media (max-width: 900px) {
+@media (max-width: 767.98px) {
   .card {
     flex-direction: column;
   }

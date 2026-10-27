@@ -4,6 +4,7 @@ import styles from "./Login.module.css";
 import { authService } from "../../../Service/Auth/Login/authService";
 import { useUser } from "../../../Context/useUser";
 import { toast } from "sonner";
+import { Responsive } from "../../../Components/Responsive/Responsive";
 
 function Login() {
   const navigate = useNavigate();
@@ -48,6 +49,7 @@ function Login() {
 
   return (
     <div className={styles.loginRoot}>
+      <Responsive min="lg">
       <div className={styles.loginLeft}>
         <div className={styles.loginLeftBg} />
 
@@ -74,10 +76,17 @@ function Login() {
           © 2026 JAF Construtora. Todos os direitos reservados.
         </p>
       </div>
+      </Responsive>
 
       <div className={styles.loginRightContainer}>
         <div className={styles.loginRight}>
           <div className={styles.loginCard}>
+            <Responsive max="md">
+              <div className={styles.logoCompacto}>
+                <img src="/assets/Geral/Logo.png" alt="" />
+                <span>JAF Construtora</span>
+              </div>
+            </Responsive>
             <h2 className={styles.cardTitle}>Bem-vindo</h2>
             <p className={styles.cardSub}>
               Entre com suas credenciais para acessar o painel.
