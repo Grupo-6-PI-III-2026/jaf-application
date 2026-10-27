@@ -9,5 +9,12 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="Maven: org.springframework.data:spring-data-commons:3.4.5" level="project" />
+    <orderEntry type="library" name="Maven: org.slf4j:slf4j-api:2.0.17" level="project" />
+    <orderEntry type="library" name="Maven: org.springframework:spring-context:6.2.6" level="project" />
+    <orderEntry type="library" name="Maven: org.springframework:spring-web:6.2.6" level="project" />
+    <orderEntry type="library" name="Maven: io.swagger.core.v3:swagger-annotations-jakarta:2.2.30" level="project" />
+    <orderEntry type="library" name="Maven: org.springframework.security:spring-security-core:6.4.5" level="project" />
+    <orderEntry type="library" name="Maven: jakarta.validation:jakarta.validation-api:3.0.2" level="project" />
   </component>
 </module>
