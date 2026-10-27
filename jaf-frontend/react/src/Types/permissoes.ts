@@ -5,6 +5,7 @@ export interface FuncionarioPermissoes {
   nome: string;
   email: string;
   cargo: Cargo | null;
+  createdAt?: string | null;
 }
 
 export interface Permissao {

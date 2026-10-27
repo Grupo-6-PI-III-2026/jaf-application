@@ -25,6 +25,13 @@ export const presencaService = {
     return response.data;
   },
 
+  listarPorObraEPeriodo: async (obraId: number, from: string, to: string): Promise<Colaborador[]> => {
+    const response = await api.get(`/presencas/obra/${obraId}/periodo`, {
+      params: { from, to },
+    });
+    return response.data;
+  },
+
   criarPresenca: async (payload: PresencaRequest) => {
     const response = await api.post("/presencas", payload);
     return response.data;

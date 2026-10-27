@@ -29,6 +29,19 @@ services:
     ports:
       - "8000:8000"
 
+  ocr-worker:
+    build: ./POC-API
+    container_name: ocr-worker
+    restart: always
+    command: ["python", "-u", "-m", "app.infrastructure.messaging.consumer"]
+    env_file:
+      - .env
+    environment:
+      RABBITMQ_HOST: rabbitmq
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
   backend:
     build:
       context: ./jaf-backend
@@ -44,12 +57,15 @@ services:
       SPRING_DATASOURCE_USERNAME: "${DB_USER:-postgres}"
       SPRING_DATASOURCE_PASSWORD: "${DB_PASSWORD}"
       OCR_SERVICE_URL: "http://ocr-service:8000/api/ocr"
+      RABBITMQ_HOST: rabbitmq
     volumes:
       - ./data/uploads:/app/uploads
     depends_on:
       ocr-service:
         condition: service_started
       jaf-db:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
 
   backend-test:
@@ -81,5 +97,27 @@ services:
     depends_on:
       - backend
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    restart: always
+    env_file:
+      - .env
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes: 
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
 volumes:
   db_data:
+  rabbitmq_data:

@@ -25,6 +25,7 @@ export interface FuncionarioResponseDto {
   email: string;
   cargo: Cargo;
   fotoUrl: string | null;
+  createdAt?: string | null;
 }
 
 export interface JwtPayload {

@@ -5,41 +5,63 @@ import styles from "./GestaoPresenca.module.css";
 import { authService } from "../../Service/Auth/Login/authService";
 import { obraService, type Obra } from "../../Service/Obras/obraService";
 import { presencaService, type Colaborador } from "../../Service/Presencas/presencaService";
+import PeriodoFiltro from "../../Components/PeriodoFiltro/PeriodoFiltro";
+import {
+  hojeIso,
+  periodoFiltroInicial,
+  resolverPeriodo,
+  type PeriodoFiltroValue,
+} from "../../Components/PeriodoFiltro/periodUtils";
 import { Responsive } from "../../Components/Responsive/Responsive";
 
-const hojeIso = () => {
-  const partes = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Sao_Paulo",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date());
-  const getParte = (tipo: string) => partes.find((parte) => parte.type === tipo)?.value ?? "";
-  return `${getParte("year")}-${getParte("month")}-${getParte("day")}`;
-};
+const formatarCargoObra = (cargo: string) =>
+  cargo.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (letra) => letra.toUpperCase());
 
-const formatarCargoObra = (cargo: string) => cargo.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (letra) => letra.toUpperCase());
+const formatarData = (data: string) =>
+  new Date(`${data}T00:00:00`).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
 
 export default function GestaoPresenca() {
   const [obras, setObras] = useState<Obra[]>([]);
   const [obraId, setObraId] = useState<number | null>(null);
   const [data, setData] = useState(hojeIso());
+  const [periodo, setPeriodo] = useState<PeriodoFiltroValue>({
+    ...periodoFiltroInicial(),
+    preset: "HOJE",
+  });
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
   const [busca, setBusca] = useState("");
   const [statusFiltro, setStatusFiltro] = useState("TODOS");
   const [carregando, setCarregando] = useState(true);
-  const [salvandoId, setSalvandoId] = useState<number | null>(null);
+  const [salvandoId, setSalvandoId] = useState<string | null>(null);
 
   const podeRegistrar = authService.hasAuthority("REGISTRAR_PRESENCA");
   const podeEditar = authService.hasAuthority("EDITAR_PRESENCA");
   const podeDeletar = authService.hasAuthority("DELETAR_PRESENCA");
 
   const obraSelecionada = obras.find((obra) => obra.id === obraId) ?? null;
+  const modoPeriodo = periodo.preset === "7_DIAS" || periodo.preset === "PERSONALIZADO";
+  const intervalo = resolverPeriodo(periodo);
 
-  const carregarPresencas = useCallback(async (obraSelecionadaId: number, dataSelecionada: string) => {
-    const dados = await presencaService.listarPorObraEData(obraSelecionadaId, dataSelecionada);
+  const chaveLinha = (colaborador: Colaborador) =>
+    `${colaborador.id ?? "n"}-${colaborador.funcionarioId}-${colaborador.data}`;
+
+  const carregarPresencas = useCallback(async () => {
+    if (!obraId) return;
+
+    if (modoPeriodo) {
+      if (!intervalo.from || !intervalo.to) {
+        setColaboradores([]);
+        return;
+      }
+      const dados = await presencaService.listarPorObraEPeriodo(obraId, intervalo.from, intervalo.to);
+      setColaboradores(dados);
+      return;
+    }
+
+    const dataConsulta = periodo.preset === "HOJE" ? hojeIso() : data;
+    const dados = await presencaService.listarPorObraEData(obraId, dataConsulta);
     setColaboradores(dados);
-  }, []);
+  }, [obraId, modoPeriodo, intervalo.from, intervalo.to, periodo.preset, data]);
 
   useEffect(() => {
     async function carregarObras() {
@@ -61,20 +83,32 @@ export default function GestaoPresenca() {
   }, []);
 
   useEffect(() => {
+    if (periodo.preset === "HOJE") {
+      setData(hojeIso());
+    }
+  }, [periodo.preset]);
+
+  useEffect(() => {
     if (!obraId) return;
 
-    carregarPresencas(obraId, data).catch((error) => {
-      console.error("Erro ao atualizar lista de presença:", error);
-      toast.error("Erro ao atualizar lista de presença");
-    });
-  }, [obraId, data, carregarPresencas]);
+    setCarregando(true);
+    carregarPresencas()
+      .catch((error) => {
+        console.error("Erro ao atualizar lista de presença:", error);
+        toast.error("Erro ao atualizar lista de presença");
+      })
+      .finally(() => setCarregando(false));
+  }, [obraId, carregarPresencas]);
 
   const colaboradoresFiltrados = useMemo(() => {
     const termo = busca.trim().toLowerCase();
 
     return colaboradores.filter((colaborador) => {
-      const correspondeBusca = !termo || [colaborador.funcionarioNome, colaborador.funcionarioCargo]
-        .some((campo) => campo.toLowerCase().includes(termo));
+      const correspondeBusca =
+        !termo ||
+        [colaborador.funcionarioNome, colaborador.funcionarioCargo].some((campo) =>
+          campo.toLowerCase().includes(termo),
+        );
       const temRegistro = Boolean(colaborador.id);
       const correspondeStatus =
         statusFiltro === "TODOS" ||
@@ -100,6 +134,10 @@ export default function GestaoPresenca() {
 
   async function salvarStatus(colaborador: Colaborador, presente: boolean) {
     if (!obraId) return;
+    if (modoPeriodo && !colaborador.id) {
+      toast.error("No modo período, use a visão diária para registrar novos pontos");
+      return;
+    }
     if (!colaborador.id && !podeRegistrar) {
       toast.error("Você não tem permissão para registrar presença");
       return;
@@ -109,12 +147,14 @@ export default function GestaoPresenca() {
       return;
     }
 
+    const dataRegistro = modoPeriodo ? colaborador.data : periodo.preset === "HOJE" ? hojeIso() : data;
+
     try {
-      setSalvandoId(colaborador.funcionarioId);
+      setSalvandoId(chaveLinha(colaborador));
       const payload = {
         funcionarioId: colaborador.funcionarioId,
         obraId,
-        data,
+        data: dataRegistro,
         presente,
       };
 
@@ -124,7 +164,7 @@ export default function GestaoPresenca() {
         await presencaService.criarPresenca(payload);
       }
 
-      await carregarPresencas(obraId, data);
+      await carregarPresencas();
       toast.success(presente ? "Presença marcada" : "Ausência registrada");
     } catch (error) {
       console.error("Erro ao salvar presença:", error);
@@ -142,9 +182,9 @@ export default function GestaoPresenca() {
     }
 
     try {
-      setSalvandoId(colaborador.funcionarioId);
+      setSalvandoId(chaveLinha(colaborador));
       await presencaService.deletarPresenca(colaborador.id);
-      await carregarPresencas(obraId, data);
+      await carregarPresencas();
       toast.success("Registro removido");
     } catch (error) {
       console.error("Erro ao excluir presença:", error);
@@ -162,8 +202,8 @@ export default function GestaoPresenca() {
   }
 
   function renderizarAcoes(colaborador: Colaborador) {
-    const salvando = salvandoId === colaborador.funcionarioId;
-    const semPermissao = colaborador.id ? !podeEditar : !podeRegistrar;
+    const salvando = salvandoId === chaveLinha(colaborador);
+    const semPermissao = colaborador.id ? !podeEditar : !podeRegistrar || modoPeriodo;
 
     return (
       <div className={styles.acoes}>
@@ -174,7 +214,13 @@ export default function GestaoPresenca() {
           Ausente
         </button>
         {colaborador.id && (
-          <button type="button" className={styles.botaoPerigo} onClick={() => excluirRegistro(colaborador)} disabled={salvando || !podeDeletar} aria-label={`Excluir presença de ${colaborador.funcionarioNome}`}>
+          <button
+            type="button"
+            className={styles.botaoPerigo}
+            onClick={() => excluirRegistro(colaborador)}
+            disabled={salvando || !podeDeletar}
+            aria-label={`Excluir presença de ${colaborador.funcionarioNome}`}
+          >
             <Trash2 size={14} />
           </button>
         )}
@@ -197,41 +243,79 @@ export default function GestaoPresenca() {
           Obra
           <select value={obraId ?? ""} onChange={(evento) => setObraId(Number(evento.target.value))}>
             {obras.map((obra) => (
-              <option key={obra.id} value={obra.id}>{obra.titulo}</option>
+              <option key={obra.id} value={obra.id}>
+                {obra.titulo}
+              </option>
             ))}
           </select>
         </label>
-        <label>
-          Data
-          <input type="date" value={data} onChange={(evento) => setData(evento.target.value)} />
-        </label>
+        {!modoPeriodo && (
+          <label>
+            Data
+            <input
+              type="date"
+              value={periodo.preset === "HOJE" ? hojeIso() : data}
+              disabled={periodo.preset === "HOJE"}
+              onChange={(evento) => setData(evento.target.value)}
+            />
+          </label>
+        )}
         <label>
           Status
           <select value={statusFiltro} onChange={(evento) => setStatusFiltro(evento.target.value)}>
             <option value="TODOS">Todos</option>
             <option value="PRESENTES">Presentes</option>
             <option value="AUSENTES">Ausentes</option>
-            <option value="SEM_REGISTRO">Sem registro</option>
+            {!modoPeriodo && <option value="SEM_REGISTRO">Sem registro</option>}
           </select>
         </label>
         <div className={styles.busca}>
           <Search size={18} />
-          <input value={busca} onChange={(evento) => setBusca(evento.target.value)} placeholder="Buscar colaborador ou função" />
+          <input
+            value={busca}
+            onChange={(evento) => setBusca(evento.target.value)}
+            placeholder="Buscar colaborador ou função"
+          />
+        </div>
+        <div className={styles.periodoWrap}>
+          <PeriodoFiltro value={periodo} onChange={setPeriodo} temaEscuro ocultarTodos />
         </div>
       </section>
 
       <section className={styles.metricas}>
-        <div><UsersRound /><span>Total</span><strong>{totais.total}</strong></div>
-        <div><CheckCircle2 /><span>Presentes</span><strong>{totais.presentes}</strong></div>
-        <div><CircleSlash /><span>Ausentes</span><strong>{totais.ausentes}</strong></div>
-        <div><CalendarDays /><span>Sem registro</span><strong>{totais.semRegistro}</strong></div>
+        <div>
+          <UsersRound />
+          <span>Total</span>
+          <strong>{totais.total}</strong>
+        </div>
+        <div>
+          <CheckCircle2 />
+          <span>Presentes</span>
+          <strong>{totais.presentes}</strong>
+        </div>
+        <div>
+          <CircleSlash />
+          <span>Ausentes</span>
+          <strong>{totais.ausentes}</strong>
+        </div>
+        {!modoPeriodo && (
+          <div>
+            <CalendarDays />
+            <span>Sem registro</span>
+            <strong>{totais.semRegistro}</strong>
+          </div>
+        )}
       </section>
 
       <section className={styles.tabelaContainer}>
         <div className={styles.tabelaHeader}>
           <div>
             <h2>{obraSelecionada?.titulo ?? "Obra"}</h2>
-            <p>Controle de ponto para equipe de campo sem necessidade de login no sistema</p>
+            <p>
+              {modoPeriodo
+                ? "Visão agregada dos registros no período selecionado"
+                : "Controle de ponto para equipe de campo sem necessidade de login no sistema"}
+            </p>
           </div>
         </div>
 
@@ -244,13 +328,16 @@ export default function GestaoPresenca() {
           <Responsive max="sm">
             <ul className={styles.listaCards}>
               {colaboradoresFiltrados.map((colaborador) => (
-                <li key={colaborador.funcionarioId} className={styles.itemCard}>
+                <li key={chaveLinha(colaborador)} className={styles.itemCard}>
                   <div className={styles.itemCardTopo}>
                     <div className={styles.funcionarioCell}>
                       <span>{colaborador.funcionarioNome.charAt(0).toUpperCase()}</span>
                       <div>
                         <strong>{colaborador.funcionarioNome}</strong>
-                        <small>{formatarCargoObra(colaborador.funcionarioCargo)}</small>
+                        <small>
+                          {formatarCargoObra(colaborador.funcionarioCargo)}
+                          {modoPeriodo && ` · ${formatarData(colaborador.data)}`}
+                        </small>
                       </div>
                     </div>
                     {renderizarStatus(colaborador)}
@@ -267,13 +354,14 @@ export default function GestaoPresenca() {
                 <tr>
                   <th>Colaborador</th>
                   <th>Função na obra</th>
+                  {modoPeriodo && <th>Data</th>}
                   <th>Registro</th>
                   <th>Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {colaboradoresFiltrados.map((colaborador) => (
-                    <tr key={colaborador.funcionarioId}>
+                    <tr key={chaveLinha(colaborador)}>
                       <td>
                         <div className={styles.funcionarioCell}>
                           <span>{colaborador.funcionarioNome.charAt(0).toUpperCase()}</span>
@@ -281,6 +369,7 @@ export default function GestaoPresenca() {
                         </div>
                       </td>
                       <td>{formatarCargoObra(colaborador.funcionarioCargo)}</td>
+                      {modoPeriodo && <td>{formatarData(colaborador.data)}</td>}
                       <td>{renderizarStatus(colaborador)}</td>
                       <td>{renderizarAcoes(colaborador)}</td>
                     </tr>

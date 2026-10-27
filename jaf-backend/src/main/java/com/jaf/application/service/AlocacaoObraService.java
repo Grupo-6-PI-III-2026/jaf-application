@@ -12,6 +12,7 @@ import com.jaf.application.repository.FuncionarioRepository;
 import com.jaf.application.repository.ObraRepository;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -42,6 +43,7 @@ public class AlocacaoObraService {
         alocacao.setFuncionario(funcionario);
         alocacao.setObra(obra);
         alocacao.setCargo(dto.getCargoNaObra());
+        alocacao.setDtInicio(LocalDate.now());
         return alocacaoObraRepository.save(alocacao);
     }
 

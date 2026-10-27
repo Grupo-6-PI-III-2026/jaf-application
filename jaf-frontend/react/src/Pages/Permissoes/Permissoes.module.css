@@ -47,6 +47,10 @@
   margin-bottom: 8px;
 }
 
+.periodoUsuarios {
+  margin-bottom: 12px;
+}
+
 .buscaUsuarios input {
   width: 100%;
   padding: 10px 12px 10px 36px;

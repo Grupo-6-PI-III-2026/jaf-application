@@ -17,6 +17,13 @@ import styles from "./Permissoes.module.css";
 import { permissaoService } from "../../Service/Permissoes/permissaoService";
 import type { FuncionarioPermissoes, ModuloPermissao } from "../../Types/permissoes";
 import type { Cargo } from "../../Types/user";
+import PeriodoFiltro from "../../Components/PeriodoFiltro/PeriodoFiltro";
+import {
+  dataNoPeriodo,
+  periodoFiltroInicial,
+  resolverPeriodo,
+  type PeriodoFiltroValue,
+} from "../../Components/PeriodoFiltro/periodUtils";
 
 const MODULOS: ModuloPermissao[] = [
   {
@@ -112,6 +119,7 @@ export default function Permissoes() {
   const [funcionarios, setFuncionarios] = useState<FuncionarioPermissoes[]>([]);
   const [selectedUser, setSelectedUser] = useState<FuncionarioPermissoes | null>(null);
   const [busca, setBusca] = useState("");
+  const [periodo, setPeriodo] = useState<PeriodoFiltroValue>(periodoFiltroInicial);
   const [permissoesPorCargo, setPermissoesPorCargo] = useState<Record<Cargo, string[]>>(permissaoService.getMapaPadraoPermissoes());
   const [permissoesAtivas, setPermissoesAtivas] = useState<Set<string>>(new Set());
   const [permissoesOriginais, setPermissoesOriginais] = useState<Set<string>>(new Set());
@@ -238,11 +246,17 @@ export default function Permissoes() {
     }
   };
 
-  const funcionariosFiltrados = funcionarios.filter(
-    (funcionario) =>
-      funcionario.nome.toLowerCase().includes(busca.toLowerCase()) ||
-      funcionario.email.toLowerCase().includes(busca.toLowerCase())
-  );
+  const intervalo = resolverPeriodo(periodo);
+
+  const funcionariosFiltrados = funcionarios.filter((funcionario) => {
+    const termo = busca.toLowerCase();
+    const correspondeBusca =
+      !termo ||
+      funcionario.nome.toLowerCase().includes(termo) ||
+      funcionario.email.toLowerCase().includes(termo);
+    const correspondePeriodo = dataNoPeriodo(funcionario.createdAt, intervalo);
+    return correspondeBusca && correspondePeriodo;
+  });
 
   const getModuloIcon = (iconName: string) => {
     const Icon = ICON_MAP[iconName];
@@ -267,6 +281,9 @@ export default function Permissoes() {
             value={busca}
             onChange={(event) => setBusca(event.target.value)}
           />
+        </div>
+        <div className={styles.periodoUsuarios}>
+          <PeriodoFiltro value={periodo} onChange={setPeriodo} temaEscuro />
         </div>
 
         {isLoading ? (
