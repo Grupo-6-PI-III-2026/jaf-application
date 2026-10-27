@@ -51,6 +51,30 @@ variable "private_subnet_rds_cidr" {
   default     = "10.0.4.0/24"
 }
 
+variable "public_subnet_secondary_cidr" {
+  description = "CIDR da segunda subnet pública"
+  type        = string
+  default     = "10.0.5.0/24"
+}
+
+variable "private_subnet_backend_secondary_cidr" {
+  description = "CIDR da segunda subnet privada do Backend"
+  type        = string
+  default     = "10.0.6.0/24"
+}
+
+variable "private_subnet_ocr_secondary_cidr" {
+  description = "CIDR da segunda subnet privada do OCR"
+  type        = string
+  default     = "10.0.7.0/24"
+}
+
+variable "private_subnet_rds_secondary_cidr" {
+  description = "CIDR da segunda subnet privada do RDS"
+  type        = string
+  default     = "10.0.8.0/24"
+}
+
 variable "availability_zone" {
   description = "Availability Zone principal dos recursos"
   type        = string
@@ -63,11 +87,123 @@ variable "secondary_availability_zone" {
   default     = "us-east-1b"
 }
 
+variable "acm_certificate_arn" {
+  description = "ARN de um certificado ACM validado para o domínio público"
+  type        = string
+  default     = null
+  nullable    = true
+}
+
+variable "enable_https" {
+  description = "Habilita HTTPS no ALB quando houver certificado ACM válido"
+  type        = bool
+  default     = false
+}
+
+variable "backend_public_access" {
+  description = "Modo temporario de diagnostico: coloca o backend em subnets publicas com IP publico e SSH/8080 abertos ao mundo. Mantenha false no uso normal"
+  type        = bool
+  default     = false
+}
+
+variable "frontend_ssh_cidrs" {
+  description = "CIDRs com acesso SSH (22) ao frontend. Padrao aberto (Learner Lab). Use [] para depender so do EIC Endpoint/SSM, ou o range EC2_INSTANCE_CONNECT da regiao para o EIC pelo console"
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
+}
+
+variable "single_nat_gateway" {
+  description = "true usa um unico NAT Gateway (AZ principal) para todas as subnets privadas; false usa um NAT por AZ"
+  type        = bool
+  default     = false
+}
+
+# ── Conta AWS / perfil ───────────────────────────────────────
+variable "use_lab_role" {
+  description = "true usa a LabRole/LabInstanceProfile do Learner Lab; false cria uma role e instance profile proprios (conta AWS normal)"
+  type        = bool
+  default     = true
+}
+
+variable "allowed_account_ids" {
+  description = "Contas AWS permitidas para este state. Lista vazia desativa a trava. Evita apply na conta errada"
+  type        = list(string)
+  default     = []
+}
+
 # ── EC2 ──────────────────────────────────────────────────────
 variable "instance_type" {
   description = "Tipo de instância EC2 (limitado pelo Learner Lab)"
   type        = string
   default     = "t3.micro"
+}
+
+variable "root_volume_size" {
+  description = "Tamanho do disco raiz (GB) das instâncias EC2"
+  type        = number
+  default     = 30
+
+  validation {
+    condition     = var.root_volume_size >= 8
+    error_message = "root_volume_size deve ser >= 8 (tamanho minimo da AMI)."
+  }
+}
+
+variable "frontend_asg" {
+  description = "Capacidade do Auto Scaling Group do frontend"
+  type = object({
+    min_size         = number
+    desired_capacity = number
+    max_size         = number
+  })
+  default = {
+    min_size         = 2
+    desired_capacity = 2
+    max_size         = 4
+  }
+
+  validation {
+    condition     = var.frontend_asg.min_size <= var.frontend_asg.desired_capacity && var.frontend_asg.desired_capacity <= var.frontend_asg.max_size
+    error_message = "frontend_asg exige min_size <= desired_capacity <= max_size."
+  }
+}
+
+variable "backend_asg" {
+  description = "Capacidade do Auto Scaling Group do backend"
+  type = object({
+    min_size         = number
+    desired_capacity = number
+    max_size         = number
+  })
+  default = {
+    min_size         = 2
+    desired_capacity = 2
+    max_size         = 4
+  }
+
+  validation {
+    condition     = var.backend_asg.min_size <= var.backend_asg.desired_capacity && var.backend_asg.desired_capacity <= var.backend_asg.max_size
+    error_message = "backend_asg exige min_size <= desired_capacity <= max_size."
+  }
+}
+
+variable "ocr_asg" {
+  description = "Capacidade do Auto Scaling Group do OCR (0/0/0 desliga o OCR)"
+  type = object({
+    min_size         = number
+    desired_capacity = number
+    max_size         = number
+  })
+  default = {
+    min_size         = 2
+    desired_capacity = 2
+    max_size         = 4
+  }
+
+  validation {
+    condition     = var.ocr_asg.min_size <= var.ocr_asg.desired_capacity && var.ocr_asg.desired_capacity <= var.ocr_asg.max_size
+    error_message = "ocr_asg exige min_size <= desired_capacity <= max_size."
+  }
 }
 
 variable "public_key_path" {
@@ -89,7 +225,7 @@ variable "db_username" {
 variable "db_password" {
   description = "Senha do usuário administrador do RDS — NUNCA commitar este valor"
   type        = string
-  sensitive   = true  # Terraform ocultará este valor nos logs e outputs
+  sensitive   = true # Terraform ocultará este valor nos logs e outputs
 }
 
 variable "rds_instance_class" {
@@ -104,13 +240,31 @@ variable "rds_allocated_storage" {
   default     = 20
 }
 
+variable "rds_multi_az" {
+  description = "true cria standby sincrono em outra AZ (failover automatico); false usa Single-AZ (mais barato)"
+  type        = bool
+  default     = true
+}
+
+variable "rds_apply_immediately" {
+  description = "true aplica mudancas do RDS (ex.: Multi-AZ) na hora; false aguarda a janela de manutencao"
+  type        = bool
+  default     = false
+}
+
+variable "rds_backup_retention_period" {
+  description = "Quantidade de dias de retenção de backups automáticos do RDS; contas Free Tier podem exigir 0"
+  type        = number
+  default     = 7
+}
+
 # ── GHCR (GitHub Container Registry) ─────────────────────────
 # Usado pelo user_data das EC2 para fazer pull das imagens Docker
 
 variable "ghcr_token" {
   description = "Personal Access Token do GitHub com permissão read:packages — NUNCA commitar"
   type        = string
-  sensitive   = true  # Oculto nos logs e outputs do Terraform
+  sensitive   = true # Oculto nos logs e outputs do Terraform
 }
 
 variable "ghcr_user" {
@@ -129,7 +283,7 @@ variable "repo_owner" {
 variable "db_url" {
   description = "JDBC URL do banco PostgreSQL (ex: jdbc:postgresql://host:5432/appdb)"
   type        = string
-  sensitive   = true  # Contém host e nome do banco — não expor
+  sensitive   = true # Contém host e nome do banco — não expor
 }
 
 variable "jwt_secret" {

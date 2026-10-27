@@ -20,27 +20,142 @@ db_password = "MinhaSenh@Forte123!"
 
 ## Executar o Terraform
 
-AWS Academy → abre o seu laboratório → clica em AWS Details → Show nas credenciais
+Os comandos abaixo são para Windows PowerShell. Sempre execute o `plan` e o
+`apply` usando o mesmo workspace, o mesmo arquivo de variáveis e a mesma conta
+AWS.
 
+### Preparação comum
 
-AWS_ACCESS_KEY_ID=...
-AWS_SECRET_ACCESS_KEY=...
-AWS_SESSION_TOKEN=...
+Execute uma vez, ou novamente caso o Terraform ainda não tenha sido inicializado:
 
-Essas você coloca no arquivo ~/.aws/credentials na sua máquina
-
-----
-
-
-```bash
-cd terraform/
+```powershell
+cd "C:\Users\guilherme\Documents\4-SEMESTRE\projeto para aws\jaf-application\terraform"
 terraform init
 terraform validate
-terraform plan
-terraform apply
 ```
 
-Confirme digitando `yes` quando solicitado.
+Os arquivos de configuração são:
+
+- AWS Student: `profiles\lab.tfvars` (crie a partir de `profiles\lab.tfvars.example`);
+- Conta pessoal: `profiles\personal.tfvars`.
+
+Não coloque senhas, tokens ou outras credenciais no Git.
+
+### Opção 1 — AWS Student / Learner Lab
+
+1. Abra o AWS Academy, entre no laboratório e acesse **AWS Details >
+   Show**.
+2. Copie as credenciais temporárias exibidas. Elas precisam ser renovadas
+   quando expirarem.
+3. No PowerShell, remova o perfil pessoal e carregue as credenciais:
+
+```powershell
+cd "C:\Users\guilherme\Documents\4-SEMESTRE\projeto para aws\jaf-application\terraform"
+
+Remove-Item Env:AWS_PROFILE -ErrorAction SilentlyContinue
+$env:AWS_ACCESS_KEY_ID = "SUA_ACCESS_KEY"
+$env:AWS_SECRET_ACCESS_KEY = "SUA_SECRET_KEY"
+$env:AWS_SESSION_TOKEN = "SEU_SESSION_TOKEN"
+
+aws sts get-caller-identity
+terraform workspace select default
+terraform workspace show
+```
+
+O workspace esperado é `default`. Se o arquivo ainda não existir:
+
+```powershell
+Copy-Item "profiles\lab.tfvars.example" "profiles\lab.tfvars"
+```
+
+Depois, execute:
+
+```powershell
+terraform plan -var-file="profiles\lab.tfvars"
+terraform apply -var-file="profiles\lab.tfvars"
+```
+
+No perfil Student, `use_lab_role = true` usa a `LabRole` fornecida pelo
+Learner Lab. O perfil mantém duas instâncias mínimas por serviço crítico,
+RDS Multi-AZ e NAT Gateway por AZ, conforme as limitações do laboratório.
+
+### Opção 2 — Conta AWS pessoal
+
+Configure o perfil AWS CLI uma única vez:
+
+```powershell
+aws configure --profile pessoal
+```
+
+Depois, execute:
+
+```powershell
+cd "C:\Users\guilherme\Documents\4-SEMESTRE\projeto para aws\jaf-application\terraform"
+
+# Remove credenciais temporárias do Student da sessão atual
+Remove-Item Env:AWS_ACCESS_KEY_ID -ErrorAction SilentlyContinue
+Remove-Item Env:AWS_SECRET_ACCESS_KEY -ErrorAction SilentlyContinue
+Remove-Item Env:AWS_SESSION_TOKEN -ErrorAction SilentlyContinue
+
+$env:AWS_PROFILE = "pessoal"
+
+aws sts get-caller-identity --profile pessoal
+terraform workspace select personal
+terraform workspace show
+```
+
+O workspace esperado é `personal`. Em seguida:
+
+```powershell
+terraform plan -var-file="profiles\personal.tfvars"
+terraform apply -var-file="profiles\personal.tfvars"
+```
+
+No perfil pessoal, `use_lab_role = false` faz o Terraform criar a role
+necessária para as instâncias. Esse perfil usa uma configuração reduzida para
+testes, incluindo RDS Single-AZ e menor capacidade nos ASGs.
+
+### Conferência obrigatória antes do `apply`
+
+Execute estes comandos e confirme:
+
+```powershell
+aws sts get-caller-identity
+terraform workspace show
+```
+
+| Ambiente | Conta/credencial | Workspace | Arquivo |
+| :--- | :--- | :--- | :--- |
+| AWS Student | Credenciais temporárias do AWS Academy | `default` | `profiles\lab.tfvars` |
+| Conta pessoal | Perfil AWS CLI `pessoal` | `personal` | `profiles\personal.tfvars` |
+
+Nunca use `profiles\personal.tfvars` no workspace `default` e nunca use
+`profiles\lab.tfvars` no workspace `personal`. O campo
+`allowed_account_ids` do perfil pessoal também deve conter o Account ID correto
+da conta pessoal.
+
+### Voltar da conta pessoal para o AWS Student
+
+Quando terminar o uso da conta pessoal, remova o perfil da sessão e carregue
+novamente credenciais temporárias válidas do AWS Academy:
+
+```powershell
+Remove-Item Env:AWS_PROFILE -ErrorAction SilentlyContinue
+$env:AWS_ACCESS_KEY_ID = "SUA_ACCESS_KEY"
+$env:AWS_SECRET_ACCESS_KEY = "SUA_SECRET_KEY"
+$env:AWS_SESSION_TOKEN = "SEU_SESSION_TOKEN"
+
+terraform workspace select default
+terraform plan -var-file="profiles\lab.tfvars"
+terraform apply -var-file="profiles\lab.tfvars"
+```
+
+Não execute `terraform destroy` sem confirmar antes a conta e o workspace:
+
+```powershell
+aws sts get-caller-identity
+terraform workspace show
+```
 
 ---
 

@@ -1,9 +1,10 @@
 #!/bin/bash
 set -eux
 dnf update -y
-dnf install -y docker
+dnf install -y docker ec2-instance-connect openssh-server
 systemctl enable docker
 systemctl start docker
+systemctl enable --now sshd
 usermod -aG docker ec2-user
 echo "${ghcr_token}" | docker login ghcr.io \
   --username "${ghcr_user}" \
@@ -16,9 +17,9 @@ docker create --name temp ghcr.io/${repo_owner}/jaf-frontend:latest
 docker cp temp:/etc/nginx/conf.d/default.conf /home/ec2-user/default.conf
 docker rm temp
 
-# ── Substitui o hostname "jaf-backend" pelo IP privado do backend ──
-# O valor de ${backend_ip} é injetado pelo templatefile() do Terraform
-sed -i "s/jaf-backend/${backend_ip}/g" /home/ec2-user/default.conf
+# No AWS, o hostname aponta para o ALB interno do backend. O mesmo arquivo
+# continua compatível com Docker Compose, onde "jaf-backend" é resolvido pelo Docker.
+sed -i "s/jaf-backend/${backend_host}/g" /home/ec2-user/default.conf
 
 # ── Sobe o container montando o conf corrigido como volume ───
 # O :ro (read-only) garante que o Nginx não tente sobrescrever o arquivo
