@@ -1,9 +1,13 @@
 package com.jaf.application.dto;
 
+import com.jaf.application.enums.StatusOcr;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public class OcrResponseDto {
+    private String jobId;
+    private StatusOcr status;
     private boolean sucesso;
     private String mensagem;
     private String textoBruto;
@@ -13,6 +17,22 @@ public class OcrResponseDto {
     private String materialInsumo;
     private String descricaoAdicional;
     private String etapa;
+
+    public String getJobId() {
+        return jobId;
+    }
+
+    public void setJobId(String jobId) {
+        this.jobId = jobId;
+    }
+
+    public StatusOcr getStatus() {
+        return status;
+    }
+
+    public void setStatus(StatusOcr status) {
+        this.status = status;
+    }
 
     public boolean isSucesso() {
         return sucesso;
