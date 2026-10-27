@@ -21,6 +21,13 @@ import { gastoService, type Gasto } from "../../Service/Gastos/gastoService";
 import { ocrService } from "../../Service/Gastos/ocrService";
 import { alocacaoService, type AlocacaoObra } from "../../Service/Alocacoes/alocacaoService";
 import { authService } from "../../Service/Auth/Login/authService";
+import PeriodoFiltro from "../../Components/PeriodoFiltro/PeriodoFiltro";
+import {
+  dataNoPeriodo,
+  periodoFiltroInicial,
+  resolverPeriodo,
+  type PeriodoFiltroValue,
+} from "../../Components/PeriodoFiltro/periodUtils";
 import { toast } from "sonner";
 
 const formatarMoeda = (valor: number) =>
@@ -127,6 +134,7 @@ export default function DetalhamentoObras() {
   const [buscaFinanceira, setBuscaFinanceira] = useState("");
   const [ordemFinanceira, setOrdemFinanceira] = useState<"data" | "valor" | "alfabetica">("data");
   const [filtroMetodoPagamento, setFiltroMetodoPagamento] = useState("TODOS");
+  const [periodoFinanceiro, setPeriodoFinanceiro] = useState<PeriodoFiltroValue>(periodoFiltroInicial);
   const [dataSelecionada, setDataSelecionada] = useState<string>(dataHoje());
   const [notaFiscalArquivo, setNotaFiscalArquivo] = useState<File | null>(null);
   const [processandoNotaFiscal, setProcessandoNotaFiscal] = useState(false);
@@ -220,7 +228,7 @@ export default function DetalhamentoObras() {
 
   useEffect(() => {
     setPaginaAtual(1);
-  }, [buscaFinanceira, ordemFinanceira, filtroMetodoPagamento]);
+  }, [buscaFinanceira, ordemFinanceira, filtroMetodoPagamento, periodoFinanceiro]);
 
   // Calcular métricas
   const totalGastoObra = gastos.reduce((total, gasto) => total + gasto.valor, 0);
@@ -240,6 +248,8 @@ export default function DetalhamentoObras() {
     return diffDays > 0 ? diffDays : 0;
   };
 
+  const intervaloFinanceiro = resolverPeriodo(periodoFinanceiro);
+
   const gastosFiltrados = gastos
     .filter((gasto) => {
       const termo = buscaFinanceira.trim().toLowerCase();
@@ -258,7 +268,10 @@ export default function DetalhamentoObras() {
         (filtroMetodoPagamento === "REEMBOLSO"
           ? gasto.reembolsoConcluido === false
           : normalizarMetodoPagamento(gasto.metodoPagamento) === filtroMetodoPagamento);
-      return correspondeBusca && correspondeMetodo;
+
+      const correspondePeriodo = dataNoPeriodo(gasto.dtGasto, intervaloFinanceiro);
+
+      return correspondeBusca && correspondeMetodo && correspondePeriodo;
     })
     .sort((a, b) => {
       if (ordemFinanceira === "valor") {
@@ -878,6 +891,7 @@ export default function DetalhamentoObras() {
                 <option key={metodo.value} value={metodo.value}>{metodo.label}</option>
               ))}
             </select>
+            <PeriodoFiltro value={periodoFinanceiro} onChange={setPeriodoFinanceiro} />
           </div>
         </div>
 

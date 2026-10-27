@@ -18,6 +18,8 @@ export interface AlocacaoObra {
     orcamento: string;
   };
   cargo: string;
+  dtInicio?: string | null;
+  dtFim?: string | null;
 }
 
 export interface AlocacaoCriarDto {

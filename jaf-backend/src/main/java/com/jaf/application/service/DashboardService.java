@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.TextStyle;
 import java.util.*;
@@ -28,12 +29,18 @@ public class DashboardService {
     }
 
     public DashboardResponseDto buscarStats(Long obraId, String etapa) {
+        return buscarStats(obraId, etapa, null, null);
+    }
+
+    public DashboardResponseDto buscarStats(Long obraId, String etapa, LocalDate from, LocalDate to) {
         Obra obra = obraRepository.findById(obraId)
                 .orElseThrow(() -> new NotFoundException("Obra não encontrada."));
 
         BigDecimal orcamento = parseOrcamento(obra.getOrcamento());
 
-        List<Gasto> todosGastos = gastoRepository.findByObraId(obraId);
+        List<Gasto> todosGastos = gastoRepository.findByObraId(obraId).stream()
+                .filter(g -> dentroDoPeriodo(g.getDtGasto(), from, to))
+                .toList();
 
         List<Gasto> gastosEtapaFiltrado = "TODAS".equals(etapa)
                 ? todosGastos
@@ -43,14 +50,15 @@ public class DashboardService {
         BigDecimal totalGastosEtapa = somarValores(gastosEtapaFiltrado);
         int progressoEtapa = calcularPercentual(totalGastosEtapa, orcamento);
 
-        // StatCard 3: saldo restante (escopo da obra inteira)
+        // StatCard 3: saldo restante (escopo da obra inteira no período)
         BigDecimal totalGastosObra = somarValores(todosGastos);
         BigDecimal saldoRestante = orcamento.subtract(totalGastosObra);
         int progressoSaldo = calcularPercentual(totalGastosObra, orcamento);
 
-        // StatCard 2: reembolsos pendentes (filtrado pela etapa selecionada)
+        // StatCard 2: reembolsos pendentes (filtrado pela etapa e período)
         List<Gasto> reembolsos = gastoRepository.findByObraIdAndReembolsoConcluidoIsNotNull(obraId).stream()
             .filter(g -> "TODAS".equals(etapa) || etapa.equals(g.getEtapa()))
+            .filter(g -> dentroDoPeriodo(g.getDtGasto(), from, to))
             .toList();
 
         BigDecimal reembolsosPendentes = reembolsos.stream()
@@ -142,5 +150,21 @@ public class DashboardService {
         } catch (NumberFormatException | NullPointerException e) {
             return BigDecimal.ZERO;
         }
+    }
+
+    private boolean dentroDoPeriodo(LocalDate data, LocalDate from, LocalDate to) {
+        if (from == null && to == null) {
+            return true;
+        }
+        if (data == null) {
+            return false;
+        }
+        if (from != null && data.isBefore(from)) {
+            return false;
+        }
+        if (to != null && data.isAfter(to)) {
+            return false;
+        }
+        return true;
     }
 }

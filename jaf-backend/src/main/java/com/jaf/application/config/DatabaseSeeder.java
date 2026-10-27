@@ -54,8 +54,8 @@ public class DatabaseSeeder implements ApplicationRunner {
 
     private void inserirFuncionario(String nome, String email, String cargo) {
         jdbcTemplate.update("""
-                INSERT INTO funcionario (nome, email, senha, cargo_global)
-                SELECT ?, ?, ?, ?
+                INSERT INTO funcionario (nome, email, senha, cargo_global, created_at)
+                SELECT ?, ?, ?, ?, CURRENT_DATE
                 WHERE NOT EXISTS (SELECT 1 FROM funcionario WHERE email = ?)
                 """, nome, email, SENHA_PADRAO_HASH, cargo, email);
     }
@@ -97,8 +97,8 @@ public class DatabaseSeeder implements ApplicationRunner {
 
     private void inserirAlocacao(String funcionarioEmail, String obraTitulo, String cargo) {
         jdbcTemplate.update("""
-                INSERT INTO alocacao_obra (funcionario_id, obra_id, cargo)
-                SELECT funcionario.id, obra.id, ?
+                INSERT INTO alocacao_obra (funcionario_id, obra_id, cargo, dt_inicio)
+                SELECT funcionario.id, obra.id, ?, CURRENT_DATE
                 FROM funcionario, obra
                 WHERE funcionario.email = ?
                   AND obra.titulo = ?

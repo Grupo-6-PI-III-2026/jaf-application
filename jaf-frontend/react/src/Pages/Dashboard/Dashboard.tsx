@@ -3,6 +3,12 @@ import { Plus, Search, Tag, ChevronDown, FileText } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import ChartCard from "../../Components/ChartCard/ChartCard";
 import StatCard from "../../Components/StatCard/StatCard";
+import PeriodoFiltro from "../../Components/PeriodoFiltro/PeriodoFiltro";
+import {
+  periodoFiltroInicial,
+  resolverPeriodo,
+  type PeriodoFiltroValue,
+} from "../../Components/PeriodoFiltro/periodUtils";
 import { dashboardService, type DashboardStats } from "../../Service/Dashboard/dashboardService";
 import { authService } from "../../Service/Auth/Login/authService";
 import styles from "./Dashboard.module.css";
@@ -32,6 +38,7 @@ export default function Dashboard() {
   const [etapa, setEtapa] = useState("TODAS");
   const [busca, setBusca] = useState("");
   const [ordenacao, setOrdenacao] = useState<"valor" | "categoria">("valor");
+  const [periodo, setPeriodo] = useState<PeriodoFiltroValue>(periodoFiltroInicial);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
@@ -49,7 +56,8 @@ export default function Dashboard() {
       try {
         setCarregando(true);
         setErro(null);
-        const data = await dashboardService.buscarStats(obraId, etapa);
+        const intervalo = resolverPeriodo(periodo);
+        const data = await dashboardService.buscarStats(obraId, etapa, intervalo);
         setStats(data);
       } catch {
         setErro("Erro ao carregar dados do dashboard.");
@@ -59,7 +67,7 @@ export default function Dashboard() {
     };
 
     carregarStats();
-  }, [obraId, etapa]);
+  }, [obraId, etapa, periodo]);
 
   const categoriasExibidas = (stats?.gastosPorCategoria ?? [])
     .filter((item) => item.categoria.toLowerCase().includes(busca.trim().toLowerCase()))
@@ -272,6 +280,7 @@ export default function Dashboard() {
             ))}
           </select>
         </label>
+        <PeriodoFiltro value={periodo} onChange={setPeriodo} />
         <div className={styles.searchWrapper}>
           <Search className={styles.searchIcon} />
           <input placeholder="Buscar categoria..." className={styles.searchInput} value={busca} onChange={(evento) => setBusca(evento.target.value)} />

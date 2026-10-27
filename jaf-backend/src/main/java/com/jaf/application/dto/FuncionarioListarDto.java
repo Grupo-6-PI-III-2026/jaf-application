@@ -2,7 +2,8 @@ package com.jaf.application.dto;
 
 import com.jaf.application.enums.Cargo;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.*;
+
+import java.time.LocalDate;
 
 public class FuncionarioListarDto {
     @Schema(description = "ID do funcionário", example = "1")
@@ -16,6 +17,9 @@ public class FuncionarioListarDto {
 
     @Schema(description = "Cargo do funcionário", example = "Administrador")
     private Cargo cargo;
+
+    @Schema(description = "Data de cadastro do funcionário", example = "2026-03-15")
+    private LocalDate createdAt;
 
     public Long getId() { return id; }
 
@@ -43,5 +47,13 @@ public class FuncionarioListarDto {
 
     public void setCargo(Cargo cargo) {
         this.cargo = cargo;
+    }
+
+    public LocalDate getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDate createdAt) {
+        this.createdAt = createdAt;
     }
 }

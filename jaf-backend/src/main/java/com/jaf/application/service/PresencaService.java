@@ -4,6 +4,7 @@ import com.jaf.application.dto.PresencaDto;
 import com.jaf.application.dto.PresencaListarDto;
 import com.jaf.application.dto.PresencaResponseDto;
 import com.jaf.application.enums.Cargo;
+import com.jaf.application.exceptions.BadRequest;
 import com.jaf.application.exceptions.Conflict;
 import com.jaf.application.exceptions.NotFoundException;
 import com.jaf.application.model.AlocacaoObra;
@@ -15,8 +16,8 @@ import com.jaf.application.repository.PresencaRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -103,6 +104,49 @@ public class PresencaService {
             
             return dto;
         }).collect(Collectors.toList());
+    }
+
+    /**
+     * Lista registros de presença existentes no intervalo (visão agregada semanal/período).
+     * Diferente do dia único, não expande alocados sem registro.
+     */
+    public List<PresencaListarDto> listarPorObraEPeriodo(Long obraId, LocalDate from, LocalDate to) {
+        if (!obraRepository.existsById(obraId)) {
+            throw new NotFoundException("Obra não encontrada.");
+        }
+        if (from == null || to == null) {
+            throw new BadRequest("Informe as datas inicial e final do período.");
+        }
+        if (to.isBefore(from)) {
+            throw new BadRequest("A data final deve ser maior ou igual à data inicial.");
+        }
+
+        Map<Long, Cargo> cargoPorFuncionario = alocacaoObraRepository.findByObraId(obraId).stream()
+                .collect(Collectors.toMap(
+                        a -> a.getFuncionario().getId(),
+                        AlocacaoObra::getCargo,
+                        (primeiro, ignorado) -> primeiro
+                ));
+
+        return presencaRepository.findByObraIdAndDataBetween(obraId, from, to).stream()
+                .sorted((a, b) -> {
+                    int porData = b.getData().compareTo(a.getData());
+                    if (porData != 0) return porData;
+                    return a.getFuncionario().getNome().compareToIgnoreCase(b.getFuncionario().getNome());
+                })
+                .map(presenca -> {
+                    PresencaListarDto dto = new PresencaListarDto();
+                    dto.setId(presenca.getId());
+                    dto.setFuncionarioId(presenca.getFuncionario().getId());
+                    dto.setFuncionarioNome(presenca.getFuncionario().getNome());
+                    Cargo cargo = cargoPorFuncionario.get(presenca.getFuncionario().getId());
+                    dto.setFuncionarioCargo(cargo != null ? cargo.name() : "");
+                    dto.setData(presenca.getData());
+                    dto.setPresente(presenca.getPresente());
+                    dto.setDesabilitado(false);
+                    return dto;
+                })
+                .collect(Collectors.toList());
     }
 
     public PresencaResponseDto buscarPorId(Long id) {
