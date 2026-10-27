@@ -14,6 +14,7 @@
   width: 100%;
   max-width: 880px;
   max-height: 90vh;
+  max-height: 90dvh;
   background: #ffffff;
   border-radius: 16px;
   overflow: hidden;
@@ -240,4 +241,55 @@
   padding: 40px;
   color: #6b7280;
   font-size: 16px;
+}
+
+@media (max-width: 767.98px) {
+  .overlay {
+    padding: 12px;
+    align-items: flex-end;
+  }
+
+  .header {
+    padding: 20px 56px 20px 18px;
+  }
+
+  .titulo {
+    font-size: 24px;
+  }
+
+  .subtitulo {
+    font-size: 18px;
+  }
+
+  .corpo {
+    padding: 16px 18px;
+  }
+
+  .infoColaborador {
+    min-width: 0;
+  }
+
+  .nome {
+    font-size: 16px;
+    overflow-wrap: anywhere;
+  }
+
+  .cargo {
+    font-size: 13px;
+  }
+
+  .itemColaborador {
+    gap: 12px;
+  }
+
+  .rodape {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 16px 18px;
+  }
+
+  .botaoRegistrar {
+    padding: 14px 22px;
+  }
 }

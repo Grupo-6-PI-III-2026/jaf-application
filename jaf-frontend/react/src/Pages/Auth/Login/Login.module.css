@@ -264,6 +264,37 @@
   box-shadow: 0 6px 24px #f5b80061;
 }
 
+.logoCompacto {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 2rem;
+  font-family: "Syne", sans-serif;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #141414;
+}
+
+.logoCompacto img {
+  width: 36px;
+  height: 36px;
+}
+
+@media (max-width: 767.98px) {
+  .loginRight {
+    width: 100%;
+    padding: 2rem 1.25rem;
+  }
+
+  .cardTitle {
+    font-size: 1.6rem;
+  }
+
+  .cardSub {
+    margin-bottom: 1.75rem;
+  }
+}
+
 .btnEntrar:disabled {
   opacity: 0.65;
   cursor: not-allowed;

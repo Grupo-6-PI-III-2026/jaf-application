@@ -18,5 +18,28 @@
   padding: 24px;
   background-color: #ffffff;
   min-height: calc(100vh - 70px);
+  min-height: calc(100dvh - 70px);
   overflow-x: hidden;
+}
+
+.fundoMenu {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  background: rgba(31, 42, 51, 0.48);
+}
+
+@media (max-width: 1023.98px) {
+  .mainArea {
+    margin-left: 0;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .content {
+    margin-top: 60px;
+    padding: 16px;
+    min-height: calc(100dvh - 60px);
+  }
 }

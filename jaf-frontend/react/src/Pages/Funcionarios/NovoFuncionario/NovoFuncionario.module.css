@@ -296,3 +296,33 @@
   line-height: 1.5;
   margin: 0;
 }
+
+@media (max-width: 767.98px) {
+  .titulo {
+    font-size: 24px;
+  }
+
+  .subtitulo {
+    margin-bottom: 20px;
+  }
+
+  .formulario {
+    padding: 20px 16px;
+    margin-bottom: 20px;
+  }
+
+  .formularioGrid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .cardsRodape,
+  .infoCards {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .cardRodape {
+    padding: 18px;
+  }
+}

@@ -14,6 +14,7 @@ import { alocacaoService, type AlocacaoObra } from "../../Service/Alocacoes/aloc
 import { funcionarioService } from "../../Service/Funcionarios/funcionarioService";
 import type { FuncionarioPermissoes } from "../../Types/permissoes";
 import { toast } from "sonner";
+import { Responsive } from "../../Components/Responsive/Responsive";
 
 const IMAGEM_PLACEHOLDER =
   "https://s2.glbimg.com/YgImWrcpJX6FAHRJOlZtEnTaHYc=/e.glbimg.com/og/ed/f/original/2020/12/23/apartamento-sao-paulo-260-m2-atemporal3.jpg";
@@ -140,6 +141,9 @@ export default function AlocacaoFuncionario() {
     (paginaAtual - 1) * ITENS_POR_PAGINA,
     paginaAtual * ITENS_POR_PAGINA
   );
+  const mensagemSemAlocacoes = busca || cargoFiltro !== "TODOS"
+    ? "Nenhum funcionário encontrado para os filtros."
+    : "Nenhum funcionário alocado nesta obra.";
 
   async function carregarAlocacoes() {
     if (!id) return;
@@ -333,6 +337,36 @@ export default function AlocacaoFuncionario() {
 
         {/* Tabela */}
         <div className={styles.tabelaWrapper}>
+          <Responsive max="sm">
+            <ul className={styles.listaCards}>
+              {alocacoesExibidas.length > 0 ? (
+                alocacoesExibidas.map((alocacao, indice) => (
+                  <li key={alocacao.id} className={styles.itemCard}>
+                    <div className={styles.celulaFuncionario}>
+                      <div className={styles.avatarPequeno} style={{ backgroundColor: cores[indice % cores.length] }}>
+                        {getIniciais(alocacao.funcionario.nome)}
+                      </div>
+                      {alocacao.funcionario.nome}
+                    </div>
+                    <dl className={styles.itemCardDetalhes}>
+                      <div>
+                        <dt>Perfil no sistema</dt>
+                        <dd>{cargoLabel(alocacao.funcionario.cargoGlobal)}</dd>
+                      </div>
+                      <div>
+                        <dt>Função na obra</dt>
+                        <dd>{cargoLabel(alocacao.cargo)}</dd>
+                      </div>
+                    </dl>
+                  </li>
+                ))
+              ) : (
+                <li className={styles.itemCardVazio}>{mensagemSemAlocacoes}</li>
+              )}
+            </ul>
+          </Responsive>
+
+          <Responsive min="md">
           <table className={styles.tabela}>
             <thead>
               <tr>
@@ -368,12 +402,13 @@ export default function AlocacaoFuncionario() {
                     colSpan={3}
                     style={{ textAlign: "center", padding: "2rem" }}
                   >
-                    {busca || cargoFiltro !== "TODOS" ? "Nenhum funcionário encontrado para os filtros." : "Nenhum funcionário alocado nesta obra."}
+                    {mensagemSemAlocacoes}
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
+          </Responsive>
 
           {/* Paginação */}
           <div className={styles.paginacao}>

@@ -436,7 +436,7 @@
 .modalOverlay {
   position: fixed;
   inset: 0;
-  z-index: 40;
+  z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -550,11 +550,60 @@
   background: #f8f9fa;
 }
 
-@media (max-width: 900px) {
+/* ---------- Lista em cards (telas pequenas) ---------- */
+.listaCards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.itemCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.itemCardDetalhes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px 16px;
+  margin: 0;
+}
+
+.itemCardDetalhes dt {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #6c757d;
+  text-transform: uppercase;
+}
+
+.itemCardDetalhes dd {
+  margin: 2px 0 0;
+  font-size: 13.5px;
+  color: #495057;
+}
+
+.itemCardVazio {
+  padding: 2rem 16px;
+  text-align: center;
+  color: #495057;
+  font-size: 14px;
+}
+
+@media (max-width: 767.98px) {
+  .pagina {
+    padding: 0;
+    background: transparent;
+    min-height: auto;
+  }
+
   .cabecalho,
   .equipeTopo,
   .paginacao {
-    align-items: flex-start;
+    align-items: stretch;
     flex-direction: column;
     gap: 14px;
   }
@@ -565,18 +614,47 @@
 
   .cardObraImagem {
     width: 100%;
-    height: 190px;
+    height: 180px;
+  }
+
+  .cardObraInformacoes {
+    padding: 18px;
+  }
+
+  .cardObraTitulo h1 {
+    font-size: 20px;
   }
 
   .equipeControles,
   .cabecalhoAcoes {
     width: 100%;
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .botaoAdicionarGasto {
+    justify-content: center;
   }
 
   .campoBusca,
   .inputBusca,
   .inputData {
     width: 100%;
+  }
+
+  .paginacaoBotoes {
+    flex-wrap: wrap;
+  }
+
+  .modalOverlay {
+    padding: 12px;
+  }
+
+  .modalFooter {
+    flex-direction: column-reverse;
+  }
+
+  .modalFooter button {
+    justify-content: center;
   }
 }

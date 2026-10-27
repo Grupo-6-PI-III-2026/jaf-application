@@ -24,7 +24,7 @@
 /* MÉTRICAS */
 .metricas {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
 }
 
@@ -57,6 +57,7 @@
   font-size: 24px;
   font-weight: 800;
   color: #ffc107;
+  overflow-wrap: anywhere;
 }
 
 .valor {

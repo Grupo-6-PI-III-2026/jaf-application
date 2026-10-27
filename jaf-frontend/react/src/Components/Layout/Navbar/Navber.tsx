@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft, LogOut, X } from "lucide-react";
+import { ArrowLeft, LogOut, Menu, X } from "lucide-react";
 import styles from "./Navbar.module.css";
 import { authService } from "../../../Service/Auth/Login/authService";
 import { useUser } from "../../../Context/useUser";
@@ -18,7 +18,12 @@ const getBreadcrumb = (pathname: string) => {
   return ["JAF"];
 };
 
-export default function Navbar() {
+interface NavbarProps {
+  menuAberto?: boolean;
+  onAbrirMenu?: () => void;
+}
+
+export default function Navbar({ menuAberto = false, onAbrirMenu }: NavbarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { clearUser } = useUser();
@@ -33,6 +38,18 @@ export default function Navbar() {
   return (
     <>
       <header className={styles.navbar}>
+        {onAbrirMenu && (
+          <button
+            type="button"
+            className={styles.backButton}
+            onClick={onAbrirMenu}
+            aria-label="Abrir menu"
+            aria-controls="menu-principal"
+            aria-expanded={menuAberto}
+          >
+            <Menu size={20} />
+          </button>
+        )}
         <button className={styles.backButton} onClick={() => navigate(-1)} aria-label="Voltar">
           <ArrowLeft size={20} />
         </button>
@@ -47,9 +64,9 @@ export default function Navbar() {
 
         <div className={styles.spacer}></div>
 
-        <button onClick={() => setModalLogoutAberto(true)} className={styles.logoutButton} title="Sair">
+        <button onClick={() => setModalLogoutAberto(true)} className={styles.logoutButton} title="Sair" aria-label="Sair">
           <LogOut size={16} />
-          Sair
+          <span className={styles.logoutTexto}>Sair</span>
         </button>
       </header>
 

@@ -15,6 +15,7 @@
 .backButton {
   width: 40px;
   height: 40px;
+  flex-shrink: 0;
   border-radius: 50%;
   border: 1px solid #e9ecef;
   background-color: #ffffff;
@@ -39,10 +40,20 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
   margin-left: 14px;
   color: #6c757d;
   font-size: 14px;
   font-weight: 600;
+}
+
+.breadcrumb span {
+  white-space: nowrap;
+}
+
+.breadcrumbAtivo {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .breadcrumb span:not(:last-child)::after {
@@ -157,4 +168,39 @@
 
 .confirmButton:hover {
   background: #c82333;
+}
+
+@media (max-width: 1023.98px) {
+  .navbar {
+    left: 0;
+    gap: 8px;
+  }
+
+  .breadcrumb {
+    margin-left: 6px;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .navbar {
+    height: 60px;
+    padding: 0 12px;
+  }
+
+  /* Em telas estreitas só a página atual cabe no breadcrumb. */
+  .breadcrumb span:not(:last-child) {
+    display: none;
+  }
+
+  .logoutTexto {
+    display: none;
+  }
+
+  .logoutButton {
+    padding: 10px;
+  }
+
+  .modalFooter {
+    flex-direction: column-reverse;
+  }
 }

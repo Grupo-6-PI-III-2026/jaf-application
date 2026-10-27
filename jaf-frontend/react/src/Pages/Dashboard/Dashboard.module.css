@@ -107,7 +107,7 @@
 
 .searchWrapper {
   position: relative;
-  width: 320px;
+  width: min(320px, 100%);
 }
 
 .searchIcon {
@@ -165,7 +165,7 @@
   gap: 12px;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
   .statsRow {
     grid-template-columns: 1fr;
   }
@@ -189,7 +189,7 @@
   margin-bottom: 10px;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1023.98px) {
   .chartsGrid {
     grid-template-columns: 1fr;
   }
@@ -359,7 +359,44 @@
   padding: 36px 0;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 767.98px) {
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .headerActions {
+    justify-content: stretch;
+  }
+
+  .headerActions > button {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  .selectWrapper {
+    width: 100%;
+    margin-right: 0;
+  }
+
+  .selectWrapper select {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .searchWrapper {
+    width: 100%;
+  }
+}
+
+@media (max-width: 639.98px) {
+  /* Com pizza e legenda empilhadas a altura fixa cortaria o conteúdo. */
+  .chartContainer {
+    height: auto;
+    min-height: 170px;
+  }
+
   .pieLayout {
     grid-template-columns: 1fr;
   }

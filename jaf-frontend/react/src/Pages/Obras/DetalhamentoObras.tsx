@@ -22,6 +22,7 @@ import { ocrService } from "../../Service/Gastos/ocrService";
 import { alocacaoService, type AlocacaoObra } from "../../Service/Alocacoes/alocacaoService";
 import { authService } from "../../Service/Auth/Login/authService";
 import { toast } from "sonner";
+import { Responsive } from "../../Components/Responsive/Responsive";
 
 const formatarMoeda = (valor: number) =>
   valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -477,6 +478,30 @@ export default function DetalhamentoObras() {
     }
   }
 
+  function renderizarReembolso(gasto: Gasto) {
+    if (gasto.reembolsoConcluido === null) {
+      return <span className={`${styles.badgeReembolso} ${styles.reembolsoNaoAplicavel}`}>Não</span>;
+    }
+
+    return (
+      <button
+        type="button"
+        className={`${styles.badgeReembolso} ${
+          gasto.reembolsoConcluido ? styles.reembolsoConcluido : styles.reembolsoPendente
+        } ${podeEditarGasto ? styles.badgeReembolsoAcionavel : ""}`}
+        onClick={() => alternarReembolso(gasto)}
+        disabled={!podeEditarGasto || atualizandoReembolsoId === gasto.id}
+        title={podeEditarGasto ? "Clique para alternar o status do reembolso" : "Sem permissão para editar reembolso"}
+      >
+        {atualizandoReembolsoId === gasto.id
+          ? "Salvando..."
+          : gasto.reembolsoConcluido
+            ? "Concluído"
+            : "Pendente"}
+      </button>
+    );
+  }
+
   if (carregando) {
     return (
       <div className={styles.pagina}>
@@ -700,15 +725,10 @@ export default function DetalhamentoObras() {
             <>
               <input
                 type="date"
+                className={styles.inputDataPresenca}
                 value={dataSelecionada}
                 onChange={(e) => setDataSelecionada(e.target.value)}
-                style={{
-                  padding: '8px 12px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  marginRight: '8px',
-                  fontSize: '14px'
-                }}
+                aria-label="Data do controle de presença"
               />
               <button
                 className={styles.botaoAdicionarGasto}
@@ -883,6 +903,57 @@ export default function DetalhamentoObras() {
 
         {/* Tabela */}
         <div className={styles.tabelaWrapper}>
+          <Responsive max="md">
+            <ul className={styles.listaCards}>
+              {gastosExibidos.length > 0 ? (
+                gastosExibidos.map((gasto, indice) => (
+                  <li key={gasto.id} className={styles.itemCard}>
+                    <div className={styles.itemCardTopo}>
+                      <span className={styles.descricaoDestaque}>{gasto.descricao}</span>
+                      <span className={styles.celulaValor} style={{ color: "#43B89C" }}>
+                        {formatarMoeda(gasto.valor)}
+                      </span>
+                    </div>
+                    <div className={styles.itemCardTopo}>
+                      <div className={styles.celulaFuncionario}>
+                        <div className={styles.avatarPequeno} style={{ backgroundColor: cores[indice % cores.length] }}>
+                          {getIniciais(gasto.funcionario.nome)}
+                        </div>
+                        {gasto.funcionario.nome}
+                      </div>
+                      <span className={styles.itemCardData}>{formatarData(gasto.dtGasto)}</span>
+                    </div>
+                    <dl className={styles.itemCardDetalhes}>
+                      <div>
+                        <dt>Tipo</dt>
+                        <dd className={gasto.reembolsoConcluido !== null ? styles.metodoReembolso : undefined}>
+                          {metodoPagamentoLabel(gasto.metodoPagamento)}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Reembolso</dt>
+                        <dd>{renderizarReembolso(gasto)}</dd>
+                      </div>
+                      <div>
+                        <dt>Etapa</dt>
+                        <dd>{gasto.etapa || "-"}</dd>
+                      </div>
+                      <div>
+                        <dt>Material</dt>
+                        <dd>{gasto.categoria || "-"}</dd>
+                      </div>
+                    </dl>
+                  </li>
+                ))
+              ) : (
+                <li className={styles.itemCardVazio}>
+                  {buscaFinanceira ? "Nenhum lançamento encontrado para a busca." : "Nenhum gasto registrado para esta obra."}
+                </li>
+              )}
+            </ul>
+          </Responsive>
+
+          <Responsive min="lg">
           <table className={styles.tabela}>
             <thead>
               <tr>
@@ -923,27 +994,7 @@ export default function DetalhamentoObras() {
                         {metodoPagamentoLabel(gasto.metodoPagamento)}
                       </span>
                     </td>
-                    <td>
-                      {gasto.reembolsoConcluido !== null ? (
-                        <button
-                          type="button"
-                          className={`${styles.badgeReembolso} ${
-                            gasto.reembolsoConcluido ? styles.reembolsoConcluido : styles.reembolsoPendente
-                          } ${podeEditarGasto ? styles.badgeReembolsoAcionavel : ""}`}
-                          onClick={() => alternarReembolso(gasto)}
-                          disabled={!podeEditarGasto || atualizandoReembolsoId === gasto.id}
-                          title={podeEditarGasto ? "Clique para alternar o status do reembolso" : "Sem permissão para editar reembolso"}
-                        >
-                          {atualizandoReembolsoId === gasto.id
-                            ? "Salvando..."
-                            : gasto.reembolsoConcluido
-                              ? "Concluído"
-                              : "Pendente"}
-                        </button>
-                      ) : (
-                        <span className={`${styles.badgeReembolso} ${styles.reembolsoNaoAplicavel}`}>Não</span>
-                      )}
-                    </td>
+                    <td>{renderizarReembolso(gasto)}</td>
                     <td>
                       <span className={styles.descricaoDestaque}>{gasto.descricao}</span>
                     </td>
@@ -961,6 +1012,7 @@ export default function DetalhamentoObras() {
               )}
             </tbody>
           </table>
+          </Responsive>
 
           {/* Paginação */}
           <div className={styles.paginacao}>
