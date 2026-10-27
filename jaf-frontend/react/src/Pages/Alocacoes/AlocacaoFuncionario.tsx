@@ -13,6 +13,13 @@ import { obraService, type Obra } from "../../Service/Obras/obraService";
 import { alocacaoService, type AlocacaoObra } from "../../Service/Alocacoes/alocacaoService";
 import { funcionarioService } from "../../Service/Funcionarios/funcionarioService";
 import type { FuncionarioPermissoes } from "../../Types/permissoes";
+import PeriodoFiltro from "../../Components/PeriodoFiltro/PeriodoFiltro";
+import {
+  dataNoPeriodo,
+  periodoFiltroInicial,
+  resolverPeriodo,
+  type PeriodoFiltroValue,
+} from "../../Components/PeriodoFiltro/periodUtils";
 import { toast } from "sonner";
 
 const IMAGEM_PLACEHOLDER =
@@ -65,6 +72,7 @@ export default function AlocacaoFuncionario() {
   const [paginaAtual, setPaginaAtual] = useState(1);
   const [busca, setBusca] = useState("");
   const [cargoFiltro, setCargoFiltro] = useState("TODOS");
+  const [periodo, setPeriodo] = useState<PeriodoFiltroValue>(periodoFiltroInicial);
   const [modalAberto, setModalAberto] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [funcionarios, setFuncionarios] = useState<FuncionarioPermissoes[]>([]);
@@ -108,7 +116,7 @@ export default function AlocacaoFuncionario() {
 
   useEffect(() => {
     setPaginaAtual(1);
-  }, [busca, cargoFiltro]);
+  }, [busca, cargoFiltro, periodo]);
 
   const funcionariosDisponiveis = funcionarios.filter(
     (funcionario) => !alocacoes.some((alocacao) => alocacao.funcionario.id === funcionario.id),
@@ -122,6 +130,8 @@ export default function AlocacaoFuncionario() {
     setModalAberto(true);
   }
 
+  const intervalo = resolverPeriodo(periodo);
+
   const alocacoesFiltradas = alocacoes.filter((alocacao) => {
     const termo = busca.trim().toLowerCase();
     const correspondeBusca = !termo || [
@@ -132,7 +142,8 @@ export default function AlocacaoFuncionario() {
     ].some((campo) => campo.toLowerCase().includes(termo));
 
     const correspondeCargo = cargoFiltro === "TODOS" || alocacao.cargo === cargoFiltro;
-    return correspondeBusca && correspondeCargo;
+    const correspondePeriodo = dataNoPeriodo(alocacao.dtInicio, intervalo);
+    return correspondeBusca && correspondeCargo && correspondePeriodo;
   });
 
   const totalPaginas = Math.ceil(alocacoesFiltradas.length / ITENS_POR_PAGINA);
@@ -328,6 +339,7 @@ export default function AlocacaoFuncionario() {
                 <option key={cargo.value} value={cargo.value}>{cargo.label}</option>
               ))}
             </select>
+            <PeriodoFiltro value={periodo} onChange={setPeriodo} />
           </div>
         </div>
 

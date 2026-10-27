@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-import java.io.IOException;
 
 @RestController
 @RequestMapping("/ocr")
@@ -32,7 +31,7 @@ public class OcrController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAuthority('CRIAR_OBRA')")
     public ResponseEntity<JsonNode> processar(@RequestParam("file") MultipartFile file)
-            throws IOException {
+            throws java.io.IOException {
         return ResponseEntity.ok(ocrService.process(file));
     }
 
@@ -41,14 +40,16 @@ public class OcrController {
     public ResponseEntity<OcrResponseDto> processarNota(@RequestParam("arquivo") MultipartFile arquivo,
                                                         Authentication authentication) {
         OcrResponseDto resposta = ocrService.processarNota(arquivo, authentication.getName());
-        HttpStatus status = resposta.getStatus() == StatusOcr.PROCESSANDO ? HttpStatus.ACCEPTED : HttpStatus.OK;
+        HttpStatus status = resposta.getStatus() == StatusOcr.PROCESSANDO
+                ? HttpStatus.ACCEPTED
+                : HttpStatus.OK;
         return ResponseEntity.status(status).body(resposta);
     }
 
     @GetMapping("/nota-fiscal/{jobId}")
     @PreAuthorize("hasAuthority('CRIAR_GASTO')")
     public ResponseEntity<OcrResponseDto> consultarProcessamento(@PathVariable String jobId,
-                                                                 Authentication authentication) {
+                                                                  Authentication authentication) {
         return ResponseEntity.ok(ocrService.consultar(jobId, authentication.getName()));
     }
 }

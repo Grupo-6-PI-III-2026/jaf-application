@@ -3,12 +3,15 @@ package com.jaf.application.dto;
 import com.jaf.application.enums.Cargo;
 import com.jaf.application.model.Funcionario;
 
+import java.time.LocalDate;
+
 public class FuncionarioResponseDto {
     private Long id;
     private String nome;
     private String email;
     private String fotoUrl;
     private Cargo cargo;
+    private LocalDate createdAt;
 
     public FuncionarioResponseDto(Funcionario funcionario) {
         this.id = funcionario.getId();
@@ -16,6 +19,7 @@ public class FuncionarioResponseDto {
         this.email = funcionario.getEmail();
         this.fotoUrl = funcionario.getFotoUrl();
         this.cargo = funcionario.getCargoGlobal();
+        this.createdAt = funcionario.getCreatedAt();
     }
 
     public static FuncionarioResponseDto from(Funcionario funcionario) {
@@ -60,5 +64,13 @@ public class FuncionarioResponseDto {
 
     public void setCargo(Cargo cargo) {
         this.cargo = cargo;
+    }
+
+    public LocalDate getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDate createdAt) {
+        this.createdAt = createdAt;
     }
 }

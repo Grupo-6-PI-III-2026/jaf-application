@@ -12,5 +12,6 @@ public interface PresencaRepository extends JpaRepository<Presenca, Long> {
     List<Presenca> findByFuncionarioId(Long funcionarioId);
     Optional<Presenca> findByFuncionarioIdAndObraIdAndData(Long funcionarioId, Long obraId, LocalDate data);
     List<Presenca> findByObraIdAndData(Long obraId, LocalDate data);
+    List<Presenca> findByObraIdAndDataBetween(Long obraId, LocalDate from, LocalDate to);
     boolean existsByFuncionarioIdAndObraIdAndData(Long funcionarioId, Long obraId, LocalDate data);
 }

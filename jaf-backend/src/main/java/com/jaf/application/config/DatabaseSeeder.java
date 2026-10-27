@@ -18,7 +18,7 @@ public class DatabaseSeeder implements ApplicationRunner {
     private static final Logger LOGGER = LoggerFactory.getLogger(DatabaseSeeder.class);
     
     // CORREÇÃO DE SEGURANÇA A02: Senha padrão já está em hash BCrypt
-    // Hash BCrypt da senha "senha123" (todos os usuários criados no seed usam esta senha)
+    // Hash BCrypt da senha "Admin@123" (todos os usuários criados no seed usam esta senha)
     // Recomendação: Em produção, cada usuário deve ter senha única ou ser forçado a trocar no primeiro login
     private static final String SENHA_PADRAO_HASH = "$2a$10$yPsrDB3hR4NRGdCKaTxrz.CNjwgz2LjEZnUMw9ttY00GHSDfhLcdW";
 
@@ -54,8 +54,8 @@ public class DatabaseSeeder implements ApplicationRunner {
 
     private void inserirFuncionario(String nome, String email, String cargo) {
         jdbcTemplate.update("""
-                INSERT INTO funcionario (nome, email, senha, cargo_global)
-                SELECT ?, ?, ?, ?
+                INSERT INTO funcionario (nome, email, senha, cargo_global, created_at)
+                SELECT ?, ?, ?, ?, CURRENT_DATE
                 WHERE NOT EXISTS (SELECT 1 FROM funcionario WHERE email = ?)
                 """, nome, email, SENHA_PADRAO_HASH, cargo, email);
     }
@@ -97,8 +97,8 @@ public class DatabaseSeeder implements ApplicationRunner {
 
     private void inserirAlocacao(String funcionarioEmail, String obraTitulo, String cargo) {
         jdbcTemplate.update("""
-                INSERT INTO alocacao_obra (funcionario_id, obra_id, cargo)
-                SELECT funcionario.id, obra.id, ?
+                INSERT INTO alocacao_obra (funcionario_id, obra_id, cargo, dt_inicio)
+                SELECT funcionario.id, obra.id, ?, CURRENT_DATE
                 FROM funcionario, obra
                 WHERE funcionario.email = ?
                   AND obra.titulo = ?

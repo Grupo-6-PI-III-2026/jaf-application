@@ -3,6 +3,8 @@ package com.jaf.application.model;
 import com.jaf.application.enums.Cargo;
 import jakarta.persistence.*;
 
+import java.time.LocalDate;
+
 @Entity
 public class AlocacaoObra {
     @Id
@@ -19,6 +21,9 @@ public class AlocacaoObra {
 
     @Enumerated(EnumType.STRING)
     private Cargo cargo;
+
+    private LocalDate dtInicio;
+    private LocalDate dtFim;
 
     public Long getId() {
         return id;
@@ -50,5 +55,28 @@ public class AlocacaoObra {
 
     public void setCargo(Cargo cargo) {
         this.cargo = cargo;
+    }
+
+    public LocalDate getDtInicio() {
+        return dtInicio;
+    }
+
+    public void setDtInicio(LocalDate dtInicio) {
+        this.dtInicio = dtInicio;
+    }
+
+    public LocalDate getDtFim() {
+        return dtFim;
+    }
+
+    public void setDtFim(LocalDate dtFim) {
+        this.dtFim = dtFim;
+    }
+
+    @PrePersist
+    protected void onCreate() {
+        if (dtInicio == null) {
+            dtInicio = LocalDate.now();
+        }
     }
 }

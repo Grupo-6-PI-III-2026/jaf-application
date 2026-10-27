@@ -3,6 +3,8 @@ package com.jaf.application.model;
 import com.jaf.application.enums.Cargo;
 import jakarta.persistence.*;
 
+import java.time.LocalDate;
+
 @Entity
 public class Funcionario {
     @Id
@@ -18,6 +20,9 @@ public class Funcionario {
 
     @Enumerated(EnumType.STRING)
     private Cargo cargoGlobal;
+
+    @Column(name = "created_at")
+    private LocalDate createdAt;
 
     public Long getId() {
         return id;
@@ -65,5 +70,20 @@ public class Funcionario {
 
     public void setCargoGlobal(Cargo cargoGlobal) {
         this.cargoGlobal = cargoGlobal;
+    }
+
+    public LocalDate getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDate createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    @PrePersist
+    protected void onCreate() {
+        if (createdAt == null) {
+            createdAt = LocalDate.now();
+        }
     }
 }

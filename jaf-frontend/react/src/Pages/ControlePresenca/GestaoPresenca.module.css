@@ -34,12 +34,18 @@
 
 .filtros {
   display: grid;
-  grid-template-columns: minmax(220px, 1.3fr) minmax(150px, 0.7fr) minmax(150px, 0.7fr) minmax(220px, 1fr);
+  grid-template-columns: minmax(200px, 1.1fr) minmax(140px, 0.7fr) minmax(140px, 0.7fr) minmax(200px, 1fr);
   gap: 14px;
   margin-bottom: 18px;
   padding: 18px;
   border-radius: 16px;
   background: #2d2d2d;
+}
+
+.periodoWrap {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
 }
 
 .filtros label {
