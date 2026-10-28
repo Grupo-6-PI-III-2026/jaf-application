@@ -1,5 +1,5 @@
 # ============================================================
-# Perfil Learner Lab (conta de estudante) — mantém o comportamento original.
+# Perfil Learner Lab (conta de estudante) — respeita o limite de 6 instâncias EC2.
 # Uso: copie para profiles/lab.tfvars e rode:
 #   terraform workspace select default
 #   terraform plan -var-file=profiles/lab.tfvars
@@ -13,9 +13,12 @@ instance_type    = "t3.micro"
 backend_instance_type = "t3.small"
 root_volume_size = 30
 
-frontend_asg = { min_size = 2, desired_capacity = 2, max_size = 4 }
-backend_asg  = { min_size = 2, desired_capacity = 2, max_size = 4 }
-ocr_asg      = { min_size = 2, desired_capacity = 2, max_size = 4 }
+# Learner Lab limita a 6 EC2: 1 frontend + 2 backend + 2 OCR + 1 RabbitMQ.
+# max_size = desired_capacity para o Auto Scaling nao tentar passar do limite.
+max_instancias_ec2 = 6
+frontend_asg = { min_size = 1, desired_capacity = 1, max_size = 1 }
+backend_asg  = { min_size = 2, desired_capacity = 2, max_size = 2 }
+ocr_asg      = { min_size = 2, desired_capacity = 2, max_size = 2 }
 
 single_nat_gateway = false
 rds_multi_az       = true

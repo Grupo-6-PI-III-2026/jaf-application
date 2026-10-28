@@ -163,9 +163,9 @@ variable "frontend_asg" {
     max_size         = number
   })
   default = {
-    min_size         = 2
-    desired_capacity = 2
-    max_size         = 4
+    min_size         = 1
+    desired_capacity = 1
+    max_size         = 1
   }
 
   validation {
@@ -184,7 +184,7 @@ variable "backend_asg" {
   default = {
     min_size         = 2
     desired_capacity = 2
-    max_size         = 4
+    max_size         = 2
   }
 
   validation {
@@ -203,13 +203,19 @@ variable "ocr_asg" {
   default = {
     min_size         = 2
     desired_capacity = 2
-    max_size         = 4
+    max_size         = 2
   }
 
   validation {
     condition     = var.ocr_asg.min_size <= var.ocr_asg.desired_capacity && var.ocr_asg.desired_capacity <= var.ocr_asg.max_size
     error_message = "ocr_asg exige min_size <= desired_capacity <= max_size."
   }
+}
+
+variable "max_instancias_ec2" {
+  description = "Limite de instancias EC2 da conta (Learner Lab permite 6); soma os max_size dos ASGs e o RabbitMQ"
+  type        = number
+  default     = 6
 }
 
 variable "public_key_path" {
