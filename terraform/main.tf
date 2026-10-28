@@ -28,6 +28,24 @@ data "aws_ami" "amazon_linux_2023" {
   }
 }
 
+locals {
+  # O RabbitMQ so existe com o OCR ligado (mesma regra do modulo EC2).
+  total_instancias_ec2 = (
+    var.frontend_asg.max_size + var.backend_asg.max_size + var.ocr_asg.max_size +
+    (var.ocr_asg.desired_capacity > 0 ? 1 : 0)
+  )
+}
+
+# ASGs acima do limite da conta nao falham no apply: as instancias extras simplesmente nao sobem.
+resource "terraform_data" "limite_instancias_ec2" {
+  lifecycle {
+    precondition {
+      condition     = local.total_instancias_ec2 <= var.max_instancias_ec2
+      error_message = "A soma dos max_size de frontend_asg, backend_asg e ocr_asg mais o RabbitMQ ultrapassa max_instancias_ec2. Reduza as capacidades ou ajuste max_instancias_ec2."
+    }
+  }
+}
+
 # ── Módulo: VPC ───────────────────────────────────────────────
 module "vpc" {
   source = "./modules/vpc"

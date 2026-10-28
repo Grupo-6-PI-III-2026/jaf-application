@@ -76,8 +76,10 @@ terraform apply -var-file="profiles\lab.tfvars"
 ```
 
 No perfil Student, `use_lab_role = true` usa a `LabRole` fornecida pelo
-Learner Lab. O perfil mantém duas instâncias mínimas por serviço crítico,
-RDS Multi-AZ e NAT Gateway por AZ, conforme as limitações do laboratório.
+Learner Lab. O perfil sobe 6 instâncias EC2 (limite do laboratório): 1 frontend,
+2 backend (`t3.small`), 2 workers OCR e 1 RabbitMQ, além de RDS Multi-AZ e NAT
+Gateway por AZ. O `plan` falha se a soma dos `max_size` dos ASGs mais o RabbitMQ
+passar de `max_instancias_ec2`.
 
 ### Opção 2 — Conta AWS pessoal
 
@@ -112,8 +114,9 @@ terraform apply -var-file="profiles\personal.tfvars"
 ```
 
 No perfil pessoal, `use_lab_role = false` faz o Terraform criar a role
-necessária para as instâncias. Esse perfil usa uma configuração reduzida para
-testes, incluindo RDS Single-AZ e menor capacidade nos ASGs.
+necessária para as instâncias. Esse perfil também sobe 6 instâncias EC2
+(1 frontend, 2 backend, 2 workers OCR e 1 RabbitMQ), com RDS Single-AZ e um único
+NAT Gateway para reduzir custo.
 
 ### Conferência obrigatória antes do `apply`
 
