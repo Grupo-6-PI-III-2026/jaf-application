@@ -11,21 +11,10 @@ echo "${ghcr_token}" | docker login ghcr.io \
   --password-stdin
 docker pull ghcr.io/${repo_owner}/jaf-frontend:latest
 
-# ── Extrai o nginx.conf original de dentro da imagem ────────
-# Cria um container temporário sem rodá-lo, só para copiar o arquivo
-docker create --name temp ghcr.io/${repo_owner}/jaf-frontend:latest
-docker cp temp:/etc/nginx/conf.d/default.conf /home/ec2-user/default.conf
-docker rm temp
-
-# No AWS, o hostname aponta para o ALB interno do backend. O mesmo arquivo
-# continua compatível com Docker Compose, onde "jaf-backend" é resolvido pelo Docker.
-sed -i "s/jaf-backend/${backend_host}/g" /home/ec2-user/default.conf
-
-# ── Sobe o container montando o conf corrigido como volume ───
-# O :ro (read-only) garante que o Nginx não tente sobrescrever o arquivo
+# BACKEND_HOST alimenta o template do Nginx; o DNS do ALB interno é resolvido periodicamente.
 docker run -d \
   --name jaf-frontend \
   --restart always \
   -p 80:80 \
-  -v /home/ec2-user/default.conf:/etc/nginx/conf.d/default.conf:ro \
+  -e BACKEND_HOST="${backend_host}" \
   ghcr.io/${repo_owner}/jaf-frontend:latest

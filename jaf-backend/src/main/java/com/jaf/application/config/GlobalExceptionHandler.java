@@ -27,6 +27,14 @@ public class GlobalExceptionHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    @ExceptionHandler({org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class,
+            org.springframework.http.converter.HttpMessageNotReadableException.class,
+            org.springframework.web.bind.MissingServletRequestParameterException.class,
+            java.time.format.DateTimeParseException.class})
+    public ResponseEntity<ErrorResponse> handleInvalidInput(Exception ex, WebRequest request) {
+        return handleBadRequest(new BadRequest("Parâmetros, data ou corpo da requisição inválidos."), request);
+    }
+
     @ExceptionHandler(BadRequest.class)
     public ResponseEntity<ErrorResponse> handleBadRequest(BadRequest ex, WebRequest request) {
         logger.error("BadRequest: {} - Path: {}", ex.getMessage(), request.getDescription(false));

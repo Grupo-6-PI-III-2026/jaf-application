@@ -11,12 +11,16 @@ import CardObra from "../../Components/CardObra/cardObra";
 import { obraService, type Obra } from "../../Service/Obras/obraService";
 import { gastoService, type Gasto } from "../../Service/Gastos/gastoService";
 import { alocacaoService, type AlocacaoObra } from "../../Service/Alocacoes/alocacaoService";
+import { authService } from "../../Service/Auth/Login/authService";
+import { toast } from "sonner";
 
 const formatarMoeda = (valor: number) =>
   valor.toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL",
   });
+
+const normalizar = (valor: string) => valor.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/_/g, " ").trim().toLowerCase();
 
 // Array de imagens placeholder para as obras
 const imagensObras = [
@@ -27,10 +31,13 @@ const imagensObras = [
 ];
 
 export default function Home() {
+  const admin = authService.isAdmin();
   const [obras, setObras] = useState<Obra[]>([]);
   const [gastos, setGastos] = useState<Gasto[]>([]);
   const [responsaveisPorObra, setResponsaveisPorObra] = useState<Map<number, AlocacaoObra>>(new Map());
   const [carregando, setCarregando] = useState(true);
+  const [busca, setBusca] = useState("");
+  const [status, setStatus] = useState("");
 
   useEffect(() => {
     const carregarDados = async () => {
@@ -38,10 +45,10 @@ export default function Home() {
         setCarregando(true);
         const obrasData = await obraService.listar();
         const gastosPorObra = await Promise.allSettled(
-          obrasData.map((obra) => gastoService.listarPorObra(obra.id))
+          admin && authService.hasAuthority("VISUALIZAR_GASTOS") ? obrasData.map((obra) => gastoService.listarPorObra(obra.id)) : []
         );
         const alocacoesPorObra = await Promise.allSettled(
-          obrasData.map((obra) => alocacaoService.listarPorObra(obra.id))
+          authService.hasAuthority("VISUALIZAR_ALOCACOES") ? obrasData.map((obra) => alocacaoService.listarPorObra(obra.id)) : []
         );
         const gastosData = gastosPorObra.flatMap((resultado) =>
           resultado.status === "fulfilled" ? resultado.value : []
@@ -57,13 +64,14 @@ export default function Home() {
         setResponsaveisPorObra(responsaveis);
       } catch (error) {
         console.error("Erro ao carregar dados:", error);
+        toast.error("Não foi possível carregar as obras. Atualize a página para tentar novamente.");
       } finally {
         setCarregando(false);
       }
     };
 
     carregarDados();
-  }, []);
+  }, [admin]);
 
   // Calcular KPIs
   const obrasEmAndamento = obras.filter(
@@ -80,11 +88,11 @@ export default function Home() {
     totalGastoPorObra.set(gasto.obra.id, (totalGastoPorObra.get(gasto.obra.id) ?? 0) + gasto.valor);
   });
 
-  // Pegar as obras mais recentes (últimas 2)
-  const obrasRecentes = obras
+  const statusDisponiveis = Array.from(new Set(obras.map((obra) => normalizar(obra.status)))).sort();
+  const obrasFiltradas = obras
     .slice()
     .sort((a, b) => new Date(b.dtInicio).getTime() - new Date(a.dtInicio).getTime())
-    .slice(0, 2);
+    .filter((obra) => normalizar(obra.titulo).includes(normalizar(busca)) && (!status || normalizar(obra.status) === status));
 
   return (
     <div className={styles.pagina}>
@@ -118,7 +126,7 @@ export default function Home() {
               <span className={styles.sub}>Obras concluídas</span>
             </div>
 
-            <div className={styles.card}>
+            {admin && <div className={styles.card}>
               <span className={styles.rotulo}>TOTAL GASTO</span>
               <div className={styles.valorLinha}>
                 <DollarSign size={18} />
@@ -130,16 +138,28 @@ export default function Home() {
                 <TrendingUp size={14} />
                 Gastos acumulados
               </div>
-            </div>
+            </div>}
           </div>
 
-          {/* OBRAS RECENTES */}
-          <div className={styles.secao}>
-            <h2 className={styles.subtitulo}>Obras Recentes</h2>
+          <section className={styles.secao} aria-labelledby="todas-obras">
+            <h2 id="todas-obras" className={styles.subtitulo}>Todas as obras</h2>
+            <div className={styles.filtros}>
+              <label>Buscar por título
+                <input type="search" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Digite o título da obra" />
+              </label>
+              <label>Status da obra
+                <select value={status} onChange={(e) => setStatus(e.target.value)}>
+                  <option value="">Todos os status</option>
+                  {statusDisponiveis.map((item) => <option key={item} value={item}>{item.toLocaleUpperCase("pt-BR")}</option>)}
+                </select>
+              </label>
+              {(busca || status) && <button type="button" onClick={() => { setBusca(""); setStatus(""); }}>Limpar filtros</button>}
+            </div>
+            <p role="status">{obrasFiltradas.length} de {obras.length} obras</p>
 
             <div className={styles.lista}>
-              {obrasRecentes.length > 0 ? (
-                obrasRecentes.map((obra, index) => {
+              {obrasFiltradas.length > 0 ? (
+                obrasFiltradas.map((obra, index) => {
                   const responsavel = responsaveisPorObra.get(obra.id);
                   return (
                     <CardObra
@@ -155,10 +175,10 @@ export default function Home() {
                   );
                 })
               ) : (
-                <p>Nenhuma obra encontrada.</p>
+                <p>{obras.length ? "Nenhuma obra corresponde aos filtros. Tente outro título ou status." : "Nenhuma obra encontrada."}</p>
               )}
             </div>
-          </div>
+          </section>
         </>
       )}
     </div>

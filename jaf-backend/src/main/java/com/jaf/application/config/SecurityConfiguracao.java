@@ -50,7 +50,8 @@ public class SecurityConfiguracao {
             "/api/public/authenticate",
             "/webjars/**",
             "/v3/api-docs/**",
-            "/actuator/*",
+            "/actuator/health",
+            "/actuator/health/**",
             "/funcionarios/login",
             "/funcionarios/logout", // CORREÇÃO DE SEGURANÇA A07: Endpoint de logout público
             "/h2-console/**",

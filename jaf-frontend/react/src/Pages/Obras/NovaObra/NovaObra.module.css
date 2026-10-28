@@ -367,7 +367,7 @@
 }
 
 .card:first-child .campo {
-  color: #52525b;
+  color: #fafafa;
   font-size: 24px;
   font-weight: 700;
   font-family: 'Manrope', sans-serif;
@@ -398,7 +398,7 @@
 }
 
 .card:first-child .infoTexto {
-  color: #71717a;
+  color: #b4b4bd;
   font-style: italic;
   font-size: 10px;
   line-height: 16.25px;

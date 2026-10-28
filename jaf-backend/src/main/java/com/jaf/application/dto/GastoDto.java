@@ -20,6 +20,7 @@ public class GastoDto {
 
     @NotNull(message = "O valor do gasto é obrigatório")
     @Positive(message = "O valor deve ser maior que zero")
+    @Digits(integer = 17, fraction = 2)
     private BigDecimal valor;
 
     @NotNull(message = "A data do gasto é obrigatória")

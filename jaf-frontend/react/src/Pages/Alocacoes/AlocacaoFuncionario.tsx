@@ -22,6 +22,7 @@ import {
 } from "../../Components/PeriodoFiltro/periodUtils";
 import { toast } from "sonner";
 import { Responsive } from "../../Components/Responsive/Responsive";
+import { authService } from "../../Service/Auth/Login/authService";
 
 const IMAGEM_PLACEHOLDER =
   "https://s2.glbimg.com/YgImWrcpJX6FAHRJOlZtEnTaHYc=/e.glbimg.com/og/ed/f/original/2020/12/23/apartamento-sao-paulo-260-m2-atemporal3.jpg";
@@ -29,7 +30,7 @@ const IMAGEM_PLACEHOLDER =
 const ITENS_POR_PAGINA = 8;
 
 const formatarData = (data: string) =>
-  new Date(data).toLocaleDateString("pt-BR");
+  new Date(`${data}T00:00:00`).toLocaleDateString("pt-BR");
 
 const getIniciais = (nome: string) => {
   const palavras = nome.split(" ");
@@ -83,11 +84,13 @@ export default function AlocacaoFuncionario() {
   const [carregando, setCarregando] = useState(true);
 
   const { id } = useParams<{ id: string }>();
+  const podeCriar = authService.hasAuthority("CRIAR_ALOCACAO");
 
   useEffect(() => {
     const carregarDados = async () => {
       if (!id) {
         toast.error("ID da obra não fornecido");
+        setCarregando(false);
         return;
       }
       try {
@@ -95,7 +98,7 @@ export default function AlocacaoFuncionario() {
         const [obraData, alocacoesData, funcionariosData] = await Promise.all([
           obraService.buscarPorId(parseInt(id)),
           alocacaoService.listarPorObra(parseInt(id)),
-          funcionarioService.listar(),
+          podeCriar && authService.hasAuthority("VISUALIZAR_FUNCIONARIOS") ? funcionarioService.listar() : Promise.resolve([]),
         ]);
         setObra(obraData);
         setAlocacoes(alocacoesData);
@@ -113,7 +116,7 @@ export default function AlocacaoFuncionario() {
       }
     };
     carregarDados();
-  }, [id]);
+  }, [id, podeCriar]);
 
   useEffect(() => {
     setPaginaAtual(1);
@@ -124,6 +127,7 @@ export default function AlocacaoFuncionario() {
   );
 
   function abrirModalAlocacao() {
+    if (!podeCriar) return;
     setNovaAlocacao((valorAtual) => ({
       ...valorAtual,
       funcionarioId: valorAtual.funcionarioId || String(funcionariosDisponiveis[0]?.id ?? ""),
@@ -270,10 +274,10 @@ export default function AlocacaoFuncionario() {
       <div className={styles.cabecalho}>
         <div />
         <div className={styles.cabecalhoAcoes}>
-          <button className={styles.botaoAdicionarGasto} onClick={abrirModalAlocacao}>
+          {podeCriar && <button className={styles.botaoAdicionarGasto} onClick={abrirModalAlocacao}>
             <UserCheck size={16} />
             Alocar colaborador
-          </button>
+          </button>}
         </div>
       </div>
 

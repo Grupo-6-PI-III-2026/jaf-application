@@ -7,6 +7,7 @@ import type {
   PerfilUpdateDto,
 } from "../../Types/user";
 import type { FuncionarioPermissoes } from "../../Types/permissoes";
+import type { FuncionarioPermissoesAcesso } from "../Permissoes/permissaoService";
 
 export const funcionarioService = {
   cadastrar: async (payload: NovoFuncionarioPayload) => {
@@ -21,6 +22,11 @@ export const funcionarioService = {
 
   getMeuPerfil: async (): Promise<FuncionarioResponseDto> => {
     const response = await api.get<FuncionarioResponseDto>("/funcionarios/me");
+    return response.data;
+  },
+
+  getMinhasPermissoes: async (): Promise<FuncionarioPermissoesAcesso> => {
+    const response = await api.get<FuncionarioPermissoesAcesso>("/funcionarios/me/permissoes");
     return response.data;
   },
 

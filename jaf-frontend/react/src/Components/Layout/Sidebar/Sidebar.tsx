@@ -6,6 +6,7 @@ import {
   HardHat,
   Shield,
   X,
+  type LucideIcon,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import styles from "./Sidebar.module.css";
@@ -13,7 +14,15 @@ import { useUser } from "../../../Context/useUser";
 import { CargoLabel, DEFAULT_AVATAR_URL } from "../../../Types/user";
 import { authService } from "../../../Service/Auth/Login/authService";
 
-const menuSections = [
+interface MenuItem {
+  icon: LucideIcon;
+  label: string;
+  path: string;
+  permissao?: string;
+  adminOnly?: boolean;
+}
+
+const menuSections: { title: string; items: MenuItem[] }[] = [
   {
     title: "Operação",
     items: [
@@ -26,7 +35,7 @@ const menuSections = [
     items: [
       { icon: HardHat, label: "Nova Obra", path: "/obras/criar", permissao: "CRIAR_OBRA" },
       { icon: UserPlus, label: "Novo Usuário", path: "/funcionarios/novo", permissao: "CRIAR_FUNCIONARIO" },
-      { icon: Shield, label: "Perfis de Acesso", path: "/permissoes", permissao: "EDITAR_FUNCIONARIO" },
+      { icon: Shield, label: "Perfis de Acesso", path: "/permissoes", adminOnly: true },
     ],
   },
 ];
@@ -40,12 +49,12 @@ interface SidebarProps {
 export function Sidebar({ recolhivel = false, aberta = false, onNavegar }: SidebarProps) {
   const { user } = useUser();
   const avatarUrl = user?.fotoUrl || DEFAULT_AVATAR_URL;
-  const userName = user?.nome ?? "Usuario";
-  const userCargo = user ? CargoLabel[user.cargo] : "Sem cargo";
   const visibleMenuSections = menuSections
     .map((section) => ({
       ...section,
-      items: section.items.filter((item) => !item.permissao || authService.hasAuthority(item.permissao)),
+      items: section.items.filter((item) =>
+        (!item.adminOnly || authService.isAdmin()) &&
+        (!item.permissao || authService.hasAuthority(item.permissao))),
     }))
     .filter((section) => section.items.length > 0);
 
@@ -89,24 +98,26 @@ export function Sidebar({ recolhivel = false, aberta = false, onNavegar }: Sideb
           </div>
         ))}
       </div>
-      <div className={styles.perfil}>
-        <div className={styles.circuloPerfil}>
-          <img src={avatarUrl} alt={userName} />
+      {user && (
+        <div className={styles.perfil}>
+          <div className={styles.circuloPerfil}>
+            <img src={avatarUrl} alt={user.nome} />
+          </div>
+          <div className={styles.nomePerfil}>
+            <h1>{user.nome}</h1>
+            <p>{CargoLabel[user.cargo] ?? user.cargo}</p>
+          </div>
+          <NavLink
+            className={styles.notificationBtn}
+            to="/perfil"
+            onClick={onNavegar}
+            title="Perfil"
+            aria-label="Ir para perfil"
+          >
+            <Settings />
+          </NavLink>
         </div>
-        <div className={styles.nomePerfil}>
-          <h1>{userName}</h1>
-          <p>{userCargo}</p>
-        </div>
-        <NavLink
-          className={styles.notificationBtn}
-          to="/perfil"
-          onClick={onNavegar}
-          title="Perfil"
-          aria-label="Ir para perfil"
-        >
-          <Settings />
-        </NavLink>
-      </div>
+      )}
     </aside>
   );
 }

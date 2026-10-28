@@ -88,6 +88,7 @@ module "ec2" {
   sg_frontend_id = module.security_groups.sg_frontend_id
   sg_backend_id  = module.security_groups.sg_backend_id
   sg_ocr_id      = module.security_groups.sg_ocr_id
+  sg_rabbitmq_id = module.security_groups.sg_rabbitmq_id
 
   # GHCR — credenciais para pull das imagens Docker nas EC2
   ghcr_token = var.ghcr_token
@@ -100,6 +101,11 @@ module "ec2" {
   db_password    = var.db_password
   jwt_secret     = var.jwt_secret
   jwt_expiration = var.jwt_expiration
+
+  # OCR assíncrono: broker RabbitMQ e workers
+  rabbitmq_user     = var.rabbitmq_user
+  rabbitmq_password = var.rabbitmq_password
+  ocr_space_api_key = var.ocr_space_api_key
 }
 
 # ── Módulo: RDS ───────────────────────────────────────────────

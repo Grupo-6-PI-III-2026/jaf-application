@@ -107,3 +107,36 @@
   flex-direction: column;
   gap: 16px;
 }
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+}
+
+.filtros label {
+  display: flex;
+  flex: 1 1 220px;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.filtros input,
+.filtros select,
+.filtros button {
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #adb5bd;
+  border-radius: 8px;
+  background: #fff;
+  color: #1a1a1a;
+  font: inherit;
+}
+
+.filtros input,
+.filtros select {
+  width: 100%;
+  box-sizing: border-box;
+}

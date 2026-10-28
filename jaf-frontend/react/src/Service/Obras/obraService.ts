@@ -3,7 +3,8 @@ import api from "../Auth/Login/Api/Api";
 export interface Obra {
   id: number;
   titulo: string;
-  orcamento: string;
+  orcamento?: string;
+  totalRecebido?: number;
   status: string;
   dtInicio: string;
   dtTerminoPrevisto: string;

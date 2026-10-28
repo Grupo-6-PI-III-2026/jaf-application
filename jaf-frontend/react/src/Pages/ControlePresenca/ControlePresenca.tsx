@@ -1,9 +1,12 @@
 import { Calendar, X } from "lucide-react";
-import { useCallback, useMemo, useState, useEffect } from "react";
+import { useCallback, useMemo, useRef, useState, useEffect } from "react";
 import styles from "./ControlePresenca.module.css";
 import { presencaService } from "../../Service/Presencas/presencaService";
 import type { Colaborador } from "../../Service/Presencas/presencaService";
 import { toast } from "sonner";
+import { authService } from "../../Service/Auth/Login/authService";
+import { hojeIso } from "../../Components/PeriodoFiltro/periodUtils";
+import { dataValida, erroApi } from "../../Utils/financeiro";
 
 type ControlePresencaProps = {
   aberto: boolean;
@@ -23,6 +26,12 @@ export default function ControlePresenca({
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
   const [carregando, setCarregando] = useState(false);
   const [salvando, setSalvando] = useState(false);
+  const [alterados, setAlterados] = useState<Set<number>>(new Set());
+  const [erro, setErro] = useState("");
+  const originais = useRef(new Map<number, boolean>());
+  const podeRegistrar = authService.hasAuthority("REGISTRAR_PRESENCA");
+  const podeEditar = authService.hasAuthority("EDITAR_PRESENCA");
+  const dataPermitida = !!data && dataValida(data, hojeIso());
 
   const carregarColaboradores = useCallback(async () => {
     if (!obraId || !data) return;
@@ -31,9 +40,14 @@ export default function ControlePresenca({
       setCarregando(true);
       const dados = await presencaService.listarPorObraEData(obraId, data);
       setColaboradores(dados);
+      originais.current = new Map(dados.map((pessoa) => [pessoa.funcionarioId, pessoa.presente]));
+      setAlterados(new Set());
+      setErro("");
     } catch (error) {
       console.error("Erro ao carregar colaboradores:", error);
       toast.error("Erro ao carregar lista de presença");
+      setColaboradores([]);
+      setErro("Não foi possível carregar a lista de presença. Feche e abra novamente para tentar.");
     } finally {
       setCarregando(false);
     }
@@ -52,7 +66,7 @@ export default function ControlePresenca({
   );
 
   async function alternarPresenca(colaborador: Colaborador) {
-    if (colaborador.desabilitado) return;
+    if (salvando || !dataPermitida || colaborador.desabilitado || (colaborador.id ? !podeEditar : !podeRegistrar)) return;
 
     // Atualização otimista da UI
     setColaboradores((listaAtual) =>
@@ -64,21 +78,11 @@ export default function ControlePresenca({
       }),
     );
 
-    // Se já existe um ID, tenta alternar no backend
-    if (colaborador.id) {
-      try {
-        await presencaService.alternarPresenca(colaborador.id);
-      } catch (error) {
-        console.error("Erro ao alternar presença:", error);
-        toast.error("Erro ao atualizar presença");
-        // Reverter a alteração em caso de erro
-        carregarColaboradores();
-      }
-    }
+    setAlterados((atuais) => new Set(atuais).add(colaborador.funcionarioId));
   }
 
   async function registrarPresenca() {
-    if (!obraId || !data) {
+    if (salvando || !obraId || !data || !dataPermitida) {
       toast.error("Dados da obra incompletos");
       return;
     }
@@ -86,11 +90,13 @@ export default function ControlePresenca({
     try {
       setSalvando(true);
       
-      // Para cada colaborador presente que não tem ID, criar presença
+      // Toda seleção (inclusive ausência explícita) é persistida só na confirmação.
       const promessas = colaboradores
-        .filter(colab => colab.presente && !colab.id)
+        .filter(colab => alterados.has(colab.funcionarioId) &&
+          authService.hasAuthority(colab.id ? "EDITAR_PRESENCA" : "REGISTRAR_PRESENCA") &&
+          (!colab.id || originais.current.get(colab.funcionarioId) !== colab.presente))
         .map(colab => 
-          presencaService.criarPresenca({
+          colab.id ? presencaService.alternarPresenca(colab.id) : presencaService.criarPresenca({
             funcionarioId: colab.funcionarioId,
             obraId: obraId,
             data: data,
@@ -98,12 +104,17 @@ export default function ControlePresenca({
           })
         );
 
-      await Promise.all(promessas);
-      toast.success("Presença registrada com sucesso");
-      onFechar();
+      const resultados = await Promise.allSettled(promessas);
+      await carregarColaboradores();
+      if (resultados.some((r) => r.status === "rejected")) {
+        toast.error("Alguns registros falharam. A lista foi recarregada; confira antes de tentar novamente.");
+      } else {
+        toast.success("Registros de presença salvos");
+        onFechar();
+      }
     } catch (error) {
       console.error("Erro ao registrar presença:", error);
-      toast.error("Erro ao registrar presença");
+      toast.error(erroApi(error, "Erro ao registrar presença"));
     } finally {
       setSalvando(false);
     }
@@ -120,12 +131,13 @@ export default function ControlePresenca({
   }
 
   return (
-    <div className={styles.overlay} onClick={onFechar}>
+    <div className={styles.overlay} onClick={() => { if (!salvando) onFechar(); }}>
       <section className={styles.modal} onClick={(evento) => evento.stopPropagation()}>
         <header className={styles.header}>
           <button
             type="button"
             onClick={onFechar}
+            disabled={salvando}
             className={styles.botaoFechar}
             aria-label="Fechar controle de presenca"
           >
@@ -142,6 +154,9 @@ export default function ControlePresenca({
         </header>
 
         <div className={styles.corpo}>
+          <p>Registro manual por usuário autenticado com permissão. Selecione a pessoa e confirme para salvar; fechar descarta a seleção. A pessoa deve estar alocada na data.</p>
+          {!dataPermitida && <p role="alert">Selecione uma data válida até hoje para registrar.</p>}
+          {erro && <p role="alert">{erro}</p>}
           <div className={styles.cabecalhoLista}>
             <span>COLABORADOR</span>
             <span>STATUS</span>
@@ -172,7 +187,9 @@ export default function ControlePresenca({
                   <button
                     type="button"
                     onClick={() => alternarPresenca(colaborador)}
-                    disabled={colaborador.desabilitado}
+                    disabled={salvando || !dataPermitida || colaborador.desabilitado || (colaborador.id ? !podeEditar : !podeRegistrar)}
+                    aria-label={`Presença de ${colaborador.funcionarioNome}`}
+                    aria-pressed={colaborador.presente}
                     className={`${styles.toggle} ${
                       colaborador.desabilitado
                         ? styles.toggleDesabilitado
@@ -193,14 +210,14 @@ export default function ControlePresenca({
           <p className={styles.contador}>
             {totalPresentes} DE {colaboradores.length} PRESENTES
           </p>
-          <button 
+          {(podeRegistrar || podeEditar) && <button
             type="button" 
             className={styles.botaoRegistrar}
             onClick={registrarPresenca}
-            disabled={salvando || carregando}
+            disabled={salvando || carregando || !!erro || !dataPermitida || alterados.size === 0}
           >
-            {salvando ? "Salvando..." : "Registrar Presença"}
-          </button>
+            {salvando ? "Salvando..." : podeRegistrar ? "Registrar Presença" : "Salvar alterações"}
+          </button>}
         </footer>
       </section>
     </div>

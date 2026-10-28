@@ -411,7 +411,7 @@ export default function Profile() {
           </button>
         </aside>
 
-        <main className={styles.mainCard}>
+        <section className={styles.mainCard} aria-label="Configurações do perfil">
           {activeTab === "info" && (
             <>
               <div className={styles.cardHeader}>
@@ -695,7 +695,7 @@ export default function Profile() {
               </button>
             </>
           )}
-        </main>
+        </section>
       </div>
 
       <div className={styles.privacyBanner}>

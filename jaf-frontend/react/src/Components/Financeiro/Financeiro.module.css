@@ -1,0 +1,74 @@
+/* Variáveis locais: os painéis também são usados fora da página da obra. */
+.painel {
+  --cor-fundo: #f8f9fa;
+  --cor-superficie: #fff;
+  --cor-superficie-suave: #f1f3f5;
+  --cor-borda: #e9ecef;
+  --cor-borda-controle: #ced4da;
+  --cor-texto: #2b2b2b;
+  --cor-texto-secundario: #6c757d;
+  --cor-icone: #495057;
+  --cor-destaque: #ffc107;
+  --cor-destaque-hover: #ffca2c;
+  --cor-foco: rgba(255, 193, 7, 0.35);
+  --cor-perigo: #c82333;
+  --raio: 8px;
+  --raio-card: 12px;
+  --altura-controle: 40px;
+  --sombra-card: 0 1px 3px rgba(43, 43, 43, 0.06);
+  background: var(--cor-superficie);
+  color: var(--cor-texto);
+  padding: 20px 24px;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-card);
+  box-shadow: var(--sombra-card);
+  margin: 0;
+  min-width: 0;
+}
+.painel h2 { margin: 0 0 4px; font-size: 16px; font-weight: 700; color: var(--cor-texto); }
+.painel h3 { margin: 20px 0 8px; font-size: 14px; font-weight: 700; color: var(--cor-texto); }
+.painel p { margin: 0 0 8px; font-size: 13px; line-height: 1.5; color: var(--cor-texto-secundario); }
+.painel [role="alert"], .erro { color: var(--cor-perigo); }
+.metricas { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 16px 0; }
+.metricas div { display: grid; gap: 6px; padding: 14px 16px; background: var(--cor-fundo); border: 1px solid var(--cor-borda); border-radius: 10px; }
+.metricas dt { color: var(--cor-texto-secundario); font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.metricas dd { margin: 0; font-size: 22px; font-weight: 700; color: var(--cor-texto); font-variant-numeric: tabular-nums; }
+.metricas dd.negativo { color: var(--cor-perigo); }
+.form { display: grid; gap: 14px; max-width: 420px; }
+.form label { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: var(--cor-texto); }
+.form input, .form textarea { min-height: var(--altura-controle); padding: 8px 12px; border: 1px solid var(--cor-borda-controle); border-radius: var(--raio); font: inherit; font-size: 14px; font-weight: 400; background: var(--cor-superficie); color: var(--cor-texto); width: 100%; box-sizing: border-box; outline: none; transition: border-color .15s, box-shadow .15s; }
+.form textarea { min-height: 80px; resize: vertical; }
+.form input:focus-visible, .form textarea:focus-visible { border-color: var(--cor-texto); box-shadow: 0 0 0 3px var(--cor-foco); }
+.painel button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: var(--altura-controle); box-sizing: border-box; padding: 0 16px; border-radius: var(--raio); border: 1px solid var(--cor-borda-controle); background: var(--cor-superficie); color: var(--cor-texto); font: inherit; font-size: 14px; font-weight: 600; white-space: nowrap; cursor: pointer; transition: background .15s, border-color .15s; }
+.painel button:hover:not(:disabled) { background: var(--cor-superficie-suave); border-color: var(--cor-icone); }
+.painel button:focus-visible { outline: 2px solid var(--cor-destaque); outline-offset: 2px; box-shadow: 0 0 0 2px var(--cor-texto); }
+.painel button:disabled { opacity: .55; cursor: not-allowed; }
+.painel .botaoPrimario { background: var(--cor-destaque); border-color: var(--cor-destaque); color: var(--cor-texto); }
+.painel .botaoPrimario:hover:not(:disabled) { background: var(--cor-destaque-hover); border-color: var(--cor-destaque-hover); }
+.acoes { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.overlay { position: fixed; inset: 0; background: rgba(43, 43, 43, .5); z-index: 1200; display: grid; place-items: center; padding: 16px; }
+.modal { width: min(660px, calc(100% - 32px)); max-height: 90dvh; overflow-y: auto; margin: auto; box-sizing: border-box; box-shadow: 0 24px 60px rgba(43, 43, 43, .24); }
+.modal::backdrop { background: rgba(43, 43, 43, .5); }
+.modal > button:last-child { margin-top: 16px; }
+.topo { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid var(--cor-borda); }
+.topo h2 { margin: 0; overflow-wrap: anywhere; }
+.painel .resumoReembolso { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; color: var(--cor-texto); font-variant-numeric: tabular-nums; }
+.status { display: inline-flex; align-items: center; min-height: 24px; box-sizing: border-box; padding: 0 10px; border: 1px solid transparent; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.statusPendente { background: #fdf6e3; border-color: #efe0b5; color: #5c4a1a; }
+.statusParcial { background: #e7f1fb; border-color: #c6dcf2; color: #1d4f7a; }
+.statusPago { background: #e6f4ea; border-color: #c3e3cc; color: #1e5e33; }
+.scroll { overflow-x: auto; margin-top: 12px; border: 1px solid var(--cor-borda); border-radius: 10px; }
+.tabela { border-collapse: collapse; width: 100%; font-size: 14px; }
+.tabela th { background: var(--cor-superficie-suave); color: var(--cor-icone); font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.tabela th, .tabela td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--cor-borda); white-space: nowrap; }
+.tabela td { color: var(--cor-texto); font-variant-numeric: tabular-nums; }
+.tabela td:first-child { font-weight: 500; }
+.tabela tbody tr:last-child td { border-bottom: none; }
+.tabela tbody tr:hover { background: var(--cor-fundo); }
+.historico { padding-left: 22px; margin: 0; color: var(--cor-texto); }
+.historico li { margin: 10px 0; overflow-wrap: anywhere; font-size: 14px; }
+.historico li p { margin: 4px 0 0; }
+@media (max-width: 767.98px) {
+  .painel { padding: 16px; }
+  .form { max-width: none; }
+}

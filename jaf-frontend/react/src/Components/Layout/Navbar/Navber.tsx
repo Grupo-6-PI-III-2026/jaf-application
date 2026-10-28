@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, LogOut, Menu, X } from "lucide-react";
 import styles from "./Navbar.module.css";
@@ -28,11 +28,31 @@ export default function Navbar({ menuAberto = false, onAbrirMenu }: NavbarProps)
   const location = useLocation();
   const { clearUser } = useUser();
   const [modalLogoutAberto, setModalLogoutAberto] = useState(false);
+  const [saindo, setSaindo] = useState(false);
+  const cancelarRef = useRef<HTMLButtonElement>(null);
   const breadcrumb = useMemo(() => getBreadcrumb(location.pathname), [location.pathname]);
 
+  useEffect(() => {
+    if (!modalLogoutAberto) return;
+    cancelarRef.current?.focus();
+    const fecharComEsc = (evento: KeyboardEvent) => {
+      if (evento.key === "Escape") setModalLogoutAberto(false);
+    };
+    document.addEventListener("keydown", fecharComEsc);
+    return () => document.removeEventListener("keydown", fecharComEsc);
+  }, [modalLogoutAberto]);
+
   const handleLogout = () => {
+    setSaindo(true);
     clearUser();
-    authService.logout();
+    void authService.logout();
+  };
+
+  const handleVoltar = () => {
+    // idx do BrowserRouter: 0 significa que não há página interna anterior (login usa replace).
+    const indice = (window.history.state as { idx?: number } | null)?.idx ?? 0;
+    if (indice > 0) navigate(-1);
+    else navigate("/home", { replace: true });
   };
 
   return (
@@ -50,7 +70,7 @@ export default function Navbar({ menuAberto = false, onAbrirMenu }: NavbarProps)
             <Menu size={20} />
           </button>
         )}
-        <button className={styles.backButton} onClick={() => navigate(-1)} aria-label="Voltar">
+        <button className={styles.backButton} onClick={handleVoltar} aria-label="Voltar">
           <ArrowLeft size={20} />
         </button>
 
@@ -72,22 +92,29 @@ export default function Navbar({ menuAberto = false, onAbrirMenu }: NavbarProps)
 
       {modalLogoutAberto && (
         <div className={styles.modalOverlay} onClick={() => setModalLogoutAberto(false)}>
-          <div className={styles.modalLogout} onClick={(evento) => evento.stopPropagation()}>
+          <div
+            className={styles.modalLogout}
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="titulo-sair"
+            aria-describedby="descricao-sair"
+            onClick={(evento) => evento.stopPropagation()}
+          >
             <header className={styles.modalHeader}>
               <div>
-                <h2>Sair da aplicação?</h2>
-                <p>Confirme apenas se deseja encerrar sua sessão atual.</p>
+                <h2 id="titulo-sair">Deseja sair da sua conta?</h2>
+                <p id="descricao-sair">Você precisará entrar novamente para acessar o sistema.</p>
               </div>
               <button type="button" className={styles.modalClose} onClick={() => setModalLogoutAberto(false)} aria-label="Fechar aviso de saída">
                 <X size={18} />
               </button>
             </header>
             <footer className={styles.modalFooter}>
-              <button type="button" className={styles.cancelButton} onClick={() => setModalLogoutAberto(false)}>
-                Continuar no sistema
+              <button ref={cancelarRef} type="button" className={styles.cancelButton} onClick={() => setModalLogoutAberto(false)} disabled={saindo}>
+                Cancelar
               </button>
-              <button type="button" className={styles.confirmButton} onClick={handleLogout}>
-                Sair
+              <button type="button" className={styles.confirmButton} onClick={handleLogout} disabled={saindo}>
+                Confirmar
               </button>
             </footer>
           </div>

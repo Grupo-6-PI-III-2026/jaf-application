@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
 import styles from "./Login.module.css";
 import { authService } from "../../../Service/Auth/Login/authService";
 import { useUser } from "../../../Context/useUser";
@@ -8,17 +8,27 @@ import { Responsive } from "../../../Components/Responsive/Responsive";
 
 function Login() {
   const navigate = useNavigate();
-  const { refreshUser } = useUser();
+  const { user, error, refreshUser, clearUser } = useUser();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const sessaoLocal = authService.isAuthenticated();
+
+  useEffect(() => {
+    // Sessão local inválida (ex.: cookie expirado): descartar e exibir o formulário.
+    if (error && !loading) {
+      authService.clearSession();
+      clearUser();
+    }
+  }, [error, loading, clearUser]);
 
   const emailRegex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
 
-  const funcLogin = async (evento: React.MouseEvent) => {
+  const funcLogin = async (evento: React.FormEvent<HTMLFormElement>) => {
     evento.preventDefault();
+    if (loading) return;
     setErrorMessage(null);
     const emailNormalizado = email.trim().toLowerCase();
 
@@ -32,11 +42,11 @@ function Login() {
     setLoading(true);
     try {
       await authService.login({ email: emailNormalizado, senha: password });
-      await refreshUser();
+      if (!(await refreshUser())) {
+        throw new Error("Não foi possível validar seu acesso. Tente novamente.");
+      }
       toast.success("Login realizado com sucesso!");
-      setTimeout(() => {
-        navigate("/home");
-      }, 1000);
+      navigate("/home", { replace: true });
     } catch (error: unknown) {
       console.error(error);
       const message = error instanceof Error ? error.message : "Erro inesperado. Tente novamente.";
@@ -46,6 +56,11 @@ function Login() {
       setLoading(false);
     }
   };
+
+  if (!loading && sessaoLocal && user) return <Navigate to="/home" replace />;
+  if (!loading && sessaoLocal && !error) {
+    return <p role="status" className={styles.loginRoot}>Verificando sessão...</p>;
+  }
 
   return (
     <div className={styles.loginRoot}>
@@ -80,7 +95,7 @@ function Login() {
 
       <div className={styles.loginRightContainer}>
         <div className={styles.loginRight}>
-          <div className={styles.loginCard}>
+          <form className={styles.loginCard} onSubmit={funcLogin}>
             <Responsive max="md">
               <div className={styles.logoCompacto}>
                 <img src="/assets/Geral/Logo.png" alt="" />
@@ -98,11 +113,13 @@ function Login() {
 
             <div className={styles.fieldGroup}>
               <div className={styles.fieldRow}>
-                <label className={styles.fieldLabel}>E-mail</label>
+                <label htmlFor="login-email" className={styles.fieldLabel}>E-mail</label>
               </div>
               <input
                 className={styles.fieldInput}
                 type="email"
+                id="login-email"
+                required
                 placeholder="exemplo@jaf.com.br"
                 value={email}
                 onChange={(e) => {
@@ -115,8 +132,8 @@ function Login() {
 
             <div className={styles.fieldGroup}>
               <div className={styles.fieldRow}>
-                <label className={styles.fieldLabel}>Senha</label>
-                <button className={styles.forgotLink} type="button">
+                <label htmlFor="login-senha" className={styles.fieldLabel}>Senha</label>
+                <button className={styles.forgotLink} type="button" onClick={() => toast.info("A recuperação de senha não está disponível nesta plataforma. Entre em contato com o administrador da sua empresa.")}>
                   Esqueceu a senha?
                 </button>
               </div>
@@ -124,6 +141,8 @@ function Login() {
                 <input
                   className={`${styles.fieldInput} ${styles.hasIcon}`}
                   type={showPassword ? "text" : "password"}
+                  id="login-senha"
+                  required
                   placeholder="Digite sua senha"
                   value={password}
                   onChange={(e) => {
@@ -136,6 +155,7 @@ function Login() {
                   className={styles.eyeBtn}
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                 >
                   {showPassword ? (
                     <svg
@@ -173,8 +193,7 @@ function Login() {
 
             <button
               className={styles.btnEntrar}
-              onClick={funcLogin}
-              type="button"
+              type="submit"
               disabled={loading}
             >
               {loading ? "Entrando..." : "Entrar"}{" "}
@@ -184,9 +203,9 @@ function Login() {
             <p className={styles.noAccess}>
               Não possui acesso à plataforma?
               <br />
-              <a href="#">Solicite aqui</a>
+              <span>Solicite seu cadastro ao administrador da sua empresa.</span>
             </p>
-          </div>
+          </form>
         </div>
       </div>
     </div>

@@ -27,13 +27,13 @@ public class CargoPermissaoController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('EDITAR_FUNCIONARIO')")
+    @PreAuthorize("@acessoObraService.isAdmin()")
     public ResponseEntity<List<CargoPermissoesDto>> listar() {
         return ResponseEntity.ok(service.listarCargosSistema());
     }
 
     @PutMapping("/{cargo}")
-    @PreAuthorize("hasAuthority('EDITAR_FUNCIONARIO')")
+    @PreAuthorize("@acessoObraService.isAdmin()")
     public ResponseEntity<CargoPermissoesDto> atualizar(
             @PathVariable Cargo cargo,
             @RequestBody AtualizarCargoPermissoesDto dto) {

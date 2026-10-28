@@ -74,19 +74,22 @@ public class ObraController {
 
     @GetMapping("/{id}/alocacoes")
     @PreAuthorize("hasAuthority('VISUALIZAR_ALOCACOES')")
-    public ResponseEntity<List<AlocacaoObra>> listarAlocacoesDaObra(@PathVariable Long id) {
+    public ResponseEntity<List<AlocacaoObra>> listarAlocacoesDaObra(@PathVariable Long id, Authentication authentication) {
+        obraService.buscarPorIdComEscopo(id, authentication.getName());
         return ResponseEntity.ok(alocacaoObraService.listarPorObra(id));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('EDITAR_OBRA')")
-    public ResponseEntity<Obra> atualizar(@PathVariable Long id, @Valid @RequestBody ObraDto dto) {
+    public ResponseEntity<Obra> atualizar(@PathVariable Long id, @Valid @RequestBody ObraDto dto, Authentication authentication) {
+        obraService.buscarPorIdComEscopo(id, authentication.getName());
         return ResponseEntity.ok(obraService.atualizar(id, dto));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('DELETAR_OBRA')")
-    public ResponseEntity<Void> deletar(@PathVariable Long id) {
+    public ResponseEntity<Void> deletar(@PathVariable Long id, Authentication authentication) {
+        obraService.buscarPorIdComEscopo(id, authentication.getName());
         obraService.deletar(id);
         return ResponseEntity.noContent().build();
     }

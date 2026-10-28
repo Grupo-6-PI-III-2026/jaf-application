@@ -1,6 +1,7 @@
 services:
   jaf-db:
     image: postgres:16
+    command: ["postgres", "-c", "timezone=America/Sao_Paulo"]
     container_name: jaf-db
     restart: always
     env_file:
@@ -52,6 +53,7 @@ services:
     env_file:
       - .env
     environment:
+      TZ: America/Sao_Paulo
       JAVA_TOOL_OPTIONS: "-Xms256m -Xmx512m"
       SPRING_DATASOURCE_URL: "jdbc:postgresql://jaf-db:5432/${DB_NAME:-jaf_db}"
       SPRING_DATASOURCE_USERNAME: "${DB_USER:-postgres}"
@@ -60,6 +62,12 @@ services:
       RABBITMQ_HOST: rabbitmq
     volumes:
       - ./data/uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/actuator/health/readiness"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
     depends_on:
       ocr-service:
         condition: service_started
@@ -69,6 +77,7 @@ services:
         condition: service_healthy
 
   backend-test:
+    profiles: ["test"]
     build:
       context: ./jaf-backend
       target: build
@@ -95,7 +104,8 @@ services:
     ports:
       - "80:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
 
   rabbitmq:
     image: rabbitmq:3-management

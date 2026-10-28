@@ -20,14 +20,17 @@ public class FuncionarioPermissaoService {
     private final FuncionarioPermissaoRepository permissaoRepository;
     private final FuncionarioRepository funcionarioRepository;
     private final CargoPermissaoService cargoPermissaoService;
+    private final AcessoObraService acesso;
 
     public FuncionarioPermissaoService(
             FuncionarioPermissaoRepository permissaoRepository,
             FuncionarioRepository funcionarioRepository,
-            CargoPermissaoService cargoPermissaoService) {
+            CargoPermissaoService cargoPermissaoService,
+            AcessoObraService acesso) {
         this.permissaoRepository = permissaoRepository;
         this.funcionarioRepository = funcionarioRepository;
         this.cargoPermissaoService = cargoPermissaoService;
+        this.acesso = acesso;
     }
 
     public List<Permissao> permissoesDoFuncionario(Funcionario funcionario) {
@@ -44,6 +47,7 @@ public class FuncionarioPermissaoService {
     }
 
     public FuncionarioPermissoesAcessoDto buscar(Long funcionarioId) {
+        acesso.exigirAdmin();
         Funcionario funcionario = buscarFuncionario(funcionarioId);
         return new FuncionarioPermissoesAcessoDto(
                 funcionario.getId(),
@@ -52,9 +56,17 @@ public class FuncionarioPermissaoService {
         );
     }
 
+    public FuncionarioPermissoesAcessoDto minhasPermissoes() {
+        Funcionario funcionario = acesso.atual();
+        return new FuncionarioPermissoesAcessoDto(
+                funcionario.getId(), funcionario.getCargoGlobal(), nomes(permissoesDoFuncionario(funcionario)));
+    }
+
     @Transactional
     public FuncionarioPermissoesAcessoDto atualizar(Long funcionarioId, List<String> permissoes) {
+        acesso.exigirAdmin();
         Funcionario funcionario = buscarFuncionario(funcionarioId);
+        acesso.exigirGestaoDeAcessoDeOutro(funcionario);
         EnumSet<Permissao> permissoesValidadas = EnumSet.noneOf(Permissao.class);
 
         if (permissoes != null) {

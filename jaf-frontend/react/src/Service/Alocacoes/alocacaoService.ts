@@ -15,7 +15,8 @@ export interface AlocacaoObra {
     status: string;
     dtInicio: string;
     dtTerminoPrevisto: string;
-    orcamento: string;
+    orcamento?: string;
+    totalRecebido?: number;
   };
   cargo: string;
   dtInicio?: string | null;

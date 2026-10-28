@@ -7,6 +7,6 @@ export default defineConfig({
     environment: 'happy-dom',
     globals: true,
     setupFiles: ['./test-setup.ts'],
-    include: ['**/*.test.tsx'],
+    include: ['**/*.test.{ts,tsx}'],
   },
 })

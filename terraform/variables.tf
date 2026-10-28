@@ -297,3 +297,27 @@ variable "jwt_expiration" {
   type        = string
   default     = "86400000" # 24 horas por padrão, se não for passado
 }
+
+# ── OCR assíncrono (RabbitMQ + worker) ──────────────────────────
+variable "rabbitmq_user" {
+  description = "Usuário do RabbitMQ usado pelo backend e pelos workers OCR"
+  type        = string
+  default     = "jaf"
+}
+
+variable "rabbitmq_password" {
+  description = "Senha do RabbitMQ — NUNCA commitar"
+  type        = string
+  sensitive   = true
+
+  validation {
+    condition     = length(var.rabbitmq_password) >= 12
+    error_message = "rabbitmq_password deve ter pelo menos 12 caracteres."
+  }
+}
+
+variable "ocr_space_api_key" {
+  description = "Chave da API OCR.space usada pelo worker — NUNCA commitar"
+  type        = string
+  sensitive   = true
+}

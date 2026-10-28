@@ -1,4 +1,5 @@
 import axios from "axios";
+import { authorizationSession } from "../authorizationSession";
 
 // const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
@@ -31,13 +32,18 @@ api.interceptors.response.use(
   (error) => {
    
     if (error.response?.status === 401) {
+      // Login e validação inicial tratam a própria falha (mensagem ou retry no Provider).
+      if (["/funcionarios/login", "/funcionarios/me", "/funcionarios/me/permissoes"].includes(error.config?.url)) {
+        return Promise.reject(error);
+      }
+      authorizationSession.clear();
       // CORREÇÃO DE SEGURANÇA A07: Limpa dados do usuário do localStorage
       // Token é gerenciado via cookie HttpOnly pelo backend
       localStorage.removeItem('userEmail');
       localStorage.removeItem('userName');
       localStorage.removeItem('userId');
       localStorage.removeItem('userCargo');
-      window.location.href = '/';
+      if (window.location.pathname !== '/') window.location.replace('/');
     }
     return Promise.reject(error);
   }

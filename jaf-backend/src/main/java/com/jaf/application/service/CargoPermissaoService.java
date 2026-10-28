@@ -21,12 +21,15 @@ public class CargoPermissaoService {
     );
 
     private final CargoPermissaoRepository repository;
+    private final AcessoObraService acesso;
 
-    public CargoPermissaoService(CargoPermissaoRepository repository) {
+    public CargoPermissaoService(CargoPermissaoRepository repository, AcessoObraService acesso) {
         this.repository = repository;
+        this.acesso = acesso;
     }
 
     public List<CargoPermissoesDto> listarCargosSistema() {
+        acesso.exigirAdmin();
         return List.of(
                 new CargoPermissoesDto(Cargo.ADMIN, nomes(Permissao.values())),
                 new CargoPermissoesDto(Cargo.RESPONSAVEL_ADMINISTRATIVO, nomes(permissoesPorCargo(Cargo.RESPONSAVEL_ADMINISTRATIVO))),
@@ -56,6 +59,10 @@ public class CargoPermissaoService {
 
     @Transactional
     public CargoPermissoesDto atualizar(Cargo cargo, List<String> permissoes) {
+        acesso.exigirAdmin();
+        if (cargo == Cargo.ADMIN) {
+            throw new BadRequest("As permissões do cargo ADMIN são fixas.");
+        }
         if (!CARGOS_CONFIGURAVEIS.contains(cargo)) {
             throw new BadRequest("Apenas perfis não administradores podem ter permissões customizadas.");
         }

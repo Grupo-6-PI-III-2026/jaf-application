@@ -78,8 +78,4 @@ export const permissaoService = {
     return PERMISSOES_POR_CARGO[cargo as Cargo] || [];
   },
 
-  temPermissao: (cargo: Cargo | null | undefined, permissao: string): boolean => {
-    if (!cargo) return false;
-    return PERMISSOES_POR_CARGO[cargo]?.includes(permissao) ?? false;
-  },
 };

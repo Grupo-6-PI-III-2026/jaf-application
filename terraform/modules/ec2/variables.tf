@@ -162,3 +162,26 @@ variable "jwt_expiration" {
   description = "Tempo de expiração do JWT (em milissegundos)"
   type        = string
 }
+
+# ── OCR assíncrono (RabbitMQ + worker) ──────────────────────────
+variable "sg_rabbitmq_id" {
+  description = "ID do Security Group do RabbitMQ"
+  type        = string
+}
+
+variable "rabbitmq_user" {
+  description = "Usuário do RabbitMQ"
+  type        = string
+}
+
+variable "rabbitmq_password" {
+  description = "Senha do RabbitMQ"
+  type        = string
+  sensitive   = true
+}
+
+variable "ocr_space_api_key" {
+  description = "Chave da API OCR.space usada pelo worker"
+  type        = string
+  sensitive   = true
+}

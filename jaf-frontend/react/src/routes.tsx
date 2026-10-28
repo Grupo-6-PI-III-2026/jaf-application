@@ -41,7 +41,7 @@ export const AppRoutes = () => {
           <Route
             path="/obras/detalhamento/:id/financeiro"
             element={
-              <PrivateRoute requiredPermission="VISUALIZAR_GASTOS">
+              <PrivateRoute adminOnly requiredPermission="VISUALIZAR_GASTOS">
                 <Dashboard />
               </PrivateRoute>
             }
@@ -59,7 +59,10 @@ export const AppRoutes = () => {
           <Route
             path="/obras/criar"
             element={
-              <PrivateRoute requiredPermission="CRIAR_OBRA">
+              <PrivateRoute
+                requiredPermission="CRIAR_OBRA"
+                deniedMessage="Você não tem permissão para criar obras. Solicite ao administrador."
+              >
                 <NovaObra />
               </PrivateRoute>
             }
@@ -67,7 +70,7 @@ export const AppRoutes = () => {
           <Route
             path="/permissoes"
             element={
-              <PrivateRoute requiredPermission="EDITAR_FUNCIONARIO">
+              <PrivateRoute adminOnly>
                 <Permissoes />
               </PrivateRoute>
             }
@@ -82,7 +85,7 @@ export const AppRoutes = () => {
           />
         </Route>
 
-        <Route path="*" element={<Navigate to="/" />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

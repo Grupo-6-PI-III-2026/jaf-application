@@ -36,9 +36,10 @@ public class PresencaController {
     @PreAuthorize("hasAuthority('VISUALIZAR_PRESENCAS')")
     public ResponseEntity<List<PresencaListarDto>> listarPorObraEData(
             @PathVariable Long obraId,
-            @PathVariable String data) {
-        LocalDate dataLocalDate = LocalDate.parse(data);
-        return ResponseEntity.ok(presencaService.listarPorObraEData(obraId, dataLocalDate));
+            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data,
+            @RequestParam(required = false) Long funcionarioId) {
+        return ResponseEntity.ok(presencaService.listarPorObraEData(obraId, data).stream()
+                .filter(p -> funcionarioId == null || funcionarioId.equals(p.getFuncionarioId())).toList());
     }
 
     @GetMapping("/obra/{obraId}/periodo")
@@ -46,8 +47,10 @@ public class PresencaController {
     public ResponseEntity<List<PresencaListarDto>> listarPorObraEPeriodo(
             @PathVariable Long obraId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
-        return ResponseEntity.ok(presencaService.listarPorObraEPeriodo(obraId, from, to));
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(required = false) Long funcionarioId) {
+        return ResponseEntity.ok(presencaService.listarPorObraEPeriodo(obraId, from, to).stream()
+                .filter(p -> funcionarioId == null || funcionarioId.equals(p.getFuncionarioId())).toList());
     }
 
     @GetMapping("/{id}")
