@@ -28,7 +28,7 @@ do
   fi
   delay=$((login_attempt * 10))
   if [ "$delay" -gt 60 ]; then delay=60; fi
-  echo "GHCR indisponível; nova tentativa em ${delay} segundos (tentativa $((login_attempt + 1))/10)." >&2
+  echo "GHCR indisponível; nova tentativa em $${delay} segundos (tentativa $((login_attempt + 1))/10)." >&2
   sleep "$delay"
   login_attempt=$((login_attempt + 1))
 done
@@ -42,7 +42,7 @@ do
   fi
   delay=$((pull_attempt * 10))
   if [ "$delay" -gt 60 ]; then delay=60; fi
-  echo "Imagem do OCR indisponível; nova tentativa em ${delay} segundos (tentativa $((pull_attempt + 1))/10)." >&2
+  echo "Imagem do OCR indisponível; nova tentativa em $${delay} segundos (tentativa $((pull_attempt + 1))/10)." >&2
   sleep "$delay"
   pull_attempt=$((pull_attempt + 1))
 done

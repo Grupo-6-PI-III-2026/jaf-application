@@ -25,7 +25,7 @@ do
   fi
   delay=$((pull_attempt * 10))
   if [ "$delay" -gt 60 ]; then delay=60; fi
-  echo "Imagem do RabbitMQ indisponível; nova tentativa em ${delay} segundos (tentativa $((pull_attempt + 1))/10)." >&2
+  echo "Imagem do RabbitMQ indisponível; nova tentativa em $${delay} segundos (tentativa $((pull_attempt + 1))/10)." >&2
   sleep "$delay"
   pull_attempt=$((pull_attempt + 1))
 done
