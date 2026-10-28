@@ -13,7 +13,12 @@ variable "environment" {
 }
 
 variable "instance_type" {
-  description = "Tipo de instância EC2"
+  description = "Tipo de instância EC2 para frontend, OCR e RabbitMQ"
+  type        = string
+}
+
+variable "backend_instance_type" {
+  description = "Tipo de instância EC2 do backend"
   type        = string
 }
 

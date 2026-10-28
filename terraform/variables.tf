@@ -133,9 +133,15 @@ variable "allowed_account_ids" {
 
 # ── EC2 ──────────────────────────────────────────────────────
 variable "instance_type" {
-  description = "Tipo de instância EC2 (limitado pelo Learner Lab)"
+  description = "Tipo de instância EC2 para frontend, OCR e RabbitMQ"
   type        = string
   default     = "t3.micro"
+}
+
+variable "backend_instance_type" {
+  description = "Tipo de instância EC2 do backend"
+  type        = string
+  default     = "t3.small"
 }
 
 variable "root_volume_size" {

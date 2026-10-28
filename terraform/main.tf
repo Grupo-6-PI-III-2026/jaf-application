@@ -67,6 +67,7 @@ module "ec2" {
   project_name     = var.project_name
   environment      = var.environment
   instance_type    = var.instance_type
+  backend_instance_type = var.backend_instance_type
   ami_id           = data.aws_ami.amazon_linux_2023.id
   public_key_path  = var.public_key_path
   use_lab_role     = var.use_lab_role

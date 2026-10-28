@@ -171,7 +171,7 @@ resource "aws_autoscaling_group" "frontend" {
 resource "aws_launch_template" "backend" {
   name_prefix   = "${var.project_name}-backend-"
   image_id      = var.ami_id
-  instance_type = var.instance_type
+  instance_type = var.backend_instance_type
   key_name      = aws_key_pair.main.key_name
 
   iam_instance_profile {
