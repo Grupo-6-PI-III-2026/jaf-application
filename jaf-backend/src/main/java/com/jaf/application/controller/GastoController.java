@@ -33,8 +33,12 @@ public class GastoController {
     @GetMapping
     @PreAuthorize("hasAuthority('VISUALIZAR_GASTOS')")
     public ResponseEntity<List<Gasto>> listar(Authentication authentication,
-                                              @RequestParam(required = false) Long obraId) {
-        return ResponseEntity.ok(gastoService.listarPorUsuario(authentication.getName(), obraId));
+                                              @RequestParam(required = false) Long obraId,
+                                              @RequestParam(required = false) Long funcionarioId,
+                                              @RequestParam(required = false) String categoria,
+                                              @RequestParam(required = false) String metodoPagamento,
+                                              @RequestParam(required = false) com.jaf.application.enums.StatusReembolso statusReembolso) {
+        return ResponseEntity.ok(gastoService.listarFiltrado(obraId, funcionarioId, categoria, metodoPagamento, statusReembolso));
     }
 
     @GetMapping("/paginado")
@@ -47,9 +51,11 @@ public class GastoController {
             @RequestParam(defaultValue = "dtGasto") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDir,
             @RequestParam(required = false) String categoria,
-            @RequestParam(required = false) String metodoPagamento) {
-        return ResponseEntity.ok(gastoService.listarPaginadoPorUsuario(
-                authentication.getName(), obraId, page, size, sortBy, sortDir, categoria, metodoPagamento));
+            @RequestParam(required = false) String metodoPagamento,
+            @RequestParam(required = false) Long funcionarioId,
+            @RequestParam(required = false) com.jaf.application.enums.StatusReembolso statusReembolso) {
+        return ResponseEntity.ok(gastoService.listarPaginadoFiltrado(
+                obraId, funcionarioId, categoria, metodoPagamento, statusReembolso, page, size, sortBy, sortDir));
     }
 
     @GetMapping("/{id}")

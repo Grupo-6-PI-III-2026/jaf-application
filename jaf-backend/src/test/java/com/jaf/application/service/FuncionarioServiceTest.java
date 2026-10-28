@@ -42,6 +42,9 @@ class FuncionarioServiceTest {
     @Mock
     private AuthenticationManager authenticationManager;
 
+    @Mock
+    private AcessoObraService acesso;
+
     @InjectMocks
     private FuncionarioService funcionarioService;
 

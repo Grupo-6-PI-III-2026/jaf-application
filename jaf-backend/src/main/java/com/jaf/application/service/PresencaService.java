@@ -27,19 +27,24 @@ public class PresencaService {
     private final FuncionarioRepository funcionarioRepository;
     private final ObraRepository obraRepository;
     private final AlocacaoObraRepository alocacaoObraRepository;
+    private final AcessoObraService acesso;
 
     public PresencaService(
             PresencaRepository presencaRepository,
             FuncionarioRepository funcionarioRepository,
             ObraRepository obraRepository,
-            AlocacaoObraRepository alocacaoObraRepository) {
+            AlocacaoObraRepository alocacaoObraRepository,
+            AcessoObraService acesso) {
         this.presencaRepository = presencaRepository;
         this.funcionarioRepository = funcionarioRepository;
         this.obraRepository = obraRepository;
         this.alocacaoObraRepository = alocacaoObraRepository;
+        this.acesso = acesso;
     }
 
     public PresencaResponseDto criar(PresencaDto dto) {
+        acesso.exigirObra(dto.getObraId());
+        validarManual(dto);
         var funcionario = funcionarioRepository.findById(dto.getFuncionarioId())
                 .orElseThrow(() -> new NotFoundException("Funcionario não encontrado."));
         
@@ -73,13 +78,19 @@ public class PresencaService {
     }
 
     public List<PresencaListarDto> listarPorObraEData(Long obraId, LocalDate data) {
+        acesso.exigirObra(obraId);
+        if (!obraRepository.existsById(obraId)) throw new NotFoundException("Obra não encontrada.");
+        if (data == null) throw new BadRequest("Informe uma data válida.");
         // Buscar todas as alocações da obra
         List<AlocacaoObra> alocacoes = alocacaoObraRepository.findByObraId(obraId);
         
         // Buscar presenças já registradas para esta data
         List<Presenca> presencasExistentes = presencaRepository.findByObraIdAndData(obraId, data);
         
-        return alocacoes.stream().map(alocacao -> {
+        return alocacoes.stream()
+            .filter(a -> alocadoNaData(a, data))
+            .collect(Collectors.toMap(a -> a.getFuncionario().getId(), a -> a, (a, b) -> a))
+            .values().stream().map(alocacao -> {
             PresencaListarDto dto = new PresencaListarDto();
             
             // Buscar presença existente para este funcionário nesta data
@@ -111,6 +122,7 @@ public class PresencaService {
      * Diferente do dia único, não expande alocados sem registro.
      */
     public List<PresencaListarDto> listarPorObraEPeriodo(Long obraId, LocalDate from, LocalDate to) {
+        acesso.exigirObra(obraId);
         if (!obraRepository.existsById(obraId)) {
             throw new NotFoundException("Obra não encontrada.");
         }
@@ -152,12 +164,16 @@ public class PresencaService {
     public PresencaResponseDto buscarPorId(Long id) {
         Presenca presenca = presencaRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Presença não encontrada."));
+        acesso.exigirObra(presenca.getObra().getId());
         return converterParaResponseDto(presenca);
     }
 
     public PresencaResponseDto atualizar(Long id, PresencaDto dto) {
         Presenca existente = presencaRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Presença não encontrada."));
+        acesso.exigirObra(existente.getObra().getId());
+        acesso.exigirObra(dto.getObraId());
+        validarManual(dto);
 
         var funcionario = funcionarioRepository.findById(dto.getFuncionarioId())
                 .orElseThrow(() -> new NotFoundException("Funcionario não encontrado."));
@@ -185,18 +201,40 @@ public class PresencaService {
     }
 
     public void deletar(Long id) {
-        if (!presencaRepository.existsById(id)) {
-            throw new NotFoundException("Presença não encontrada.");
-        }
+        Presenca existente = presencaRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Presença não encontrada."));
+        acesso.exigirObra(existente.getObra().getId());
         presencaRepository.deleteById(id);
     }
 
     public void alternarPresenca(Long id) {
         Presenca presenca = presencaRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Presença não encontrada."));
-        
+        acesso.exigirObra(presenca.getObra().getId());
+        if (presenca.getData().isAfter(LocalDate.now())) throw new BadRequest("Não é possível registrar presença futura.");
         presenca.setPresente(!presenca.getPresente());
+        if (!presenca.getPresente()) {
+            presenca.setHorarioEntrada(null);
+            presenca.setHorarioSaida(null);
+        }
         presencaRepository.save(presenca);
+    }
+
+    private boolean alocadoNaData(AlocacaoObra alocacao, LocalDate data) {
+        return (alocacao.getDtInicio() == null || !data.isBefore(alocacao.getDtInicio()))
+                && (alocacao.getDtFim() == null || !data.isAfter(alocacao.getDtFim()));
+    }
+
+    private void validarManual(PresencaDto dto) {
+        if (dto.getData() == null || dto.getData().isAfter(LocalDate.now()))
+            throw new BadRequest("Presença exige data não futura.");
+        if (alocacaoObraRepository.findByFuncionarioIdAndObraId(dto.getFuncionarioId(), dto.getObraId())
+                .stream().noneMatch(a -> alocadoNaData(a, dto.getData())))
+            throw new Conflict("Funcionário não está alocado na obra na data informada.");
+        if (Boolean.FALSE.equals(dto.getPresente()) && (dto.getHorarioEntrada() != null || dto.getHorarioSaida() != null))
+            throw new BadRequest("Ausência não pode ter horários.");
+        if (dto.getHorarioSaida() != null && (dto.getHorarioEntrada() == null || !dto.getHorarioSaida().isAfter(dto.getHorarioEntrada())))
+            throw new BadRequest("Saída deve ser posterior à entrada.");
     }
 
     private PresencaResponseDto converterParaResponseDto(Presenca presenca) {

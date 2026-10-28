@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   User,
   Mail,
@@ -19,6 +19,7 @@ import {
 import { toast } from "sonner";
 import { AxiosError } from "axios";
 import {type CargoApi } from "../../../Types/Register"
+import { authService } from "../../../Service/Auth/Login/authService";
 
 interface ErrosFormulario {
   nome?: string;
@@ -28,6 +29,7 @@ interface ErrosFormulario {
 }
 
 export default function NovoFuncionario() {
+  const enviandoRef = useRef(false);
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
@@ -66,7 +68,7 @@ export default function NovoFuncionario() {
         "A senha precisa de 8 caracteres, 1 maiúscula, 1 minúscula e 1 especial.";
     }
 
-    if (!cargo) {
+    if (!cargo || (cargo === "ADMIN" && !authService.isAdmin())) {
       nextErrors.cargo = "Selecione uma função para o funcionário.";
     }
 
@@ -76,11 +78,13 @@ export default function NovoFuncionario() {
 
  const handleCadastrar = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (enviandoRef.current) return;
 
     if (!validateInputs()) {
       return;
     }
 
+    enviandoRef.current = true;
     setIsLoading(true);
 
     try {
@@ -109,8 +113,11 @@ export default function NovoFuncionario() {
         } else {
           toast.error("Erro inesperado. Tente novamente.");
         }
+      } else {
+        toast.error("Erro ao cadastrar funcionário. Tente novamente.");
       }
     } finally {
+      enviandoRef.current = false;
       setIsLoading(false);
     }
   };
@@ -129,14 +136,15 @@ export default function NovoFuncionario() {
         de preencher todos os dados corporativos corretamente.
       </p>
 
-      <form className={styles.formulario} onSubmit={handleCadastrar}>
+      <form aria-label="Cadastrar funcionário" className={styles.formulario} onSubmit={handleCadastrar}>
         <div className={styles.formularioGrid}>
           <div className={styles.coluna}>
             <div className={styles.grupoCampo}>
-              <label className={styles.rotulo}>NOME COMPLETO</label>
+              <label htmlFor="nome-funcionario" className={styles.rotulo}>NOME COMPLETO</label>
               <div className={styles.caixaCampo}>
                 <User size={18} className={styles.icone} />
                 <input
+                  id="nome-funcionario"
                   type="text"
                   placeholder="Ex: Carlos Almeida"
                   value={nome}
@@ -165,10 +173,11 @@ export default function NovoFuncionario() {
             </div>
 
             <div className={styles.grupoCampo}>
-              <label className={styles.rotulo}>E-MAIL CORPORATIVO</label>
+              <label htmlFor="email-funcionario" className={styles.rotulo}>E-MAIL CORPORATIVO</label>
               <div className={styles.caixaCampo}>
                 <Mail size={18} className={styles.icone} />
                 <input
+                  id="email-funcionario"
                   type="email"
                   placeholder="nome@jafconstrutora.com.br"
                   value={email}
@@ -197,10 +206,11 @@ export default function NovoFuncionario() {
             </div>
 
             <div className={styles.grupoCampo}>
-              <label className={styles.rotulo}>SENHA DE ACESSO</label>
+              <label htmlFor="senha-funcionario" className={styles.rotulo}>SENHA DE ACESSO</label>
               <div className={styles.caixaCampo}>
                 <Lock size={18} className={styles.icone} />
                 <input
+                  id="senha-funcionario"
                   type={mostrarSenha ? "text" : "password"}
                   placeholder="••••••••"
                   value={senha}
@@ -215,6 +225,7 @@ export default function NovoFuncionario() {
                 <button
                   type="button"
                   onClick={() => setMostrarSenha(!mostrarSenha)}
+                  aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
                   className={styles.botaoOlho}
                   disabled={isLoading}
                 >
@@ -243,10 +254,11 @@ export default function NovoFuncionario() {
 
           <div className={styles.coluna}>
             <div className={styles.grupoCampo}>
-              <label className={styles.rotulo}>PERFIL DE ACESSO</label>
+              <label htmlFor="cargo-funcionario" className={styles.rotulo}>PERFIL DE ACESSO</label>
               <div className={styles.caixaCampo}>
                 <User size={18} className={styles.icone} />
                 <select
+                  id="cargo-funcionario"
                   value={cargo}
                   onChange={(e) => {
                     setCargo(e.target.value);
@@ -257,7 +269,7 @@ export default function NovoFuncionario() {
                   disabled={isLoading}
                 >
                   <option value="">Selecione uma função</option>
-                  {opcoesCargo.map((opcao) => (
+                  {opcoesCargo.filter((opcao) => opcao.value !== "ADMIN" || authService.isAdmin()).map((opcao) => (
                     <option key={opcao.value} value={opcao.value}>
                       {opcao.label}
                     </option>

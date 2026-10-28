@@ -305,7 +305,7 @@ export default function Dashboard() {
           value={formatBRL(stats.reembolsosPendentes)}
         />
         <StatCard
-          label="Saldo restante do orçamento"
+          label="Saldo acumulado dos recebimentos"
           value={formatBRL(stats.saldoRestante)}
           progress={stats.progressoSaldo}
         />

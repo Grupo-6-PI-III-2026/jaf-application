@@ -1,49 +1,23 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { isAxiosError } from "axios";
-import {
-  FileText,
-  MapPin,
-  Calendar,
-  User,
-  DollarSign,
-  Upload,
-  ChevronDown,
-  X,
-} from "lucide-react";
+import { FileText, Calendar, User, DollarSign, ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import styles from "./NovaObra.module.css";
-import { obraService, type ObraCriarDto } from "../../../Service/Obras/obraService";
+import { obraService, type Obra } from "../../../Service/Obras/obraService";
 import { alocacaoService } from "../../../Service/Alocacoes/alocacaoService";
 import { funcionarioService } from "../../../Service/Funcionarios/funcionarioService";
+import { authService } from "../../../Service/Auth/Login/authService";
 import type { FuncionarioPermissoes } from "../../../Types/permissoes";
-import { toast } from "sonner";
-import { ocrService } from "../../../Service/Ocr/ocrService";
+import { dataValida, erroApi, valorDecimal } from "../../../Utils/financeiro";
+
 interface ErrosFormulario {
   nomeObra?: string;
-  status?: string;
   responsavel?: string;
   dataInicio?: string;
   dataFim?: string;
-  endereco?: string;
-  cidade?: string;
-  estado?: string;
   orcamento?: string;
-  arquivos?: string;
 }
-
-interface ArquivoUpload {
-  id: string;
-  file: File;
-  nome: string;
-  tipo: string;
-  tamanho: number;
-}
-
-const ESTADOS = [
-  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
-  "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN",
-  "RS", "RO", "RR", "SC", "SP", "SE", "TO"
-];
 
 const STATUS_OPCOES = [
   { label: "Planejada", value: "PLANEJADA" },
@@ -52,612 +26,218 @@ const STATUS_OPCOES = [
   { label: "Cancelada", value: "CANCELADA" },
 ];
 
-const CARGO_LABELS: Record<string, string> = {
-  ADMIN: "Administrador",
-  RESPONSAVEL_ADMINISTRATIVO: "Responsável Administrativo",
-  ENGENHEIRO: "Engenheiro",
-  GESTOR_OBRA: "Gestor de Obra",
-  ARQUITETO: "Arquiteto",
-  MESTRE_DE_OBRAS: "Mestre de Obras",
-  OPERADOR_LANCAMENTO: "Operador de Lançamento",
-  PEDREIRO: "Pedreiro",
-  PINTOR: "Pintor",
-  MARCENEIRO: "Marceneiro",
-  GESSEIRO: "Gesseiro",
-};
-
-const cargoLabel = (cargo: string | null | undefined) =>
-  cargo ? (CARGO_LABELS[cargo] ?? cargo.replace(/_/g, " ")) : "Sem cargo";
-
 export default function NovaObra() {
   const navigate = useNavigate();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // Trava síncrona: não depender de um novo render para impedir envios duplicados.
+  const enviandoRef = useRef(false);
+  const obraCriadaRef = useRef<Obra | null>(null);
+  const podeAlocar = authService.hasAuthority("CRIAR_ALOCACAO");
+  const podeListarFuncionarios = podeAlocar || authService.hasAuthority("VISUALIZAR_FUNCIONARIOS");
   const [isLoading, setIsLoading] = useState(false);
-  const [carregandoFuncionarios, setCarregandoFuncionarios] = useState(true);
+  const [carregandoFuncionarios, setCarregandoFuncionarios] = useState(false);
   const [errors, setErrors] = useState<ErrosFormulario>({});
-  const [arquivos, setArquivos] = useState<ArquivoUpload[]>([]);
   const [funcionarios, setFuncionarios] = useState<FuncionarioPermissoes[]>([]);
-
   const [nomeObra, setNomeObra] = useState("");
   const [status, setStatus] = useState("PLANEJADA");
   const [responsavelId, setResponsavelId] = useState("");
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
-  const [endereco, setEndereco] = useState("");
-  const [cidade, setCidade] = useState("");
-  const [estado, setEstado] = useState("");
   const [orcamento, setOrcamento] = useState("");
 
   useEffect(() => {
-    const carregarFuncionarios = async () => {
-      try {
-        setCarregandoFuncionarios(true);
-        const data = await funcionarioService.listar();
-        setFuncionarios(data);
-        setResponsavelId((valorAtual) => valorAtual || String(data[0]?.id ?? ""));
-      } catch (error) {
-        console.error("Erro ao carregar funcionários:", error);
-        toast.error("Não foi possível carregar os usuários do sistema.");
-      } finally {
-        setCarregandoFuncionarios(false);
-      }
-    };
-
-    carregarFuncionarios();
-  }, []);
+    // A lista só é necessária para alocar; CRIAR_ALOCACAO também autoriza a consulta na API.
+    if (!podeAlocar || !podeListarFuncionarios) return;
+    let ativo = true;
+    setCarregandoFuncionarios(true);
+    funcionarioService.listar().then((data) => {
+      if (!ativo) return;
+      setFuncionarios(data);
+      setResponsavelId((atual) => atual || String(data[0]?.id ?? ""));
+    }).catch((error: unknown) => {
+      if (ativo) toast.error(erroApi(error, "Não foi possível carregar os usuários do sistema."));
+    }).finally(() => {
+      if (ativo) setCarregandoFuncionarios(false);
+    });
+    return () => { ativo = false; };
+  }, [podeAlocar, podeListarFuncionarios]);
 
   const validateInputs = () => {
     const nextErrors: ErrosFormulario = {};
-
-    if (!nomeObra.trim()) {
-      nextErrors.nomeObra = "O nome da obra é obrigatório.";
+    if (!nomeObra.trim()) nextErrors.nomeObra = "O nome da obra é obrigatório.";
+    // O helper exige um limite superior: planejamento admite qualquer data ISO válida, inclusive futura.
+    const inicioValido = dataValida(dataInicio, "9999-12-31");
+    const fimValido = dataValida(dataFim, "9999-12-31");
+    if (!inicioValido) nextErrors.dataInicio = "Informe uma data de início válida.";
+    if (!fimValido) nextErrors.dataFim = "Informe uma data de término válida.";
+    else if (inicioValido && dataFim < dataInicio) {
+      nextErrors.dataFim = "A data de término não pode ser anterior à data de início.";
     }
-
-    if (!dataInicio) {
-      nextErrors.dataInicio = "A data de início é obrigatória.";
+    if (valorDecimal(orcamento) === null) {
+      nextErrors.orcamento = "Informe um orçamento positivo com até duas casas decimais.";
     }
-
-    if (!dataFim) {
-      nextErrors.dataFim = "A data de término é obrigatória.";
+    if (podeAlocar && !funcionarios.some((funcionario) => String(funcionario.id) === responsavelId)) {
+      nextErrors.responsavel = "Selecione um usuário responsável pela obra.";
     }
-
-    if (dataInicio && dataFim && new Date(dataInicio) > new Date(dataFim)) {
-      nextErrors.dataFim = "A data de término deve ser após a data de início.";
-    }
-
-    if (!orcamento.trim()) {
-      nextErrors.orcamento = "Defina o orçamento inicial.";
-    }
-
-    if (!responsavelId) {
-      nextErrors.responsavel = funcionarios.length
-        ? "Selecione um usuário responsável pela obra."
-        : "Nenhum usuário disponível para vincular à obra.";
-    }
-
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
 
-  const handleArquivoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-
-    if (arquivos.length + files.length > 3) {
-      setErrors((prev) => ({
-        ...prev,
-        arquivos: "Máximo de 3 arquivos permitidos.",
-      }));
-      return;
-    }
-
-    const novoArquivos: ArquivoUpload[] = Array.from(files).map((file) => ({
-      id: Math.random().toString(36).substr(2, 9),
-      file,
-      nome: file.name,
-      tipo: file.type,
-      tamanho: file.size,
-    }));
-
-    setArquivos((prev) => [...prev, ...novoArquivos]);
-    setErrors((prev) => ({ ...prev, arquivos: undefined }));
-  };
-
-  const handleProcessarOcr = async (arquivo: ArquivoUpload) => {
-    setIsLoading(true);
-
-    try {
-      const resultado = await ocrService.processar(arquivo.file);
-      const item = resultado.dados_extraidos?.itens?.[0];
-      const tituloExtraido = item?.Nome_Produto || resultado.ocr?.raw_text
-        ?.split(/\r?\n/)
-        .map((linha) => linha.trim())
-        .find(Boolean);
-
-      if (tituloExtraido) {
-        setNomeObra(tituloExtraido);
-      }
-
-      if (item?.Preco) {
-        const preco = item.Preco.replace(/[^\d,.-]/g, "").replace(",", ".");
-        if (preco) {
-          setOrcamento(preco);
-        }
-      }
-
-      alert("OCR processado. Revise os campos antes de criar a obra.");
-    } catch (error: any) {
-      console.error("Erro ao processar OCR:", error);
-      alert(error.response?.data?.message || "Falha ao processar o arquivo com OCR.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const removeArquivo = (id: string) => {
-    setArquivos((prev) => prev.filter((arq) => arq.id !== id));
-  };
-
   const handleCriarObra = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
-    if (!validateInputs()) {
+    if (enviandoRef.current) return;
+    if (obraCriadaRef.current) {
+      navigate(podeAlocar ? `/obras/${obraCriadaRef.current.id}/alocacoes` : "/home");
       return;
     }
-
+    if (!validateInputs()) return;
+    enviandoRef.current = true;
     setIsLoading(true);
 
     try {
-      
-      const obraDto: ObraCriarDto = {
-        titulo: nomeObra,
-        orcamento: orcamento.replace(/[^\d,]/g, '').replace(',', '.'), // Remove formatação
-        status: status,
-        dtInicio: dataInicio,
-        dtTerminoPrevisto: dataFim,
-      };
-
-      
-      const obraCriada = await obraService.criar(obraDto);
-
-      await alocacaoService.criar({
-        funcionarioId: Number(responsavelId),
-        obraId: obraCriada.id,
-        cargoNaObra: "GESTOR_OBRA",
-      });
-      
-      toast.success(`Obra "${obraCriada.titulo}" criada com sucesso!`);
-      
-      // Limpar formulário
-      setNomeObra("");
-      setStatus("PLANEJADA");
-      setResponsavelId(String(funcionarios[0]?.id ?? ""));
-      setDataInicio("");
-      setDataFim("");
-      setEndereco("");
-      setCidade("");
-      setEstado("");
-      setOrcamento("");
-      setArquivos([]);
-      setErrors({});
-
-      // Redirecionar para home (lista de obras)
-      navigate("/home");
-    } catch (error: unknown) {
-      console.error("Erro ao criar obra:", error);
-      
-      if (isAxiosError<{ message?: string }>(error) && error.response?.data?.message) {
-        toast.error(error.response.data.message);
-      } else if (isAxiosError(error) && error.response?.status === 401) {
-        toast.error("Sessão expirada. Faça login novamente.");
-        navigate("/");
-      } else if (isAxiosError(error) && error.response?.status === 403) {
-        toast.error("Você não tem permissão para criar obras.");
-      } else {
-        toast.error("Falha ao criar obra. Tente novamente.");
+      let obraCriada: Obra;
+      try {
+        obraCriada = await obraService.criar({
+          titulo: nomeObra.trim(),
+          orcamento: String(valorDecimal(orcamento)),
+          status,
+          dtInicio: dataInicio,
+          dtTerminoPrevisto: dataFim,
+        });
+        // Nunca repetir o POST após uma criação confirmada, mesmo se a alocação falhar.
+        obraCriadaRef.current = obraCriada;
+      } catch (error: unknown) {
+        if (isAxiosError(error) && error.response?.status === 401) {
+          toast.error("Sessão expirada. Faça login novamente.");
+          navigate("/");
+        } else {
+          toast.error(erroApi(error, isAxiosError(error) && error.response?.status === 403
+            ? "Você não tem permissão para criar obras."
+            : "Falha ao criar obra. Tente novamente."));
+        }
+        return;
       }
+
+      if (podeAlocar) {
+        try {
+          await alocacaoService.criar({
+            funcionarioId: Number(responsavelId),
+            obraId: obraCriada.id,
+            cargoNaObra: "GESTOR_OBRA",
+          });
+        } catch {
+          toast.warning(`Obra "${obraCriada.titulo}" criada, mas não foi possível alocar o responsável. Finalize a alocação na próxima tela; não é necessário criar a obra novamente.`);
+          navigate(`/obras/${obraCriada.id}/alocacoes`);
+          return;
+        }
+        toast.success(`Obra "${obraCriada.titulo}" criada com sucesso!`);
+      } else {
+        toast.success(`Obra "${obraCriada.titulo}" criada. Solicite a um usuário com permissão de alocação que vincule o responsável.`);
+      }
+      navigate("/home");
     } finally {
+      enviandoRef.current = false;
       setIsLoading(false);
     }
-  };
-
-  const formatarTamanhoArquivo = (bytes: number) => {
-    if (bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
   };
 
   return (
     <div className={styles.pagina}>
       <div className={styles.navegacao}>
-        <span>OBRAS</span>
-        <span className={styles.separador}>&gt;</span>
+        <span>OBRAS</span><span className={styles.separador}>&gt;</span>
         <span className={styles.ativo}>NOVA OBRA</span>
       </div>
-
       <h1 className={styles.titulo}>Criação de Obra</h1>
-      <p className={styles.subtitulo}>
-        Cadastre uma nova estrutura no sistema e defina os parâmetros iniciais de gerenciamento.
-      </p>
-
-      <form className={styles.formulario} onSubmit={handleCriarObra}>
+      <p className={styles.subtitulo}>Cadastre uma nova estrutura no sistema e defina os parâmetros iniciais de gerenciamento.</p>
+      <form aria-label="Criar obra" className={styles.formulario} onSubmit={handleCriarObra} noValidate>
         <div className={styles.gridContainer}>
-          {/* Coluna esquerda - Formulário principal */}
           <div className={styles.colunaEsquerda}>
-            {/* Seção: Informações Gerais */}
-            <div className={styles.secao}>
+            <section className={styles.secao} aria-labelledby="informacoes-obra">
               <div className={styles.secaoHeader}>
-                <FileText size={20} className={styles.iconeSecao} />
-                <h2 className={styles.secaoTitulo}>Informações Gerais</h2>
+                <FileText size={20} className={styles.iconeSecao} aria-hidden="true" />
+                <h2 id="informacoes-obra" className={styles.secaoTitulo}>Informações Gerais</h2>
               </div>
-
               <div className={styles.gruposCampos}>
-                {/* Nome da Obra */}
                 <div className={styles.campoBlocoInteiro}>
-                  <label className={styles.rotulo}>NOME DA OBRA</label>
+                  <label htmlFor="nome-obra" className={styles.rotulo}>NOME DA OBRA</label>
                   <div className={styles.caixaCampo}>
-                    <input
-                      type="text"
-                      placeholder="Ex: Residencial Mirante do Sol"
-                      value={nomeObra}
-                      onChange={(e) => {
-                        setNomeObra(e.target.value);
-                        if (errors.nomeObra)
-                          setErrors((prev) => ({ ...prev, nomeObra: undefined }));
-                      }}
-                      className={styles.campo}
-                      disabled={isLoading}
-                    />
+                    <input id="nome-obra" type="text" placeholder="Ex: Residencial Mirante do Sol" value={nomeObra}
+                      onChange={(e) => setNomeObra(e.target.value)} className={styles.campo} disabled={isLoading}
+                      aria-invalid={!!errors.nomeObra} aria-describedby={errors.nomeObra ? "erro-nome-obra" : undefined} />
                   </div>
-                  {errors.nomeObra && (
-                    <span className={styles.errorText}>{errors.nomeObra}</span>
-                  )}
+                  {errors.nomeObra && <span id="erro-nome-obra" role="alert" className={styles.errorText}>{errors.nomeObra}</span>}
                 </div>
-
-                {/* Status e Responsável */}
                 <div className={styles.linhaGrupos}>
                   <div className={styles.grupoCampo}>
-                    <label className={styles.rotulo}>STATUS</label>
+                    <label htmlFor="status-obra" className={styles.rotulo}>STATUS</label>
                     <div className={styles.selectWrapper}>
-                      <select
-                        value={status}
-                        onChange={(e) => setStatus(e.target.value)}
-                        className={styles.select}
-                        disabled={isLoading}
-                      >
-                        {STATUS_OPCOES.map((opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
+                      <select id="status-obra" value={status} onChange={(e) => setStatus(e.target.value)} className={styles.select} disabled={isLoading}>
+                        {STATUS_OPCOES.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                       </select>
-                      <ChevronDown size={20} className={styles.iconSelect} />
+                      <ChevronDown size={20} className={styles.iconSelect} aria-hidden="true" />
                     </div>
-                    {errors.status && (
-                      <span className={styles.errorText}>{errors.status}</span>
-                    )}
                   </div>
-
-                  <div className={styles.grupoCampo}>
-                    <label className={styles.rotulo}>RESPONSÁVEL</label>
+                  {podeAlocar && <div className={styles.grupoCampo}>
+                    <label htmlFor="responsavel-obra" className={styles.rotulo}>RESPONSÁVEL</label>
                     <div className={styles.selectWrapperComIcone}>
-                      <User size={18} className={styles.icone} />
-                      <select
-                        value={responsavelId}
-                        onChange={(e) => {
-                          setResponsavelId(e.target.value);
-                          if (errors.responsavel)
-                            setErrors((prev) => ({
-                              ...prev,
-                              responsavel: undefined,
-                            }));
-                        }}
-                        className={styles.selectComIcone}
-                        disabled={isLoading || carregandoFuncionarios || funcionarios.length === 0}
-                      >
-                        {carregandoFuncionarios ? (
-                          <option value="">Carregando usuários...</option>
-                        ) : funcionarios.length > 0 ? (
-                          funcionarios.map((funcionario) => (
-                            <option key={funcionario.id} value={funcionario.id}>
-                              {funcionario.nome} - {cargoLabel(funcionario.cargo)} - {funcionario.email}
-                            </option>
-                          ))
-                        ) : (
-                          <option value="">Nenhum usuário encontrado</option>
-                        )}
+                      <User size={18} className={styles.icone} aria-hidden="true" />
+                      <select id="responsavel-obra" value={responsavelId} onChange={(e) => setResponsavelId(e.target.value)}
+                        className={styles.selectComIcone} disabled={isLoading || carregandoFuncionarios || !funcionarios.length}
+                        aria-invalid={!!errors.responsavel} aria-describedby={errors.responsavel ? "erro-responsavel-obra" : undefined}>
+                        <option value="">{carregandoFuncionarios ? "Carregando usuários..." : "Selecione um responsável"}</option>
+                        {funcionarios.map((funcionario) => <option key={funcionario.id} value={funcionario.id}>{funcionario.nome} - {funcionario.email}</option>)}
                       </select>
-                      <ChevronDown size={20} className={styles.iconSelect} />
+                      <ChevronDown size={20} className={styles.iconSelect} aria-hidden="true" />
                     </div>
-                    {errors.responsavel && (
-                      <span className={styles.errorText}>
-                        {errors.responsavel}
-                      </span>
-                    )}
-                  </div>
+                    {errors.responsavel && <span id="erro-responsavel-obra" role="alert" className={styles.errorText}>{errors.responsavel}</span>}
+                  </div>}
                 </div>
-
-                {/* Datas */}
+                {!podeAlocar && <p className={styles.infoTexto}>Você pode criar a obra sem responsável. Solicite a um usuário com permissão de alocação que faça o vínculo depois.</p>}
                 <div className={styles.linhaGrupos}>
                   <div className={styles.grupoCampo}>
-                    <label className={styles.rotulo}>DATA DE INÍCIO</label>
+                    <label htmlFor="inicio-obra" className={styles.rotulo}>DATA DE INÍCIO</label>
                     <div className={styles.caixaCampo}>
-                      <Calendar size={18} className={styles.icone} />
-                      <input
-                        type="date"
-                        value={dataInicio}
-                        onChange={(e) => {
-                          setDataInicio(e.target.value);
-                          if (errors.dataInicio)
-                            setErrors((prev) => ({
-                              ...prev,
-                              dataInicio: undefined,
-                            }));
-                        }}
-                        className={styles.campo}
-                        disabled={isLoading}
-                      />
+                      <Calendar size={18} className={styles.icone} aria-hidden="true" />
+                      <input id="inicio-obra" type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)}
+                        className={styles.campo} disabled={isLoading} aria-invalid={!!errors.dataInicio}
+                        aria-describedby={errors.dataInicio ? "erro-inicio-obra" : undefined} />
                     </div>
-                    {errors.dataInicio && (
-                      <span className={styles.errorText}>
-                        {errors.dataInicio}
-                      </span>
-                    )}
+                    {errors.dataInicio && <span id="erro-inicio-obra" role="alert" className={styles.errorText}>{errors.dataInicio}</span>}
                   </div>
-
                   <div className={styles.grupoCampo}>
-                    <label className={styles.rotulo}>DATA DE TÉRMINO</label>
+                    <label htmlFor="fim-obra" className={styles.rotulo}>DATA DE TÉRMINO</label>
                     <div className={styles.caixaCampo}>
-                      <Calendar size={18} className={styles.icone} />
-                      <input
-                        type="date"
-                        value={dataFim}
-                        onChange={(e) => {
-                          setDataFim(e.target.value);
-                          if (errors.dataFim)
-                            setErrors((prev) => ({
-                              ...prev,
-                              dataFim: undefined,
-                            }));
-                        }}
-                        className={styles.campo}
-                        disabled={isLoading}
-                      />
+                      <Calendar size={18} className={styles.icone} aria-hidden="true" />
+                      <input id="fim-obra" type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)}
+                        className={styles.campo} disabled={isLoading} aria-invalid={!!errors.dataFim}
+                        aria-describedby={errors.dataFim ? "erro-fim-obra" : undefined} />
                     </div>
-                    {errors.dataFim && (
-                      <span className={styles.errorText}>{errors.dataFim}</span>
-                    )}
+                    {errors.dataFim && <span id="erro-fim-obra" role="alert" className={styles.errorText}>{errors.dataFim}</span>}
                   </div>
                 </div>
               </div>
-            </div>
-
-            {/* Seção: Localização */}
-            <div className={styles.secao}>
-              <div className={styles.secaoHeader}>
-                <MapPin size={20} className={styles.iconeSecao} />
-                <h2 className={styles.secaoTitulo}>Localização</h2>
-              </div>
-
-              <div className={styles.gruposCampos}>
-                {/* Endereço completo */}
-                <div className={styles.campoBlocoInteiro}>
-                  <label className={styles.rotulo}>ENDEREÇO COMPLETO</label>
-                  <textarea
-                    placeholder="Rua, Número, Bairro, Complemento"
-                    value={endereco}
-                    onChange={(e) => {
-                      setEndereco(e.target.value);
-                      if (errors.endereco)
-                        setErrors((prev) => ({ ...prev, endereco: undefined }));
-                    }}
-                    className={styles.textarea}
-                    disabled={isLoading}
-                  />
-                  {errors.endereco && (
-                    <span className={styles.errorText}>{errors.endereco}</span>
-                  )}
-                </div>
-
-                {/* Cidade e Estado */}
-                <div className={styles.linhaGrupos}>
-                  <div className={styles.grupoCampo}>
-                    <label className={styles.rotulo}>CIDADE</label>
-                    <div className={styles.caixaCampo}>
-                      <input
-                        type="text"
-                        placeholder="Ex: São Paulo"
-                        value={cidade}
-                        onChange={(e) => {
-                          setCidade(e.target.value);
-                          if (errors.cidade)
-                            setErrors((prev) => ({
-                              ...prev,
-                              cidade: undefined,
-                            }));
-                        }}
-                        className={styles.campo}
-                        disabled={isLoading}
-                      />
-                    </div>
-                    {errors.cidade && (
-                      <span className={styles.errorText}>{errors.cidade}</span>
-                    )}
-                  </div>
-
-                  <div className={styles.grupoCampo}>
-                    <label className={styles.rotulo}>ESTADO</label>
-                    <div className={styles.selectWrapper}>
-                      <select
-                        value={estado}
-                        onChange={(e) => {
-                          setEstado(e.target.value);
-                          if (errors.estado)
-                            setErrors((prev) => ({ ...prev, estado: undefined }));
-                        }}
-                        className={styles.select}
-                        disabled={isLoading}
-                      >
-                        <option value="">Selecione um estado</option>
-                        {ESTADOS.map((uf) => (
-                          <option key={uf} value={uf}>
-                            {uf}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown size={20} className={styles.iconSelect} />
-                    </div>
-                    {errors.estado && (
-                      <span className={styles.errorText}>{errors.estado}</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
+            </section>
           </div>
-
-          {/* Coluna direita - Cards auxiliares */}
           <div className={styles.colunaDireita}>
-            {/* Card: Financeiro */}
-            <div className={styles.card}>
+            <section className={styles.card} aria-labelledby="financeiro-obra">
               <div className={styles.cardHeader}>
-                <DollarSign size={20} className={styles.iconeCard} />
-                <h3 className={styles.cardTitulo}>Financeiro</h3>
+                <DollarSign size={20} className={styles.iconeCard} aria-hidden="true" />
+                <h2 id="financeiro-obra" className={styles.cardTitulo}>Financeiro</h2>
               </div>
-
               <div className={styles.cardBody}>
-                <label className={styles.rotulo}>ORÇAMENTO INICIAL</label>
+                <label htmlFor="orcamento-obra" className={styles.rotulo}>ORÇAMENTO PLANEJADO</label>
                 <div className={styles.caixaCampo}>
-                  <DollarSign size={18} className={styles.icone} />
-                  <input
-                    type="number"
-                    placeholder="0.000,00"
-                    value={orcamento}
-                    onChange={(e) => {
-                      setOrcamento(e.target.value);
-                      if (errors.orcamento)
-                        setErrors((prev) => ({
-                          ...prev,
-                          orcamento: undefined,
-                        }));
-                    }}
-                    step="0.01"
-                    min="0"
-                    className={styles.campo}
-                    disabled={isLoading}
-                  />
+                  <DollarSign size={18} className={styles.icone} aria-hidden="true" />
+                  <input id="orcamento-obra" type="text" inputMode="decimal" placeholder="0,00" value={orcamento}
+                    onChange={(e) => setOrcamento(e.target.value)} className={styles.campo} disabled={isLoading}
+                    aria-invalid={!!errors.orcamento} aria-describedby={`info-orcamento${errors.orcamento ? " erro-orcamento-obra" : ""}`} />
                 </div>
-                {errors.orcamento && (
-                  <span className={styles.errorText}>{errors.orcamento}</span>
-                )}
-                <p className={styles.infoTexto}>
-                  Este valor servirá como base para o controle de<br />
-                  gastos e projeção de lucros da obra.
-                </p>
+                {errors.orcamento && <span id="erro-orcamento-obra" role="alert" className={styles.errorText}>{errors.orcamento}</span>}
+                <p id="info-orcamento" className={styles.infoTexto}>Orçamento planejado não é dinheiro recebido. O total recebido começa em zero e deve ser atualizado no financeiro da obra.</p>
               </div>
-            </div>
-
-            {/* Card: Documentação */}
+            </section>
             <div className={styles.card}>
-              <div className={styles.cardHeader}>
-                <Upload size={20} className={styles.iconeCard} />
-                <h3 className={styles.cardTitulo}>Documentação</h3>
-              </div>
-
-              <div className={styles.cardBody}>
-                <label className={styles.rotulo}>
-                  UPLOAD DE ARQUIVOS
-                </label>
-                <label className={styles.areaUpload}>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    accept="image/*,.pdf"
-                    onChange={handleArquivoUpload}
-                    disabled={isLoading || arquivos.length >= 3}
-                    className={styles.inputArquivo}
-                  />
-                  <div className={styles.uploadConteudo}>
-                    <Upload size={32} className={styles.uploadIcone} />
-                    <p className={styles.uploadTexto}>
-                      Upload de Arquivos
-                    </p>
-                    <p className={styles.uploadSubtexto}>
-                      Arraste fotos ou projetos<br />
-                      (.pdf, .jpg, .png)
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className={styles.botaoSelecionarArquivos}
-                      disabled={isLoading || arquivos.length >= 3}
-                    >
-                      Selecionar Arquivos
-                    </button>
-                  </div>
-                </label>
-
-                {errors.arquivos && (
-                  <span className={styles.errorText}>{errors.arquivos}</span>
-                )}
-
-                {/* Lista de arquivos */}
-                {arquivos.length > 0 && (
-                  <div className={styles.listaArquivos}>
-                    {arquivos.map((arq) => (
-                      <div key={arq.id} className={styles.itemArquivo}>
-                        <div className={styles.infoArquivo}>
-                          <FileText size={16} />
-                          <div>
-                            <p className={styles.nomeArquivo}>{arq.nome}</p>
-                            <p className={styles.tamanhoArquivo}>
-                              {formatarTamanhoArquivo(arq.tamanho)}
-                            </p>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => removeArquivo(arq.id)}
-                          className={styles.botaoRemover}
-                          disabled={isLoading}
-                        >
-                          <X size={16} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleProcessarOcr(arq)}
-                          className={styles.botaoProcessarOcr}
-                          disabled={isLoading}
-                        >
-                          Processar OCR
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Card: Botões de Ação */}
-            <div className={styles.card}>
-              <button
-                type="submit"
-                className={styles.botaoCriar}
-                disabled={isLoading}
-              >
-                {isLoading ? "Criando..." : "Criar Obra"}
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate(-1)}
-                className={styles.botaoCancelar}
-                disabled={isLoading}
-              >
-                Cancelar
-              </button>
+              <button type="submit" className={styles.botaoCriar} disabled={isLoading}>{isLoading ? "Criando..." : "Criar Obra"}</button>
+              <button type="button" onClick={() => navigate(-1)} className={styles.botaoCancelar} disabled={isLoading}>Cancelar</button>
             </div>
           </div>
         </div>

@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 
 @Entity
+@com.fasterxml.jackson.databind.annotation.JsonSerialize(using = com.jaf.application.config.ObraSerializer.class)
 public class Obra {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -13,6 +14,12 @@ public class Obra {
     private String titulo;
     private String orcamento;
     private String status;
+
+    @Column(nullable = false, precision = 19, scale = 2)
+    private java.math.BigDecimal totalRecebido = java.math.BigDecimal.ZERO;
+
+    public java.math.BigDecimal getTotalRecebido() { return totalRecebido; }
+    public void setTotalRecebido(java.math.BigDecimal totalRecebido) { this.totalRecebido = totalRecebido; }
 
     private LocalDate dtInicio;
     private LocalDate dtTerminoPrevisto;

@@ -2,9 +2,7 @@ import { useCallback, useState, useEffect, type FormEvent } from "react";
 import {
   Calendar,
   Search,
-  Filter,
   CalendarDays,
-  TrendingUp,
   ChevronLeft,
   ChevronRight,
   Plus,
@@ -17,7 +15,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import styles from "./DetalhamentoObras.module.css";
 import ControlePresenca from "../ControlePresenca/ControlePresenca";
 import { obraService, type Obra } from "../../Service/Obras/obraService";
-import { gastoService, type Gasto } from "../../Service/Gastos/gastoService";
+import { gastoService, type Gasto, type StatusReembolso } from "../../Service/Gastos/gastoService";
 import { ocrService } from "../../Service/Gastos/ocrService";
 import { alocacaoService, type AlocacaoObra } from "../../Service/Alocacoes/alocacaoService";
 import { authService } from "../../Service/Auth/Login/authService";
@@ -30,6 +28,10 @@ import {
 } from "../../Components/PeriodoFiltro/periodUtils";
 import { toast } from "sonner";
 import { Responsive } from "../../Components/Responsive/Responsive";
+import FinanceiroObra from "../../Components/Financeiro/FinanceiroObra";
+import ReembolsoModal from "../../Components/Financeiro/ReembolsoModal";
+import ResumoReembolsos from "../../Components/Financeiro/ResumoReembolsos";
+import { dataValida, erroApi, valorDecimal } from "../../Utils/financeiro";
 
 const formatarMoeda = (valor: number) =>
   valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -49,7 +51,11 @@ const getIniciais = (nome: string) => {
 const cargoLabel = (cargo: string | null | undefined) =>
   cargo ? cargo.replace(/_/g, " ") : "Não definido";
 
-const cores = ["#6C63FF", "#FF6584", "#43B89C", "#ffc107", "#9c27b0"];
+const STATUS_REEMBOLSO: Record<StatusReembolso, { rotulo: string; classe: string }> = {
+  PENDENTE: { rotulo: "Pendente", classe: styles.statusPendente },
+  PARCIAL: { rotulo: "Parcial", classe: styles.statusParcial },
+  PAGO: { rotulo: "Pago", classe: styles.statusPago },
+};
 
 const dataHoje = () => {
   const partes = new Intl.DateTimeFormat("en-CA", {
@@ -114,14 +120,6 @@ const normalizarMetodoPagamentoOcr = (metodo: string | null | undefined) => {
 const formatarValorInput = (valor: number) =>
   valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-const parseValorMonetario = (valor: string) => {
-  const valorNormalizado = valor.trim();
-  if (valorNormalizado.includes(",")) {
-    return Number(valorNormalizado.replace(/\./g, "").replace(",", "."));
-  }
-  return Number(valorNormalizado);
-};
-
 export default function DetalhamentoObras() {
   const [paginaAtual, setPaginaAtual] = useState(1);
   const [controlePresencaAberto, setControlePresencaAberto] = useState(false);
@@ -131,7 +129,14 @@ export default function DetalhamentoObras() {
   const [salvandoGasto, setSalvandoGasto] = useState(false);
   const [salvandoObra, setSalvandoObra] = useState(false);
   const [deletandoObra, setDeletandoObra] = useState(false);
-  const [atualizandoReembolsoId, setAtualizandoReembolsoId] = useState<number | null>(null);
+  const [gastoReembolso, setGastoReembolso] = useState<Gasto | null>(null);
+  const [gastoEditando, setGastoEditando] = useState<Gasto | null>(null);
+  const [excluindoGastoId, setExcluindoGastoId] = useState<number | null>(null);
+  const [revisaoFinanceira, setRevisaoFinanceira] = useState(0);
+  const [filtroPessoa, setFiltroPessoa] = useState("");
+  const [filtroStatus, setFiltroStatus] = useState<StatusReembolso | "">("");
+  const [carregandoGastos, setCarregandoGastos] = useState(false);
+  const [erroGastos, setErroGastos] = useState("");
   const [buscaFinanceira, setBuscaFinanceira] = useState("");
   const [ordemFinanceira, setOrdemFinanceira] = useState<"data" | "valor" | "alfabetica">("data");
   const [filtroMetodoPagamento, setFiltroMetodoPagamento] = useState("TODOS");
@@ -159,26 +164,30 @@ export default function DetalhamentoObras() {
   });
   const [obra, setObra] = useState<Obra | null>(null);
   const [gastos, setGastos] = useState<Gasto[]>([]);
+  const [pessoasHistoricas, setPessoasHistoricas] = useState<Gasto["funcionario"][]>([]);
   const [alocacoes, setAlocacoes] = useState<AlocacaoObra[]>([]);
   const [carregando, setCarregando] = useState(true);
   
   const { id } = useParams<{ id: string }>();
   const navegar = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const podeEditarObra = authService.hasAuthority("EDITAR_OBRA");
+  const admin = authService.isAdmin();
+  // O PUT legado exige orçamento: não reenviar valor oculto ou inventar zero.
+  const podeEditarObra = admin && authService.hasAuthority("EDITAR_OBRA");
   const podeDeletarObra = authService.hasAuthority("DELETAR_OBRA");
   const podeCriarGasto = authService.hasAuthority("CRIAR_GASTO");
   const podeEditarGasto = authService.hasAuthority("EDITAR_GASTO");
+  const podeDeletarGasto = authService.hasAuthority("DELETAR_GASTO");
   const podeVisualizarGastos = authService.hasAuthority("VISUALIZAR_GASTOS");
   const podeVisualizarAlocacoes = authService.hasAuthority("VISUALIZAR_ALOCACOES");
-  const podeRegistrarPresenca = authService.hasAuthority("REGISTRAR_PRESENCA");
+  const podeRegistrarPresenca = authService.hasAuthority("VISUALIZAR_PRESENCAS");
 
   const carregarDados = useCallback(async () => {
       try {
         setCarregando(true);
         
         // Se não houver ID, pega a primeira obra
-        let obraData: Obra;
+        let obraData: Obra | null;
         if (id) {
           obraData = await obraService.buscarPorId(parseInt(id));
         } else {
@@ -187,21 +196,21 @@ export default function DetalhamentoObras() {
         }
         
         setObra(obraData);
+        if (!obraData) { setGastos([]); setAlocacoes([]); return; }
         setEdicaoObra({
           titulo: obraData.titulo,
-          orcamento: obraData.orcamento,
+          orcamento: obraData.orcamento ?? "",
           status: obraData.status,
           dtInicio: obraData.dtInicio,
           dtTerminoPrevisto: obraData.dtTerminoPrevisto,
         });
 
         if (obraData) {
-          const [gastosData, alocacoesData] = await Promise.all([
-            gastoService.listarPorObra(obraData.id),
-            alocacaoService.listarPorObra(obraData.id),
+          const [alocacoesResultado] = await Promise.allSettled([
+            podeVisualizarAlocacoes ? alocacaoService.listarPorObra(obraData.id) : Promise.resolve([]),
           ]);
-
-          setGastos(gastosData);
+          const alocacoesData = alocacoesResultado.status === "fulfilled" ? alocacoesResultado.value : [];
+          if (alocacoesResultado.status === "rejected") toast.error("Não foi possível carregar as alocações");
           setAlocacoes(alocacoesData);
           setNovoGasto((gastoAtual) => ({
             ...gastoAtual,
@@ -215,7 +224,34 @@ export default function DetalhamentoObras() {
       } finally {
         setCarregando(false);
       }
-  }, [id]);
+  }, [id, podeVisualizarAlocacoes]);
+
+  const obraId = obra?.id;
+  useEffect(() => {
+    setFiltroPessoa("");
+    setFiltroStatus("");
+    setGastoReembolso(null);
+    setPessoasHistoricas([]);
+  }, [obraId]);
+
+  useEffect(() => {
+    if (!obraId || !podeVisualizarGastos) { setGastos([]); return; }
+    let ativo = true;
+    setCarregandoGastos(true);
+    setErroGastos("");
+    // As opções não podem depender da resposta filtrada (nem das alocações atuais).
+    const historico = filtroPessoa || filtroStatus ? gastoService.listarPorObra(obraId) : null;
+    const consulta = gastoService.listarPorObra(obraId, {
+      funcionarioId: filtroPessoa ? Number(filtroPessoa) : undefined,
+      statusReembolso: filtroStatus || undefined,
+    });
+    Promise.all([historico ?? consulta, consulta]).then(([todos, dados]) => {
+      if (ativo) { setGastos(dados); setPessoasHistoricas(todos.map((gasto) => gasto.funcionario)); }
+    })
+      .catch((e: unknown) => { if (ativo) { setGastos([]); setErroGastos(erroApi(e, "Não foi possível carregar os gastos. Atualize para tentar novamente.")); } })
+      .finally(() => { if (ativo) setCarregandoGastos(false); });
+    return () => { ativo = false; };
+  }, [obraId, podeVisualizarGastos, filtroPessoa, filtroStatus, revisaoFinanceira]);
 
   useEffect(() => {
     carregarDados();
@@ -229,15 +265,7 @@ export default function DetalhamentoObras() {
 
   useEffect(() => {
     setPaginaAtual(1);
-  }, [buscaFinanceira, ordemFinanceira, filtroMetodoPagamento, periodoFinanceiro]);
-
-  // Calcular métricas
-  const totalGastoObra = gastos.reduce((total, gasto) => total + gasto.valor, 0);
-  const reembolsosPendentes = gastos.filter((gasto) => gasto.reembolsoConcluido === false);
-  const reembolsosConcluidos = gastos.filter((gasto) => gasto.reembolsoConcluido === true);
-  const totalReembolsoPendente = reembolsosPendentes.reduce((total, gasto) => total + gasto.valor, 0);
-  const orcamentoObra = parseFloat(obra?.orcamento || "0");
-  const limiteAtingido = orcamentoObra > 0 ? (totalGastoObra / orcamentoObra) * 100 : 0;
+  }, [buscaFinanceira, ordemFinanceira, filtroMetodoPagamento, periodoFinanceiro, filtroPessoa, filtroStatus]);
 
   // Calcular dias restantes
   const calcularDiasRestantes = () => {
@@ -266,9 +294,7 @@ export default function DetalhamentoObras() {
 
       const correspondeMetodo =
         filtroMetodoPagamento === "TODOS" ||
-        (filtroMetodoPagamento === "REEMBOLSO"
-          ? gasto.reembolsoConcluido === false
-          : normalizarMetodoPagamento(gasto.metodoPagamento) === filtroMetodoPagamento);
+        normalizarMetodoPagamento(gasto.metodoPagamento) === filtroMetodoPagamento;
 
       const correspondePeriodo = dataNoPeriodo(gasto.dtGasto, intervaloFinanceiro);
 
@@ -285,7 +311,8 @@ export default function DetalhamentoObras() {
     });
 
   const totalPaginas = Math.ceil(gastosFiltrados.length / 5);
-  const gastosExibidos = gastosFiltrados.slice((paginaAtual - 1) * 5, paginaAtual * 5);
+  const paginaVisivel = Math.min(paginaAtual, Math.max(1, totalPaginas));
+  const gastosExibidos = gastosFiltrados.slice((paginaVisivel - 1) * 5, paginaVisivel * 5);
 
   function atualizarNovoGasto(campo: keyof typeof novoGasto, valor: string | boolean) {
     setNovoGasto((gastoAtual) => ({ ...gastoAtual, [campo]: valor }));
@@ -297,7 +324,9 @@ export default function DetalhamentoObras() {
   }
 
   function fecharModalGasto() {
+    if (salvandoGasto || processandoNotaFiscal) return;
     setModalGastoAberto(false);
+    setGastoEditando(null);
     limparNotaFiscal();
   }
 
@@ -317,10 +346,13 @@ export default function DetalhamentoObras() {
 
     if (!obra) return;
 
-    const orcamento = parseValorMonetario(edicaoObra.orcamento);
-    if (!orcamento || orcamento <= 0) {
-      toast.error("Informe um orçamento maior que zero");
+    const orcamento = valorDecimal(edicaoObra.orcamento);
+    if (orcamento === null) {
+      toast.error("Informe um orçamento positivo com até duas casas decimais");
       return;
+    }
+    if (!admin || edicaoObra.titulo.trim().length < 5 || edicaoObra.dtTerminoPrevisto < edicaoObra.dtInicio) {
+      toast.error("Verifique o título e o intervalo de datas da obra"); return;
     }
 
     try {
@@ -337,7 +369,7 @@ export default function DetalhamentoObras() {
       toast.success("Obra atualizada com sucesso");
     } catch (error) {
       console.error("Erro ao atualizar obra:", error);
-      toast.error("Não foi possível atualizar a obra");
+      toast.error(erroApi(error, "Não foi possível atualizar a obra"));
     } finally {
       setSalvandoObra(false);
     }
@@ -351,29 +383,34 @@ export default function DetalhamentoObras() {
       return;
     }
 
-    const valor = parseValorMonetario(novoGasto.valor);
-    if (!valor || valor <= 0) {
-      toast.error("Informe um valor maior que zero");
+    const valor = valorDecimal(novoGasto.valor);
+    if (valor === null) {
+      toast.error("Informe um valor positivo com até duas casas decimais e dentro do limite seguro");
+      return;
+    }
+    if (!novoGasto.descricao.trim() || !dataValida(novoGasto.dtGasto, dataHoje())) {
+      toast.error("Informe uma descrição e uma data válida até hoje");
       return;
     }
 
     try {
       setSalvandoGasto(true);
-      await gastoService.criar({
+      const payload = {
         descricao: novoGasto.descricao.trim(),
         categoria: novoGasto.categoria,
-        metodoPagamento: novoGasto.metodoPagamento,
+        metodoPagamento: novoGasto.reembolsoFuncionario ? "REEMBOLSO" : novoGasto.metodoPagamento,
         etapa: novoGasto.etapa,
         valor,
         dtGasto: novoGasto.dtGasto,
         funcionarioId: Number(novoGasto.funcionarioId),
         obraId: obra.id,
-        reembolsoConcluido: novoGasto.reembolsoFuncionario ? false : null,
-      });
-
-      const gastosAtualizados = await gastoService.listarPorObra(obra.id);
-      setGastos(gastosAtualizados);
-      fecharModalGasto();
+      };
+      if (gastoEditando) await gastoService.atualizar(gastoEditando.id, payload);
+      else await gastoService.criar(payload);
+      setRevisaoFinanceira((r) => r + 1);
+      setModalGastoAberto(false);
+      setGastoEditando(null);
+      limparNotaFiscal();
       setNovoGasto({
         descricao: "",
         categoria: "MATERIAL",
@@ -384,10 +421,10 @@ export default function DetalhamentoObras() {
         funcionarioId: String(alocacoes[0]?.funcionario.id ?? ""),
         reembolsoFuncionario: false,
       });
-      toast.success("Gasto adicionado ao financeiro da obra");
+      toast.success(gastoEditando ? "Gasto atualizado" : "Gasto adicionado à obra");
     } catch (error) {
       console.error("Erro ao cadastrar gasto:", error);
-      toast.error("Não foi possível adicionar o gasto");
+      toast.error(erroApi(error, "Não foi possível salvar o gasto"));
     } finally {
       setSalvandoGasto(false);
     }
@@ -434,41 +471,53 @@ export default function DetalhamentoObras() {
     }
   }
 
-  async function alternarReembolso(gasto: Gasto) {
-    if (!obra || gasto.reembolsoConcluido === null || atualizandoReembolsoId) return;
+  function editarGasto(gasto: Gasto) {
+    setGastoEditando(gasto);
+    setNovoGasto({ descricao: gasto.descricao, categoria: gasto.categoria,
+      metodoPagamento: gasto.metodoPagamento === "REEMBOLSO" ? "PIX" : gasto.metodoPagamento,
+      etapa: gasto.etapa, valor: gasto.valor.toFixed(2), dtGasto: gasto.dtGasto,
+      funcionarioId: String(gasto.funcionario.id), reembolsoFuncionario: gasto.metodoPagamento === "REEMBOLSO" });
+    setModalGastoAberto(true);
+  }
 
-    try {
-      setAtualizandoReembolsoId(gasto.id);
-      const gastoAtualizado = await gastoService.atualizar(gasto.id, {
-        descricao: gasto.descricao,
-        categoria: gasto.categoria,
-        metodoPagamento: gasto.metodoPagamento,
-        etapa: gasto.etapa,
-        valor: gasto.valor,
-        dtGasto: gasto.dtGasto,
-        funcionarioId: gasto.funcionario.id,
-        obraId: obra.id,
-        reembolsoConcluido: !gasto.reembolsoConcluido,
-      });
+  async function excluirGasto(gasto: Gasto) {
+    if (!podeDeletarGasto || excluindoGastoId || !window.confirm(`Excluir o gasto “${gasto.descricao}”? Gastos com pagamentos não podem ser excluídos.`)) return;
+    setExcluindoGastoId(gasto.id);
+    try { await gastoService.deletar(gasto.id); setRevisaoFinanceira((r) => r + 1); toast.success("Gasto excluído"); }
+    catch (e) { toast.error(erroApi(e, "Não foi possível excluir o gasto")); }
+    finally { setExcluindoGastoId(null); }
+  }
 
-      setGastos((gastosAtuais) =>
-        gastosAtuais.map((item) => (item.id === gasto.id ? gastoAtualizado : item))
-      );
-      toast.success(gastoAtualizado.reembolsoConcluido ? "Reembolso concluído" : "Reembolso marcado como pendente");
-    } catch (error) {
-      console.error("Erro ao atualizar reembolso:", error);
-      toast.error("Não foi possível atualizar o reembolso");
-    } finally {
-      setAtualizandoReembolsoId(null);
-    }
+  function renderizarAcoesGasto(gasto: Gasto) {
+    if (!podeEditarGasto && !podeDeletarGasto) return null;
+    return <div className={styles.acoesGasto}>
+      {podeEditarGasto && (
+        <button className={styles.botaoIcone} type="button" aria-label="Editar gasto" title="Editar gasto" onClick={() => editarGasto(gasto)}>
+          <Pencil size={15} aria-hidden="true" />
+        </button>
+      )}
+      {podeDeletarGasto && (
+        <button
+          className={`${styles.botaoIcone} ${styles.botaoIconePerigo}`}
+          type="button"
+          aria-label="Excluir gasto"
+          title={excluindoGastoId === gasto.id ? "Excluindo..." : "Excluir gasto"}
+          aria-busy={excluindoGastoId === gasto.id}
+          disabled={excluindoGastoId !== null}
+          onClick={() => void excluirGasto(gasto)}
+        >
+          <Trash2 size={15} aria-hidden="true" />
+        </button>
+      )}
+    </div>;
   }
 
   function irParaPaginaAnterior() {
-    setPaginaAtual((paginaCorrente) => Math.max(1, paginaCorrente - 1));
+    setPaginaAtual(Math.max(1, paginaVisivel - 1));
   }
 
   function irParaProximaPagina() {
-    setPaginaAtual((paginaCorrente) => Math.min(totalPaginas, paginaCorrente + 1));
+    setPaginaAtual(Math.min(totalPaginas, paginaVisivel + 1));
   }
 
   function irParaPagina(pagina: number) {
@@ -492,26 +541,29 @@ export default function DetalhamentoObras() {
   }
 
   function renderizarReembolso(gasto: Gasto) {
-    if (gasto.reembolsoConcluido === null) {
-      return <span className={`${styles.badgeReembolso} ${styles.reembolsoNaoAplicavel}`}>Não</span>;
+    if (gasto.metodoPagamento !== "REEMBOLSO") {
+      return (
+        <span className={styles.semReembolso} title="Não é reembolso">
+          <span aria-hidden="true">—</span>
+          <span className={styles.textoOculto}>Não</span>
+        </span>
+      );
     }
 
+    // O gasto não traz status próprio; só é confiável quando filtrado no servidor.
+    const status = filtroStatus ? STATUS_REEMBOLSO[filtroStatus] : null;
     return (
-      <button
-        type="button"
-        className={`${styles.badgeReembolso} ${
-          gasto.reembolsoConcluido ? styles.reembolsoConcluido : styles.reembolsoPendente
-        } ${podeEditarGasto ? styles.badgeReembolsoAcionavel : ""}`}
-        onClick={() => alternarReembolso(gasto)}
-        disabled={!podeEditarGasto || atualizandoReembolsoId === gasto.id}
-        title={podeEditarGasto ? "Clique para alternar o status do reembolso" : "Sem permissão para editar reembolso"}
-      >
-        {atualizandoReembolsoId === gasto.id
-          ? "Salvando..."
-          : gasto.reembolsoConcluido
-            ? "Concluído"
-            : "Pendente"}
-      </button>
+      <div className={styles.celulaReembolso}>
+        {status && <span className={`${styles.statusBadge} ${status.classe}`}>{status.rotulo}</span>}
+        <button
+          type="button"
+          className={`${styles.botaoSecundario} ${styles.botaoCompacto}`}
+          onClick={() => setGastoReembolso(gasto)}
+          title="Consultar parcelas e saldo do reembolso"
+        >
+          {authService.podeRegistrarPagamento() ? "Pagamentos / Registrar" : "Ver pagamentos"}
+        </button>
+      </div>
     );
   }
 
@@ -533,6 +585,7 @@ export default function DetalhamentoObras() {
 
   return (
     <div className={styles.pagina}>
+      {gastoReembolso && <ReembolsoModal key={gastoReembolso.id} gasto={gastoReembolso} onFechar={() => setGastoReembolso(null)} onAtualizado={() => setRevisaoFinanceira((r) => r + 1)} />}
       <ControlePresenca
         aberto={controlePresencaAberto}
         onFechar={() => setControlePresencaAberto(false)}
@@ -584,7 +637,7 @@ export default function DetalhamentoObras() {
 
             <footer className={styles.modalFooter}>
               <button type="button" className={styles.botaoSecundario} onClick={fecharModalEdicao}>Cancelar</button>
-              <button type="submit" className={styles.botaoAdicionarGasto} disabled={salvandoObra}>
+              <button type="submit" className={styles.botaoPrimario} disabled={salvandoObra}>
                 {salvandoObra ? "Salvando..." : "Salvar obra"}
               </button>
             </footer>
@@ -597,7 +650,7 @@ export default function DetalhamentoObras() {
           <form className={styles.modalGasto} onSubmit={cadastrarGasto} onClick={(evento) => evento.stopPropagation()}>
             <header className={styles.modalHeader}>
               <div>
-                <h2>Adicionar gasto</h2>
+                <h2>{gastoEditando ? "Editar gasto" : "Adicionar gasto"}</h2>
                 <p>{obra.titulo}</p>
               </div>
               <button type="button" className={styles.botaoFecharModal} onClick={fecharModalGasto} aria-label="Fechar modal de gasto">
@@ -643,6 +696,7 @@ export default function DetalhamentoObras() {
                 Responsável
                 <select value={novoGasto.funcionarioId} onChange={(evento) => atualizarNovoGasto("funcionarioId", evento.target.value)} required>
                   <option value="" disabled>Selecione</option>
+                  {gastoEditando && !alocacoes.some((a) => a.funcionario.id === gastoEditando.funcionario.id) && <option value={gastoEditando.funcionario.id}>{gastoEditando.funcionario.nome}</option>}
                   {alocacoes.map((alocacao) => (
                     <option key={alocacao.id} value={alocacao.funcionario.id}>
                       {alocacao.funcionario.nome}
@@ -695,7 +749,7 @@ export default function DetalhamentoObras() {
 
             <footer className={styles.modalFooter}>
               <button type="button" className={styles.botaoSecundario} onClick={fecharModalGasto}>Cancelar</button>
-              <button type="submit" className={styles.botaoAdicionarGasto} disabled={salvandoGasto || alocacoes.length === 0}>
+              <button type="submit" className={styles.botaoPrimario} disabled={salvandoGasto || processandoNotaFiscal || (!gastoEditando && alocacoes.length === 0)}>
                 {salvandoGasto ? "Salvando..." : "Salvar gasto"}
               </button>
             </footer>
@@ -716,13 +770,13 @@ export default function DetalhamentoObras() {
               </button>
             </header>
             <div className={styles.modalGrid}>
-              <p style={{ color: "#6b6b6b", lineHeight: "1.6" }}>
+              <p className={styles.textoModal}>
                 Tem certeza que deseja excluir esta obra? Esta ação é irreversível e todos os dados associados (gastos, alocações, presenças) serão permanentemente removidos.
               </p>
             </div>
             <footer className={styles.modalFooter}>
               <button type="button" className={styles.botaoSecundario} onClick={() => setModalDeleteAberto(false)}>Cancelar</button>
-              <button type="button" className={styles.botaoDeletarConfirm} onClick={deletarObra} disabled={deletandoObra}>
+              <button type="button" className={styles.botaoPerigo} onClick={deletarObra} disabled={deletandoObra}>
                 {deletandoObra ? "Excluindo..." : "Confirmar exclusão"}
               </button>
             </footer>
@@ -739,12 +793,14 @@ export default function DetalhamentoObras() {
               <input
                 type="date"
                 className={styles.inputDataPresenca}
+                max={dataHoje()}
                 value={dataSelecionada}
                 onChange={(e) => setDataSelecionada(e.target.value)}
                 aria-label="Data do controle de presença"
               />
               <button
-                className={styles.botaoAdicionarGasto}
+                type="button"
+                className={styles.botaoSecundario}
                 onClick={() => setControlePresencaAberto(true)}
               >
                 Controle de presença
@@ -752,7 +808,11 @@ export default function DetalhamentoObras() {
             </>
           )}
           {podeCriarGasto && (
-            <button className={styles.botaoAdicionarGasto} onClick={() => setModalGastoAberto(true)}>
+            <button type="button" className={styles.botaoPrimario} onClick={() => {
+              setGastoEditando(null);
+              setNovoGasto({ descricao: "", categoria: "MATERIAL", metodoPagamento: "PIX", etapa: "ETAPA 1", valor: "", dtGasto: dataHoje(), funcionarioId: String(alocacoes[0]?.funcionario.id ?? ""), reembolsoFuncionario: false });
+              setModalGastoAberto(true);
+            }}>
               <Plus size={16} />
               Adicionar gasto
             </button>
@@ -798,12 +858,9 @@ export default function DetalhamentoObras() {
           <div className={styles.equipeRotulo}>EQUIPE RESPONSÁVEL</div>
           <div className={styles.equipe}>
             {alocacoes.length > 0 ? (
-              alocacoes.map((alocacao, index) => (
+              alocacoes.map((alocacao) => (
                 <div key={alocacao.id} className={styles.membroCard}>
-                  <div
-                    className={styles.membroAvatar}
-                    style={{ backgroundColor: cores[index % cores.length] }}
-                  >
+                  <div className={styles.membroAvatar} aria-hidden="true">
                     {getIniciais(alocacao.funcionario.nome)}
                   </div>
                   <div className={styles.membroInformacoes}>
@@ -815,12 +872,15 @@ export default function DetalhamentoObras() {
                 </div>
               ))
             ) : (
-              <p style={{ fontSize: "14px", color: "#666" }}>Nenhum funcionário alocado</p>
+              <p className={styles.equipeVazia}>Nenhum funcionário alocado</p>
             )}
             {podeVisualizarAlocacoes && (
               <button
+                type="button"
                 className={styles.botaoAdicionarMembro}
                 onClick={() => navegar(`/obras/${obra.id}/alocacoes`)}
+                aria-label="Gerenciar equipe da obra"
+                title="Gerenciar equipe da obra"
               >
                 <Plus size={18} />
               </button>
@@ -830,31 +890,8 @@ export default function DetalhamentoObras() {
       </div>
 
       {/* Cards de métricas */}
+      {admin && <FinanceiroObra key={obra.id} obraId={obra.id} orcamento={obra.orcamento} revisao={revisaoFinanceira} />}
       <div className={styles.metricas}>
-        <div className={styles.metricaCard}>
-          <span className={styles.metricaRotulo}>CUSTO TOTAL ACUMULADO</span>
-          <span className={styles.metricaValorDestaque}>
-            {formatarMoeda(totalGastoObra)}
-          </span>
-          <div className={styles.metricaTendencia}>
-            <TrendingUp size={14} />
-            <span>Gastos acumulados</span>
-          </div>
-        </div>
-
-        <div className={styles.metricaCard}>
-          <span className={styles.metricaRotulo}>LIMITE ATINGIDO</span>
-          <span className={styles.metricaValor}>{limiteAtingido.toFixed(0)}%</span>
-          <div className={styles.barraProgressoWrapper}>
-            <div className={styles.barraProgresso}>
-              <div
-                className={styles.barraProgressoPreenchimento}
-                style={{ width: `${Math.min(limiteAtingido, 100)}%` }}
-              />
-            </div>
-          </div>
-        </div>
-
         <div className={styles.metricaCard}>
           <span className={styles.metricaRotulo}>DIAS PARA ENTREGA</span>
           <span className={styles.metricaValor}>{calcularDiasRestantes()} Dias</span>
@@ -864,73 +901,112 @@ export default function DetalhamentoObras() {
           </div>
         </div>
 
-        <div className={styles.metricaCard}>
-          <span className={styles.metricaRotulo}>REEMBOLSO A FUNCIONÁRIOS</span>
-          <span className={styles.metricaValorDestaque}>{formatarMoeda(totalReembolsoPendente)}</span>
-          <div className={styles.metricaSubtitulo}>
-            <span>{reembolsosPendentes.length} pendente(s) · {reembolsosConcluidos.length} concluído(s)</span>
-          </div>
-        </div>
       </div>
 
       {/* Seção financeiro */}
+      {podeVisualizarGastos && <>
+      <ResumoReembolsos key={obra.id} obraId={obra.id} revisao={revisaoFinanceira} />
       <div className={styles.secaoFinanceiro}>
         <div className={styles.financeiroTopo}>
-          <h2 className={styles.financeiroTitulo}>Financeiro</h2>
-          <div className={styles.financeiroControles}>
-            {podeVisualizarGastos && (
-              <button className={styles.botaoFiltro} onClick={() => navegar(`/obras/detalhamento/${obra.id}/financeiro`)}>
+          <div className={styles.financeiroCabecalho}>
+            <div>
+              <h2 className={styles.financeiroTitulo}>Gastos</h2>
+              {!carregandoGastos && !erroGastos && (
+                <span className={styles.financeiroContador}>
+                  {gastosFiltrados.length} {gastosFiltrados.length === 1 ? "lançamento" : "lançamentos"}
+                </span>
+              )}
+            </div>
+            {admin && (
+              <button type="button" className={styles.botaoSecundario} onClick={() => navegar(`/obras/detalhamento/${obra.id}/financeiro`)}>
                 Ver estatísticas
               </button>
             )}
-            <div className={styles.campoBusca}>
-              <Search size={15} className={styles.iconeBusca} />
-              <input
-                type="text"
-                placeholder="Buscar lançamentos..."
-                className={styles.inputBusca}
-                value={buscaFinanceira}
-                onChange={(evento) => setBuscaFinanceira(evento.target.value)}
-              />
+          </div>
+          <div className={styles.toolbar} role="group" aria-label="Filtros de gastos">
+            <label className={`${styles.campoFiltro} ${styles.campoBusca}`}>
+              <span className={styles.rotuloFiltro}>Buscar</span>
+              <span className={styles.buscaControle}>
+                <Search size={15} className={styles.iconeBusca} aria-hidden="true" />
+                <input
+                  type="text"
+                  placeholder="Buscar lançamentos..."
+                  aria-label="Buscar lançamentos"
+                  className={styles.inputBusca}
+                  value={buscaFinanceira}
+                  onChange={(evento) => setBuscaFinanceira(evento.target.value)}
+                />
+              </span>
+            </label>
+            <div className={styles.campoFiltro}>
+              <span className={styles.rotuloFiltro} aria-hidden="true">Ordenar por</span>
+              <div className={styles.segmentado} role="group" aria-label="Ordenar por">
+                {([
+                  { valor: "valor", rotulo: "Valor" },
+                  { valor: "alfabetica", rotulo: "Alfabética" },
+                  { valor: "data", rotulo: "Data" },
+                ] as const).map((opcao) => (
+                  <button
+                    key={opcao.valor}
+                    type="button"
+                    className={`${styles.segmento} ${ordemFinanceira === opcao.valor ? styles.segmentoAtivo : ""}`}
+                    aria-pressed={ordemFinanceira === opcao.valor}
+                    onClick={() => setOrdemFinanceira(opcao.valor)}
+                  >
+                    {opcao.rotulo}
+                  </button>
+                ))}
+              </div>
             </div>
-            <button className={`${styles.botaoFiltro} ${ordemFinanceira === "valor" ? styles.botaoFiltroAtivo : ""}`} onClick={() => setOrdemFinanceira("valor")}>
-              <Filter size={14} />
-              Valor
-            </button>
-            <button className={`${styles.botaoFiltro} ${ordemFinanceira === "alfabetica" ? styles.botaoFiltroAtivo : ""}`} onClick={() => setOrdemFinanceira("alfabetica")}>
-              <Filter size={14} />
-              Alfabética
-            </button>
-            <button className={`${styles.botaoFiltro} ${ordemFinanceira === "data" ? styles.botaoFiltroAtivo : ""}`} onClick={() => setOrdemFinanceira("data")}>
-              <CalendarDays size={14} />
-              Data
-            </button>
-            <select className={styles.inputFiltro} value={filtroMetodoPagamento} onChange={(evento) => setFiltroMetodoPagamento(evento.target.value)}>
-              <option value="TODOS">Todos os pagamentos</option>
-              {FILTROS_PAGAMENTO.map((metodo) => (
-                <option key={metodo.value} value={metodo.value}>{metodo.label}</option>
-              ))}
-            </select>
-            <PeriodoFiltro value={periodoFinanceiro} onChange={setPeriodoFinanceiro} />
+            <label className={styles.campoFiltro}>
+              <span className={styles.rotuloFiltro}>Pagamento</span>
+              <select className={styles.inputFiltro} aria-label="Pagamento" value={filtroMetodoPagamento} onChange={(evento) => setFiltroMetodoPagamento(evento.target.value)}>
+                <option value="TODOS">Todos os pagamentos</option>
+                {FILTROS_PAGAMENTO.map((metodo) => (
+                  <option key={metodo.value} value={metodo.value}>{metodo.label}</option>
+                ))}
+              </select>
+            </label>
+            <label className={styles.campoFiltro}>
+              <span className={styles.rotuloFiltro}>Pessoa</span>
+              <select className={styles.inputFiltro} aria-label="Pessoa" value={filtroPessoa} onChange={(e) => setFiltroPessoa(e.target.value)}>
+                <option value="">Todas as pessoas</option>
+                {Array.from(new Map([...alocacoes.map((a) => [a.funcionario.id, a.funcionario.nome] as const), ...pessoasHistoricas.map((pessoa) => [pessoa.id, pessoa.nome] as const)]).entries()).map(([pessoaId, nome]) => <option key={pessoaId} value={pessoaId}>{nome}</option>)}
+              </select>
+            </label>
+            <label className={styles.campoFiltro}>
+              <span className={styles.rotuloFiltro}>Status do reembolso</span>
+              <select className={styles.inputFiltro} aria-label="Status do reembolso" value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value as StatusReembolso | "")}>
+                <option value="">Todos os status</option>
+                <option value="PENDENTE">Pendente</option><option value="PARCIAL">Parcial</option><option value="PAGO">Pago</option>
+              </select>
+            </label>
+            <div className={`${styles.campoFiltro} ${styles.campoPeriodo}`}>
+              <span className={styles.rotuloFiltro} aria-hidden="true">Período</span>
+              <PeriodoFiltro value={periodoFinanceiro} onChange={setPeriodoFinanceiro} segmentado />
+            </div>
           </div>
         </div>
 
         {/* Tabela */}
+        {carregandoGastos && <p role="status" className={styles.estadoLista}>Carregando gastos...</p>}
+        {erroGastos && <p role="alert" className={styles.mensagemErro}>{erroGastos}</p>}
+        {!carregandoGastos && !erroGastos &&
         <div className={styles.tabelaWrapper}>
           <Responsive max="md">
             <ul className={styles.listaCards}>
               {gastosExibidos.length > 0 ? (
-                gastosExibidos.map((gasto, indice) => (
+                gastosExibidos.map((gasto) => (
                   <li key={gasto.id} className={styles.itemCard}>
                     <div className={styles.itemCardTopo}>
-                      <span className={styles.descricaoDestaque}>{gasto.descricao}</span>
-                      <span className={styles.celulaValor} style={{ color: "#43B89C" }}>
+                      <span className={styles.descricao}>{gasto.descricao}</span>
+                      <span className={styles.celulaValor}>
                         {formatarMoeda(gasto.valor)}
                       </span>
                     </div>
                     <div className={styles.itemCardTopo}>
                       <div className={styles.celulaFuncionario}>
-                        <div className={styles.avatarPequeno} style={{ backgroundColor: cores[indice % cores.length] }}>
+                        <div className={styles.avatarPequeno} aria-hidden="true">
                           {getIniciais(gasto.funcionario.nome)}
                         </div>
                         {gasto.funcionario.nome}
@@ -940,7 +1016,7 @@ export default function DetalhamentoObras() {
                     <dl className={styles.itemCardDetalhes}>
                       <div>
                         <dt>Tipo</dt>
-                        <dd className={gasto.reembolsoConcluido !== null ? styles.metodoReembolso : undefined}>
+                        <dd className={gasto.metodoPagamento === "REEMBOLSO" ? styles.metodoReembolso : undefined}>
                           {metodoPagamentoLabel(gasto.metodoPagamento)}
                         </dd>
                       </div>
@@ -957,6 +1033,7 @@ export default function DetalhamentoObras() {
                         <dd>{gasto.categoria || "-"}</dd>
                       </div>
                     </dl>
+                    {renderizarAcoesGasto(gasto)}
                   </li>
                 ))
               ) : (
@@ -968,6 +1045,7 @@ export default function DetalhamentoObras() {
           </Responsive>
 
           <Responsive min="lg">
+          <div className={styles.tabelaScroll}>
           <table className={styles.tabela}>
             <thead>
               <tr>
@@ -979,53 +1057,51 @@ export default function DetalhamentoObras() {
                 <th>ETAPA</th>
                 <th>MATERIAL</th>
                 <th>DATA</th>
+                <th>AÇÕES</th>
               </tr>
             </thead>
             <tbody>
               {gastosExibidos.length > 0 ? (
-                gastosExibidos.map((gasto, indice) => (
+                gastosExibidos.map((gasto) => (
                   <tr key={gasto.id}>
                     <td>
-                      <span className={styles.celulaValor} style={{ color: "#43B89C" }}>
+                      <span className={styles.celulaValor}>
                         {formatarMoeda(gasto.valor)}
                       </span>
                     </td>
                     <td>
                       <div className={styles.celulaFuncionario}>
-                        <div
-                          className={styles.avatarPequeno}
-                          style={{
-                            backgroundColor: cores[indice % cores.length],
-                          }}
-                        >
+                        <div className={styles.avatarPequeno} aria-hidden="true">
                           {getIniciais(gasto.funcionario.nome)}
                         </div>
                         {gasto.funcionario.nome}
                       </div>
                     </td>
                     <td>
-                      <span className={gasto.reembolsoConcluido !== null ? styles.metodoReembolso : undefined}>
+                      <span className={gasto.metodoPagamento === "REEMBOLSO" ? styles.metodoReembolso : undefined}>
                         {metodoPagamentoLabel(gasto.metodoPagamento)}
                       </span>
                     </td>
                     <td>{renderizarReembolso(gasto)}</td>
                     <td>
-                      <span className={styles.descricaoDestaque}>{gasto.descricao}</span>
+                      <span className={styles.descricao}>{gasto.descricao}</span>
                     </td>
                     <td>{gasto.etapa || "-"}</td>
                     <td>{gasto.categoria || "-"}</td>
                     <td>{formatarData(gasto.dtGasto)}</td>
+                    <td>{renderizarAcoesGasto(gasto)}</td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: "center", padding: "2rem" }}>
+                  <td colSpan={9} className={styles.estadoLista}>
                     {buscaFinanceira ? "Nenhum lançamento encontrado para a busca." : "Nenhum gasto registrado para esta obra."}
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
+          </div>
           </Responsive>
 
           {/* Paginação */}
@@ -1035,32 +1111,39 @@ export default function DetalhamentoObras() {
             </span>
             <div className={styles.paginacaoBotoes}>
               <button
+                type="button"
                 className={styles.botaoPaginacao}
                 onClick={irParaPaginaAnterior}
-                disabled={paginaAtual === 1}
+                disabled={paginaVisivel === 1}
+                aria-label="Página anterior"
               >
                 <ChevronLeft size={16} />
               </button>
               {Array.from({ length: totalPaginas }, (_, i) => i + 1).map((numeroPagina) => (
                 <button
                   key={numeroPagina}
-                  className={`${styles.botaoPaginacao} ${paginaAtual === numeroPagina ? styles.botaoPaginacaoAtivo : ""}`}
+                  type="button"
+                  className={`${styles.botaoPaginacao} ${paginaVisivel === numeroPagina ? styles.botaoPaginacaoAtivo : ""}`}
+                  aria-current={paginaVisivel === numeroPagina ? "page" : undefined}
                   onClick={() => irParaPagina(numeroPagina)}
                 >
                   {numeroPagina}
                 </button>
               ))}
               <button
+                type="button"
                 className={styles.botaoPaginacao}
                 onClick={irParaProximaPagina}
-                disabled={paginaAtual === totalPaginas || totalPaginas === 0}
+                disabled={paginaVisivel === totalPaginas || totalPaginas === 0}
+                aria-label="Próxima página"
               >
                 <ChevronRight size={16} />
               </button>
             </div>
           </div>
-        </div>
+        </div>}
       </div>
+      </>}
     </div>
   );
 }

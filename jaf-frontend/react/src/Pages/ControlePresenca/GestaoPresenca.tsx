@@ -13,6 +13,7 @@ import {
   type PeriodoFiltroValue,
 } from "../../Components/PeriodoFiltro/periodUtils";
 import { Responsive } from "../../Components/Responsive/Responsive";
+import { dataValida, erroApi } from "../../Utils/financeiro";
 
 const formatarCargoObra = (cargo: string) =>
   cargo.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (letra) => letra.toUpperCase());
@@ -33,13 +34,14 @@ export default function GestaoPresenca() {
   const [statusFiltro, setStatusFiltro] = useState("TODOS");
   const [carregando, setCarregando] = useState(true);
   const [salvandoId, setSalvandoId] = useState<string | null>(null);
+  const [modoPeriodo, setModoPeriodo] = useState(false);
+  const [erro, setErro] = useState("");
 
   const podeRegistrar = authService.hasAuthority("REGISTRAR_PRESENCA");
   const podeEditar = authService.hasAuthority("EDITAR_PRESENCA");
   const podeDeletar = authService.hasAuthority("DELETAR_PRESENCA");
 
   const obraSelecionada = obras.find((obra) => obra.id === obraId) ?? null;
-  const modoPeriodo = periodo.preset === "7_DIAS" || periodo.preset === "PERSONALIZADO";
   const intervalo = resolverPeriodo(periodo);
 
   const chaveLinha = (colaborador: Colaborador) =>
@@ -49,8 +51,9 @@ export default function GestaoPresenca() {
     if (!obraId) return;
 
     if (modoPeriodo) {
-      if (!intervalo.from || !intervalo.to) {
+      if (!intervalo.from || !intervalo.to || intervalo.from > intervalo.to) {
         setColaboradores([]);
+        setErro("Informe um período válido, com início não posterior ao fim.");
         return;
       }
       const dados = await presencaService.listarPorObraEPeriodo(obraId, intervalo.from, intervalo.to);
@@ -58,10 +61,10 @@ export default function GestaoPresenca() {
       return;
     }
 
-    const dataConsulta = periodo.preset === "HOJE" ? hojeIso() : data;
-    const dados = await presencaService.listarPorObraEData(obraId, dataConsulta);
+    if (!dataValida(data, hojeIso())) { setColaboradores([]); setErro("Selecione uma data válida até hoje."); return; }
+    const dados = await presencaService.listarPorObraEData(obraId, data);
     setColaboradores(dados);
-  }, [obraId, modoPeriodo, intervalo.from, intervalo.to, periodo.preset, data]);
+  }, [obraId, modoPeriodo, intervalo.from, intervalo.to, data]);
 
   useEffect(() => {
     async function carregarObras() {
@@ -83,19 +86,16 @@ export default function GestaoPresenca() {
   }, []);
 
   useEffect(() => {
-    if (periodo.preset === "HOJE") {
-      setData(hojeIso());
-    }
-  }, [periodo.preset]);
-
-  useEffect(() => {
     if (!obraId) return;
 
     setCarregando(true);
+    setColaboradores([]);
+    setErro("");
     carregarPresencas()
       .catch((error) => {
         console.error("Erro ao atualizar lista de presença:", error);
         toast.error("Erro ao atualizar lista de presença");
+        setErro("Não foi possível carregar os registros. Altere os filtros para tentar novamente.");
       })
       .finally(() => setCarregando(false));
   }, [obraId, carregarPresencas]);
@@ -133,7 +133,8 @@ export default function GestaoPresenca() {
   }, [colaboradores]);
 
   async function salvarStatus(colaborador: Colaborador, presente: boolean) {
-    if (!obraId) return;
+    if (!obraId || salvandoId || colaborador.desabilitado) return;
+    if (colaborador.id && colaborador.presente === presente) return;
     if (modoPeriodo && !colaborador.id) {
       toast.error("No modo período, use a visão diária para registrar novos pontos");
       return;
@@ -147,7 +148,8 @@ export default function GestaoPresenca() {
       return;
     }
 
-    const dataRegistro = modoPeriodo ? colaborador.data : periodo.preset === "HOJE" ? hojeIso() : data;
+    const dataRegistro = modoPeriodo ? colaborador.data : data;
+    if (!dataValida(dataRegistro, hojeIso())) { toast.error("Não é permitido registrar presença futura ou em data inválida"); return; }
 
     try {
       setSalvandoId(chaveLinha(colaborador));
@@ -159,7 +161,8 @@ export default function GestaoPresenca() {
       };
 
       if (colaborador.id) {
-        await presencaService.atualizarPresenca(colaborador.id, payload);
+        // Alternar mantém horários quando aplicável; ausência limpa horários na API.
+        await presencaService.alternarPresenca(colaborador.id);
       } else {
         await presencaService.criarPresenca(payload);
       }
@@ -168,19 +171,20 @@ export default function GestaoPresenca() {
       toast.success(presente ? "Presença marcada" : "Ausência registrada");
     } catch (error) {
       console.error("Erro ao salvar presença:", error);
-      toast.error("Não foi possível salvar o registro");
+      toast.error(erroApi(error, "Não foi possível salvar o registro"));
     } finally {
       setSalvandoId(null);
     }
   }
 
   async function excluirRegistro(colaborador: Colaborador) {
-    if (!obraId || !colaborador.id) return;
+    if (!obraId || !colaborador.id || salvandoId) return;
     if (!podeDeletar) {
       toast.error("Você não tem permissão para excluir presença");
       return;
     }
 
+    if (!window.confirm(`Excluir registro de ${colaborador.funcionarioNome} em ${colaborador.data}?`)) return;
     try {
       setSalvandoId(chaveLinha(colaborador));
       await presencaService.deletarPresenca(colaborador.id);
@@ -202,8 +206,9 @@ export default function GestaoPresenca() {
   }
 
   function renderizarAcoes(colaborador: Colaborador) {
-    const salvando = salvandoId === chaveLinha(colaborador);
-    const semPermissao = colaborador.id ? !podeEditar : !podeRegistrar || modoPeriodo;
+    if (!colaborador.id && !podeRegistrar) return null;
+    const salvando = salvandoId !== null;
+    const semPermissao = !!colaborador.desabilitado || !dataValida(colaborador.data, hojeIso()) || (colaborador.id ? !podeEditar : !podeRegistrar || modoPeriodo);
 
     return (
       <div className={styles.acoes}>
@@ -223,16 +228,17 @@ export default function GestaoPresenca() {
   }
 
   return (
-    <main className={styles.pagina}>
+    <section className={styles.pagina} aria-label="Gestão de presença">
       <header className={styles.header}>
         <div>
           <span className={styles.eyebrow}>OPERAÇÃO</span>
           <h1>Gestão de Presença</h1>
-          <p>Consulte e ajuste a presença dos colaboradores operacionais alocados em cada obra.</p>
+          <p>Registro manual por usuário autenticado: REGISTRAR_PRESENCA permite criar, EDITAR_PRESENCA alterar e DELETAR_PRESENCA excluir. O colaborador não precisa de login; deve estar alocado na obra na data informada.</p>
         </div>
       </header>
 
       <section className={styles.filtros}>
+        <label>Visão<select value={modoPeriodo ? "PERIODO" : "DIA"} onChange={(e) => { setModoPeriodo(e.target.value === "PERIODO"); setStatusFiltro("TODOS"); }}><option value="DIA">Diária</option><option value="PERIODO">Período</option></select></label>
         <label>
           Obra
           <select value={obraId ?? ""} onChange={(evento) => setObraId(Number(evento.target.value))}>
@@ -248,8 +254,8 @@ export default function GestaoPresenca() {
             Data
             <input
               type="date"
-              value={periodo.preset === "HOJE" ? hojeIso() : data}
-              disabled={periodo.preset === "HOJE"}
+              value={data}
+              max={hojeIso()}
               onChange={(evento) => setData(evento.target.value)}
             />
           </label>
@@ -271,9 +277,9 @@ export default function GestaoPresenca() {
             placeholder="Buscar colaborador ou função"
           />
         </div>
-        <div className={styles.periodoWrap}>
+        {modoPeriodo && <div className={styles.periodoWrap}>
           <PeriodoFiltro value={periodo} onChange={setPeriodo} temaEscuro ocultarTodos />
-        </div>
+        </div>}
       </section>
 
       <section className={styles.metricas}>
@@ -307,13 +313,13 @@ export default function GestaoPresenca() {
             <h2>{obraSelecionada?.titulo ?? "Obra"}</h2>
             <p>
               {modoPeriodo
-                ? "Visão agregada dos registros no período selecionado"
-                : "Controle de ponto para equipe de campo sem necessidade de login no sistema"}
+                ? "Registros históricos por pessoa e data (não é uma agregação)"
+                : "Selecione Presente ou Ausente na linha da pessoa para salvar o registro manual"}
             </p>
           </div>
         </div>
 
-        {carregando ? (
+        {erro ? <p role="alert" className={styles.estado}>{erro}</p> : carregando ? (
           <div className={styles.estado}>Carregando presença...</div>
         ) : colaboradoresFiltrados.length === 0 ? (
           <div className={styles.estado}>Nenhum colaborador encontrado para os filtros selecionados.</div>
@@ -322,7 +328,7 @@ export default function GestaoPresenca() {
           <Responsive max="sm">
             <ul className={styles.listaCards}>
               {colaboradoresFiltrados.map((colaborador) => (
-                <li key={colaborador.funcionarioId} className={styles.itemCard}>
+                <li key={chaveLinha(colaborador)} className={styles.itemCard}>
                   <div className={styles.itemCardTopo}>
                     <div className={styles.funcionarioCell}>
                       <span>{colaborador.funcionarioNome.charAt(0).toUpperCase()}</span>
@@ -333,6 +339,7 @@ export default function GestaoPresenca() {
                     </div>
                     {renderizarStatus(colaborador)}
                   </div>
+                  {modoPeriodo && <p>{formatarData(colaborador.data)}</p>}
                   {renderizarAcoes(colaborador)}
                 </li>
               ))}
@@ -352,7 +359,6 @@ export default function GestaoPresenca() {
               </thead>
               <tbody>
                 {colaboradoresFiltrados.map((colaborador) => {
-                  const salvando = salvandoId === chaveLinha(colaborador);
                   const status = colaborador.id
                     ? colaborador.presente
                       ? "Presente"
@@ -383,41 +389,7 @@ export default function GestaoPresenca() {
                         </span>
                       </td>
                       <td>
-                        <div className={styles.acoes}>
-                          <button
-                            type="button"
-                            onClick={() => salvarStatus(colaborador, true)}
-                            disabled={
-                              salvando ||
-                              (!colaborador.id && (!podeRegistrar || modoPeriodo)) ||
-                              (Boolean(colaborador.id) && !podeEditar)
-                            }
-                          >
-                            Presente
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => salvarStatus(colaborador, false)}
-                            disabled={
-                              salvando ||
-                              (!colaborador.id && (!podeRegistrar || modoPeriodo)) ||
-                              (Boolean(colaborador.id) && !podeEditar)
-                            }
-                          >
-                            Ausente
-                          </button>
-                          {colaborador.id && (
-                            <button
-                              type="button"
-                              className={styles.botaoPerigo}
-                              onClick={() => excluirRegistro(colaborador)}
-                              disabled={salvando || !podeDeletar}
-                              aria-label={`Excluir presença de ${colaborador.funcionarioNome}`}
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          )}
-                        </div>
+                        {renderizarAcoes(colaborador)}
                       </td>
                     </tr>
                   );
@@ -429,6 +401,6 @@ export default function GestaoPresenca() {
           </>
         )}
       </section>
-    </main>
+    </section>
   );
 }

@@ -17,7 +17,6 @@ import com.jaf.application.model.Funcionario;
 import com.jaf.application.repository.FuncionarioRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -31,19 +30,24 @@ import java.util.List;
 public class FuncionarioService {
     private static final Logger logger = LoggerFactory.getLogger(FuncionarioService.class);
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    private final PasswordEncoder passwordEncoder;
+    private final FuncionarioRepository funcionarioRepository;
+    private final GerenciadorTokenJwt gerenciadorTokenJwt;
+    private final AuthenticationManager authenticationManager;
+    private final AcessoObraService acesso;
 
-    @Autowired
-    private FuncionarioRepository funcionarioRepository;
-
-    @Autowired
-    private GerenciadorTokenJwt gerenciadorTokenJwt;
-
-    @Autowired
-    private AuthenticationManager authenticationManager;
+    public FuncionarioService(PasswordEncoder passwordEncoder, FuncionarioRepository funcionarioRepository,
+                              GerenciadorTokenJwt gerenciadorTokenJwt, AuthenticationManager authenticationManager,
+                              AcessoObraService acesso) {
+        this.passwordEncoder = passwordEncoder;
+        this.funcionarioRepository = funcionarioRepository;
+        this.gerenciadorTokenJwt = gerenciadorTokenJwt;
+        this.authenticationManager = authenticationManager;
+        this.acesso = acesso;
+    }
 
     public FuncionarioResponseDto criar(FuncionarioDto dto) {
+        acesso.exigirCriacaoFuncionario(dto.getCargo());
         logger.info("Tentando criar novo funcionário: {}", dto.getEmail());
 
         if (funcionarioRepository.existsByNome(dto.getNome())) {
@@ -118,6 +122,7 @@ public class FuncionarioService {
         Funcionario existente = funcionarioRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Usuário não encontrado."));
 
+        acesso.exigirEdicaoFuncionario(existente, dto.getCargo());
         existente.setNome(dto.getNome());
         existente.setEmail(dto.getEmail());
         existente.setCargoGlobal(dto.getCargo());
@@ -174,20 +179,23 @@ public class FuncionarioService {
     }
 
     public void deletar(Long id) {
-        if (!funcionarioRepository.existsById(id)) {
-            throw new NotFoundException("Usuário não encontrado.");
-        }
+        Funcionario existente = funcionarioRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Usuário não encontrado."));
+        acesso.exigirExclusaoFuncionario(existente);
+        acesso.exigirExclusaoDeOutro(existente);
         funcionarioRepository.deleteById(id);
     }
 
     public FuncionarioResponseDto atualizarCargo(Long id, String novoCargo) {
+        acesso.exigirAdmin();
         Funcionario existente = funcionarioRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Usuário não encontrado."));
+        acesso.exigirGestaoDeAcessoDeOutro(existente);
 
         com.jaf.application.enums.Cargo cargo;
         try {
             cargo = com.jaf.application.enums.Cargo.valueOf(novoCargo);
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | NullPointerException e) {
             throw new IllegalArgumentException("Cargo inválido: " + novoCargo);
         }
 

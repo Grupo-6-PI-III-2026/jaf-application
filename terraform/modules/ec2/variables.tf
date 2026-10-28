@@ -13,7 +13,12 @@ variable "environment" {
 }
 
 variable "instance_type" {
-  description = "Tipo de instância EC2"
+  description = "Tipo de instância EC2 para frontend, OCR e RabbitMQ"
+  type        = string
+}
+
+variable "backend_instance_type" {
+  description = "Tipo de instância EC2 do backend"
   type        = string
 }
 
@@ -161,4 +166,27 @@ variable "jwt_secret" {
 variable "jwt_expiration" {
   description = "Tempo de expiração do JWT (em milissegundos)"
   type        = string
+}
+
+# ── OCR assíncrono (RabbitMQ + worker) ──────────────────────────
+variable "sg_rabbitmq_id" {
+  description = "ID do Security Group do RabbitMQ"
+  type        = string
+}
+
+variable "rabbitmq_user" {
+  description = "Usuário do RabbitMQ"
+  type        = string
+}
+
+variable "rabbitmq_password" {
+  description = "Senha do RabbitMQ"
+  type        = string
+  sensitive   = true
+}
+
+variable "ocr_space_api_key" {
+  description = "Chave da API OCR.space usada pelo worker"
+  type        = string
+  sensitive   = true
 }

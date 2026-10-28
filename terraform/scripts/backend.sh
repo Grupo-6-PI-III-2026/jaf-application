@@ -1,5 +1,6 @@
 #!/bin/bash
-set -eux
+# Sem "set -x": evita gravar senhas e tokens no log do cloud-init.
+set -eu
 dnf update -y
 dnf install -y docker ec2-instance-connect openssh-server
 
@@ -25,4 +26,8 @@ docker run -d \
   -e SPRING_DATASOURCE_PASSWORD="${db_password}" \
   -e JWT_SECRET="${jwt_secret}" \
   -e JWT_EXPIRATION="${jwt_expiration}" \
+  -e RABBITMQ_HOST="${rabbitmq_host}" \
+  -e RABBITMQ_PORT=5672 \
+  -e RABBITMQ_USER="${rabbitmq_user}" \
+  -e RABBITMQ_PASSWORD="${rabbitmq_password}" \
   ghcr.io/${repo_owner}/jaf-backend:latest

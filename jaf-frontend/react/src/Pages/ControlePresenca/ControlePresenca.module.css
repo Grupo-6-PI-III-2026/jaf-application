@@ -6,7 +6,7 @@
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: rgba(17, 24, 39, 0.58);
+  background: rgba(43, 43, 43, 0.5);
   backdrop-filter: blur(2px);
 }
 
@@ -16,87 +16,113 @@
   max-height: 90vh;
   max-height: 90dvh;
   background: #ffffff;
-  border-radius: 16px;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 26px 55px rgba(17, 24, 39, 0.3);
+  box-shadow: 0 24px 60px rgba(43, 43, 43, 0.24);
   display: flex;
   flex-direction: column;
 }
 
 .header {
   position: relative;
-  background: #171717;
+  background: #2b2b2b;
   color: #ffffff;
-  padding: 28px 34px 30px;
+  padding: 22px 28px 24px;
 }
 
 .botaoFechar {
   position: absolute;
   top: 20px;
   right: 20px;
-  width: 30px;
-  height: 30px;
-  border: none;
-  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  background: transparent;
-  color: #bfbfbf;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
   transition: background 0.2s, color 0.2s;
 }
 
 .botaoFechar:hover {
-  background: rgba(255, 255, 255, 0.09);
-  color: #ffffff;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.botaoFechar:focus-visible,
+.toggle:focus-visible,
+.botaoRegistrar:focus-visible {
+  outline: 2px solid #ffc107;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px #2b2b2b;
 }
 
 .titulo {
-  font-size: 34px;
-  line-height: 1;
-  letter-spacing: -0.02em;
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
   font-weight: 700;
 }
 
 .subtitulo {
-  margin-top: 8px;
-  font-size: 24px;
-  color: #f5b900;
-  font-weight: 600;
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: #ced4da;
+  font-weight: 500;
 }
 
 .botaoData {
-  margin-top: 20px;
+  margin-top: 16px;
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  border: none;
+  border: 1px solid #e9ecef;
   border-radius: 8px;
   background: #ffffff;
-  color: #3f3f46;
+  color: #2b2b2b;
   padding: 7px 12px;
   font-size: 13px;
   font-weight: 500;
 }
 
 .iconeData {
-  color: #f5b900;
+  color: #495057;
 }
 
 .corpo {
-  padding: 22px 34px 24px;
+  padding: 20px 28px 24px;
   overflow-y: auto;
   flex: 1;
+  color: #2b2b2b;
+}
+
+.corpo > p {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #6c757d;
+}
+
+.corpo > p[role="alert"] {
+  padding: 10px 14px;
+  border: 1px solid #f1aeb5;
+  border-radius: 8px;
+  background: #fdecee;
+  color: #842029;
 }
 
 .cabecalhoLista {
   display: grid;
   grid-template-columns: 1fr auto;
-  font-size: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e9ecef;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.12em;
-  color: #a1a1aa;
+  letter-spacing: 0.06em;
+  color: #6c757d;
   margin-bottom: 10px;
 }
 
@@ -122,17 +148,18 @@
 }
 
 .avatar {
-  width: 42px;
-  height: 42px;
-  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 50%;
   object-fit: cover;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #495057;
   color: white;
-  font-weight: 600;
-  font-size: 16px;
+  font-weight: 700;
+  font-size: 13px;
   text-transform: uppercase;
 }
 
@@ -141,24 +168,25 @@
 }
 
 .nome {
-  font-size: 22px;
-  color: #18181b;
+  margin: 0;
+  font-size: 14px;
+  color: #2b2b2b;
   font-weight: 600;
-  line-height: 1.15;
+  line-height: 1.25;
 }
 
 .cargo {
-  font-size: 16px;
-  color: #6b7280;
-  margin-top: 2px;
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: #6c757d;
 }
 
 .textoDesabilitado {
-  color: #a1a1aa;
+  color: #868e96;
 }
 
 .cargoDesabilitado {
-  color: #c4c4c4;
+  color: #adb5bd;
 }
 
 .toggle {
@@ -172,15 +200,15 @@
 }
 
 .toggleAtivo {
-  background: #f5b900;
+  background: #ffc107;
 }
 
 .toggleInativo {
-  background: #d4d4d8;
+  background: #adb5bd;
 }
 
 .toggleDesabilitado {
-  background: #e4e4e7;
+  background: #e9ecef;
   cursor: not-allowed;
 }
 
@@ -201,37 +229,45 @@
 }
 
 .rodape {
-  border-top: 1px solid #f1f1f1;
-  background: #f8f8f8;
-  padding: 18px 34px;
+  border-top: 1px solid #e9ecef;
+  background: #f8f9fa;
+  padding: 16px 28px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
 }
 
 .contador {
+  margin: 0;
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.1em;
-  color: #71717a;
+  letter-spacing: 0.06em;
+  color: #6c757d;
 }
 
 .botaoRegistrar {
-  border: none;
-  border-radius: 10px;
-  background: #f5b900;
-  color: #18181b;
-  padding: 12px 22px;
-  font-size: 11px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+  min-height: 40px;
+  border: 1px solid #ffc107;
+  border-radius: 8px;
+  background: #ffc107;
+  color: #2b2b2b;
+  padding: 0 18px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.15s, border-color 0.15s;
 }
 
-.botaoRegistrar:hover {
-  background: #ffd451;
+.botaoRegistrar:hover:not(:disabled) {
+  background: #ffca2c;
+  border-color: #ffca2c;
+}
+
+.botaoRegistrar:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .carregando {
@@ -254,11 +290,11 @@
   }
 
   .titulo {
-    font-size: 24px;
+    font-size: 18px;
   }
 
   .subtitulo {
-    font-size: 18px;
+    font-size: 13px;
   }
 
   .corpo {
@@ -270,12 +306,7 @@
   }
 
   .nome {
-    font-size: 16px;
     overflow-wrap: anywhere;
-  }
-
-  .cargo {
-    font-size: 13px;
   }
 
   .itemColaborador {
@@ -290,6 +321,6 @@
   }
 
   .botaoRegistrar {
-    padding: 14px 22px;
+    min-height: 44px;
   }
 }

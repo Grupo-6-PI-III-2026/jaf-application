@@ -46,3 +46,11 @@ jobs:
           context: ./jaf-backend
           push: true
           tags: ghcr.io/${{ env.OWNER }}/jaf-backend:latest
+
+      # ── Worker OCR ─────────────────────────────────
+      - name: Build e Push — OCR
+        uses: docker/build-push-action@v6
+        with:
+          context: ./POC-API
+          push: true
+          tags: ghcr.io/${{ env.OWNER }}/jaf-ocr:latest

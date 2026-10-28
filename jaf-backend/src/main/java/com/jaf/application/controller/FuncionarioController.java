@@ -124,7 +124,7 @@ public class FuncionarioController {
     }
 
     @PatchMapping("/{id}/cargo")
-    @PreAuthorize("hasAuthority('EDITAR_FUNCIONARIO')")
+    @PreAuthorize("@acessoObraService.isAdmin()")
     public ResponseEntity<FuncionarioResponseDto> atualizarCargo(
             @PathVariable Long id,
             @RequestBody java.util.Map<String, String> body) {
@@ -133,16 +133,21 @@ public class FuncionarioController {
     }
 
     @GetMapping("/{id}/permissoes")
-    @PreAuthorize("hasAuthority('EDITAR_FUNCIONARIO')")
+    @PreAuthorize("@acessoObraService.isAdmin()")
     public ResponseEntity<FuncionarioPermissoesAcessoDto> buscarPermissoes(@PathVariable Long id) {
         return ResponseEntity.ok(funcionarioPermissaoService.buscar(id));
     }
 
     @PutMapping("/{id}/permissoes")
-    @PreAuthorize("hasAuthority('EDITAR_FUNCIONARIO')")
+    @PreAuthorize("@acessoObraService.isAdmin()")
     public ResponseEntity<FuncionarioPermissoesAcessoDto> atualizarPermissoes(
             @PathVariable Long id,
             @RequestBody AtualizarCargoPermissoesDto dto) {
         return ResponseEntity.ok(funcionarioPermissaoService.atualizar(id, dto.getPermissoes()));
+    }
+
+    @GetMapping("/me/permissoes")
+    public ResponseEntity<FuncionarioPermissoesAcessoDto> minhasPermissoes() {
+        return ResponseEntity.ok(funcionarioPermissaoService.minhasPermissoes());
     }
 }

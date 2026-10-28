@@ -12,6 +12,7 @@ public class PresencaDto {
     private Long obraId;
 
     @NotNull(message = "A data é obrigatória")
+    @jakarta.validation.constraints.PastOrPresent
     private LocalDate data;
 
     @NotNull(message = "O status de presença é obrigatório")

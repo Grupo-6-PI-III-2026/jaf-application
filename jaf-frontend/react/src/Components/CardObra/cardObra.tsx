@@ -30,7 +30,8 @@ const getIniciais = (nome: string) => {
 
 export default function CardObra({ id, nome, status, valor, imagem, responsavelNome, responsavelCargo }: Props) {
   const navigate = useNavigate();
-  const podeEditarObra = authService.hasAuthority("EDITAR_OBRA");
+  const admin = authService.isAdmin();
+  const podeEditarObra = admin && authService.hasAuthority("EDITAR_OBRA");
   const podeVisualizarAlocacoes = authService.hasAuthority("VISUALIZAR_ALOCACOES");
 
   return (
@@ -91,22 +92,22 @@ export default function CardObra({ id, nome, status, valor, imagem, responsavelN
 
         {/* RODAPÉ */}
         <div className={styles.rodape}>
-          <div>
+          {admin && <div>
             <span className={styles.label}>TOTAL GASTO</span>
             <div className={styles.valor}>
               {formatarMoeda(valor)}
             </div>
-          </div>
+          </div>}
 
           <div className={styles.acoesCard}>
             <button className={styles.botaoDetalhes} onClick={() => navigate(id ? `/obras/detalhamento/${id}` : "/obras/detalhamento")}>
               <FileText size={15} />
               Detalhes
             </button>
-            <button className={styles.botaoDashboard} onClick={() => navigate(id ? `/obras/detalhamento/${id}/financeiro` : "/obras/detalhamento")}>
+            {admin && authService.hasAuthority("VISUALIZAR_GASTOS") && <button className={styles.botaoDashboard} onClick={() => navigate(id ? `/obras/detalhamento/${id}/financeiro` : "/obras/detalhamento")}>
               <BarChart3 size={15} />
               Dashboard
-            </button>
+            </button>}
           </div>
         </div>
 

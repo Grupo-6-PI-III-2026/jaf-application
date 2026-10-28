@@ -17,6 +17,11 @@ output "sg_ocr_id" {
   value       = aws_security_group.ocr.id
 }
 
+output "sg_rabbitmq_id" {
+  description = "ID do Security Group do RabbitMQ"
+  value       = aws_security_group.rabbitmq.id
+}
+
 output "sg_rds_id" {
   description = "ID do Security Group do RDS"
   value       = aws_security_group.rds.id

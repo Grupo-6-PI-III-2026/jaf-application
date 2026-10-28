@@ -221,20 +221,11 @@ resource "aws_security_group" "backend" {
 }
 
 # ── SG OCR ────────────────────────────────────────────────────
-# Microsserviço OCR — acessível apenas pelo Backend
+# Workers OCR só consomem a fila (sem porta de entrada de aplicação)
 resource "aws_security_group" "ocr" {
   name        = "${var.project_name}-ocr-sg"
   description = "Security Group do Microsservico OCR - acesso restrito ao Backend"
   vpc_id      = var.vpc_id
-
-  # Porta do serviço OCR — ajustar se a aplicação usar porta diferente
-  ingress {
-    description     = "API OCR vinda do Backend"
-    from_port       = 8081
-    to_port         = 8081
-    protocol        = "tcp"
-    security_groups = [aws_security_group.backend.id]
-  }
 
   # SSH via jump host — apenas o frontend pode iniciar a sessão
   ingress {
@@ -263,6 +254,53 @@ resource "aws_security_group" "ocr" {
 
   tags = {
     Name        = "sg-ocr-${var.project_name}"
+    Environment = var.environment
+    Project     = var.project_name
+    ManagedBy   = "Terraform"
+  }
+}
+
+# ── SG RabbitMQ ───────────────────────────────────────────────
+# Broker AMQP — apenas backend (publica/recebe resultados) e workers OCR
+resource "aws_security_group" "rabbitmq" {
+  name        = "${var.project_name}-rabbitmq-sg"
+  description = "Security Group do RabbitMQ - acesso restrito ao Backend e ao OCR"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    description     = "AMQP vindo do Backend"
+    from_port       = 5672
+    to_port         = 5672
+    protocol        = "tcp"
+    security_groups = [aws_security_group.backend.id]
+  }
+
+  ingress {
+    description     = "AMQP vindo dos workers OCR"
+    from_port       = 5672
+    to_port         = 5672
+    protocol        = "tcp"
+    security_groups = [aws_security_group.ocr.id]
+  }
+
+  ingress {
+    description     = "SSH via EC2 Instance Connect Endpoint"
+    from_port       = 22
+    to_port         = 22
+    protocol        = "tcp"
+    security_groups = [var.eic_security_group_id]
+  }
+
+  egress {
+    description = "Saida irrestrita"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name        = "sg-rabbitmq-${var.project_name}"
     Environment = var.environment
     Project     = var.project_name
     ManagedBy   = "Terraform"

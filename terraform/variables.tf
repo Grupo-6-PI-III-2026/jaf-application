@@ -133,9 +133,15 @@ variable "allowed_account_ids" {
 
 # ── EC2 ──────────────────────────────────────────────────────
 variable "instance_type" {
-  description = "Tipo de instância EC2 (limitado pelo Learner Lab)"
+  description = "Tipo de instância EC2 para frontend, OCR e RabbitMQ"
   type        = string
   default     = "t3.micro"
+}
+
+variable "backend_instance_type" {
+  description = "Tipo de instância EC2 do backend"
+  type        = string
+  default     = "t3.small"
 }
 
 variable "root_volume_size" {
@@ -296,4 +302,28 @@ variable "jwt_expiration" {
   description = "Tempo de expiração do JWT (em milissegundos)"
   type        = string
   default     = "86400000" # 24 horas por padrão, se não for passado
+}
+
+# ── OCR assíncrono (RabbitMQ + worker) ──────────────────────────
+variable "rabbitmq_user" {
+  description = "Usuário do RabbitMQ usado pelo backend e pelos workers OCR"
+  type        = string
+  default     = "jaf"
+}
+
+variable "rabbitmq_password" {
+  description = "Senha do RabbitMQ — NUNCA commitar"
+  type        = string
+  sensitive   = true
+
+  validation {
+    condition     = length(var.rabbitmq_password) >= 12
+    error_message = "rabbitmq_password deve ter pelo menos 12 caracteres."
+  }
+}
+
+variable "ocr_space_api_key" {
+  description = "Chave da API OCR.space usada pelo worker — NUNCA commitar"
+  type        = string
+  sensitive   = true
 }

@@ -12,6 +12,8 @@ interface PeriodoFiltroProps {
   ocultarTodos?: boolean;
   /** Visual escuro para barras de filtro escuras (ex.: presença / permissões). */
   temaEscuro?: boolean;
+  /** Agrupa os presets em um controle segmentado (altura padrão de 40px). */
+  segmentado?: boolean;
   className?: string;
 }
 
@@ -20,6 +22,7 @@ export default function PeriodoFiltro({
   onChange,
   ocultarTodos = false,
   temaEscuro = false,
+  segmentado = false,
   className,
 }: PeriodoFiltroProps) {
   const opcoes = ocultarTodos
@@ -30,26 +33,42 @@ export default function PeriodoFiltro({
     onChange({ ...value, preset });
   };
 
+  const botoes = opcoes.map((opcao) => {
+    const ativo = value.preset === opcao.value;
+    const classe = segmentado
+      ? `${styles.segmento} ${ativo ? styles.segmentoAtivo : ""}`
+      : `${styles.chip} ${ativo ? styles.chipAtivo : ""}`;
+    return (
+      <button
+        key={opcao.value}
+        type="button"
+        className={classe}
+        aria-pressed={ativo}
+        onClick={() => selecionar(opcao.value)}
+      >
+        {opcao.label}
+      </button>
+    );
+  });
+
   return (
     <div
       className={[
         styles.periodoFiltro,
         temaEscuro ? styles.temaEscuro : "",
+        segmentado ? styles.periodoSegmentado : "",
         className ?? "",
       ]
         .filter(Boolean)
         .join(" ")}
     >
-      {opcoes.map((opcao) => (
-        <button
-          key={opcao.value}
-          type="button"
-          className={`${styles.chip} ${value.preset === opcao.value ? styles.chipAtivo : ""}`}
-          onClick={() => selecionar(opcao.value)}
-        >
-          {opcao.label}
-        </button>
-      ))}
+      {segmentado ? (
+        <div className={styles.segmentos} role="group" aria-label="Período">
+          {botoes}
+        </div>
+      ) : (
+        botoes
+      )}
 
       {value.preset === "PERSONALIZADO" && (
         <div className={styles.ranges}>

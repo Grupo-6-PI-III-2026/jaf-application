@@ -5,7 +5,7 @@ export interface UserContextValue {
   user: FuncionarioResponseDto | null;
   isLoading: boolean;
   error: string | null;
-  refreshUser: () => Promise<void>;
+  refreshUser: () => Promise<boolean>;
   clearUser: () => void;
 }
 

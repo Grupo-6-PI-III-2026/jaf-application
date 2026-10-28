@@ -95,3 +95,104 @@
   border-color: #ffc107;
   box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.16);
 }
+
+.chip:focus-visible {
+  outline: 2px solid #ffc107;
+  outline-offset: 2px;
+}
+
+/* ---------- Variante segmentada ---------- */
+.periodoSegmentado {
+  gap: 8px;
+}
+
+.segmentos {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 2px;
+  height: var(--altura-controle, 40px);
+  box-sizing: border-box;
+  padding: 3px;
+  border: 1px solid var(--cor-borda-controle, #ced4da);
+  border-radius: var(--raio, 8px);
+  background: var(--cor-superficie-suave, #f1f3f5);
+}
+
+.segmento {
+  flex: 1 1 auto;
+  padding: 0 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--cor-icone, #495057);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.segmento:hover:not(.segmentoAtivo) {
+  background: var(--cor-borda, #e9ecef);
+  color: var(--cor-texto, #2b2b2b);
+}
+
+.segmento:focus-visible {
+  outline: 2px solid var(--cor-destaque, #ffc107);
+  outline-offset: 1px;
+  box-shadow: 0 0 0 1px var(--cor-texto, #2b2b2b);
+}
+
+.segmentoAtivo {
+  background: var(--cor-destaque, #ffc107);
+  color: var(--cor-texto, #2b2b2b);
+}
+
+.periodoSegmentado .ranges label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.periodoSegmentado .ranges input {
+  height: var(--altura-controle, 40px);
+  box-sizing: border-box;
+  border-color: var(--cor-borda-controle, #ced4da);
+  color: var(--cor-texto, #2b2b2b);
+  font-size: 14px;
+  padding: 0 10px;
+}
+
+.periodoSegmentado .ranges input:focus {
+  border-color: var(--cor-texto, #2b2b2b);
+  box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.35);
+}
+
+@media (max-width: 767.98px) {
+  .periodoSegmentado,
+  .periodoSegmentado .segmentos,
+  .periodoSegmentado .ranges {
+    width: 100%;
+  }
+
+  .periodoSegmentado .ranges label {
+    flex: 1 1 140px;
+  }
+
+  .periodoSegmentado .ranges input {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .periodoSegmentado .segmentos {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: var(--altura-controle, 40px);
+  }
+
+  .periodoSegmentado .segmento {
+    min-height: 32px;
+  }
+}

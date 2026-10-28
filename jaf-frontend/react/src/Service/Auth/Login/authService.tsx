@@ -2,10 +2,19 @@ import { type LoginCredentials, type LoginResponse } from "../../../Types/auth";
 import type { Cargo, JwtPayload } from "../../../Types/user";
 import api from "./Api/Api";
 import axios from "axios";
+import { authorizationSession } from "./authorizationSession.ts";
+
+function clearStoredUser() {
+  for (const key of ["userEmail", "userName", "userId", "userCargo"]) {
+    localStorage.removeItem(key);
+  }
+}
 
 export const authService = {
   // endpoint de login
   login: async (credentials: LoginCredentials): Promise<LoginResponse> => {
+    authorizationSession.clear();
+    clearStoredUser();
     try {
       const response = await api.post<LoginResponse>(
         "/funcionarios/login",
@@ -40,6 +49,7 @@ export const authService = {
   },
 
   logout: async () => {
+    authService.clearSession();
     // CORREÇÃO DE SEGURANÇA A07: Chama endpoint de logout do backend para limpar o cookie
     try {
       await api.post("/funcionarios/logout");
@@ -47,12 +57,12 @@ export const authService = {
       console.error("Erro ao fazer logout:", error);
     }
 
-    // Limpa dados do usuário do localStorage
-    localStorage.removeItem("userEmail");
-    localStorage.removeItem("userName");
-    localStorage.removeItem("userId");
-    localStorage.removeItem("userCargo");
-    window.location.href = "/";
+    window.location.replace("/");
+  },
+
+  clearSession: () => {
+    authorizationSession.clear();
+    clearStoredUser();
   },
 
   isAuthenticated: (): boolean => {
@@ -94,22 +104,18 @@ export const authService = {
   },
 
   getCargo: (): Cargo | null => {
-    // CORREÇÃO DE SEGURANÇA A07: Retorna cargo do localStorage
-    const cargo = localStorage.getItem("userCargo");
-    return cargo ? (cargo as Cargo) : null;
+    return authorizationSession.current()?.user.cargo ?? null;
   },
+
+  clearAuthorization: authorizationSession.clear,
+  getAuthorizationVersion: authorizationSession.version,
+  setValidatedSession: authorizationSession.set,
 
   hasAuthority: (authority: string): boolean => {
-    // CORREÇÃO DE SEGURANÇA A07: Verificação básica de autoridade baseada no cargo
-    // Em produção, isso deve ser validado no backend via endpoint dedicado
-    const cargo = authService.getCargo();
-
-    // Lendo a variável 'authority' apenas para satisfazer a regra do TypeScript
-    if (!authority) {
-      return false;
-    }
-
-    // Implementação simplificada - ajustar conforme necessidades de permissão
-    return cargo !== null;
+    // Orientação da UI; autorização e escopo definitivos pertencem à API.
+    return authorizationSession.current()?.permissions.has(authority) ?? false;
   },
+  isAdmin: (): boolean => authService.getCargo() === "ADMIN",
+  podeRegistrarPagamento: (): boolean =>
+    ["ADMIN", "RESPONSAVEL_ADMINISTRATIVO"].includes(authService.getCargo() ?? ""),
 };

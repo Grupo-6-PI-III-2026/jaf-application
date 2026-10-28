@@ -35,14 +35,23 @@ export interface GastoCriarDto {
   reembolsoConcluido?: boolean | null;
 }
 
+export type StatusReembolso = "PENDENTE" | "PARCIAL" | "PAGO";
+export interface GastoFiltro {
+  obraId?: number;
+  funcionarioId?: number;
+  categoria?: string;
+  metodoPagamento?: string;
+  statusReembolso?: StatusReembolso;
+}
+
 export const gastoService = {
-  listar: async (): Promise<Gasto[]> => {
-    const response = await api.get("/gastos");
+  listar: async (params: GastoFiltro = {}): Promise<Gasto[]> => {
+    const response = await api.get<Gasto[]>("/gastos", { params });
     return response.data;
   },
 
-  listarPorObra: async (obraId: number): Promise<Gasto[]> => {
-    const response = await api.get(`/obras/${obraId}/gastos`);
+  listarPorObra: async (obraId: number, filtros: Omit<GastoFiltro, "obraId"> = {}): Promise<Gasto[]> => {
+    const response = await api.get<Gasto[]>("/gastos", { params: { ...filtros, obraId } });
     return response.data;
   },
 
@@ -59,5 +68,8 @@ export const gastoService = {
   buscarPorId: async (id: number): Promise<Gasto> => {
     const response = await api.get(`/gastos/${id}`);
     return response.data;
+  },
+  deletar: async (id: number): Promise<void> => {
+    await api.delete(`/gastos/${id}`);
   },
 };

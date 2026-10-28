@@ -22,52 +22,65 @@ public class DashboardService {
 
     private final GastoRepository gastoRepository;
     private final ObraRepository obraRepository;
+    private final AcessoObraService acesso;
+    private final ReembolsoService reembolsoService;
 
-    public DashboardService(GastoRepository gastoRepository, ObraRepository obraRepository) {
+    public DashboardService(GastoRepository gastoRepository, ObraRepository obraRepository,
+                            AcessoObraService acesso, ReembolsoService reembolsoService) {
         this.gastoRepository = gastoRepository;
         this.obraRepository = obraRepository;
+        this.acesso = acesso;
+        this.reembolsoService = reembolsoService;
     }
 
     public DashboardResponseDto buscarStats(Long obraId, String etapa) {
         return buscarStats(obraId, etapa, null, null);
     }
 
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public DashboardResponseDto buscarStats(Long obraId, String etapa, LocalDate from, LocalDate to) {
+        acesso.exigirAdmin();
+        if (from != null && to != null && to.isBefore(from))
+            throw new com.jaf.application.exceptions.BadRequest("Data final anterior à inicial.");
         Obra obra = obraRepository.findById(obraId)
                 .orElseThrow(() -> new NotFoundException("Obra não encontrada."));
 
         BigDecimal orcamento = parseOrcamento(obra.getOrcamento());
 
-        List<Gasto> todosGastos = gastoRepository.findByObraId(obraId).stream()
+        List<Gasto> todosGastos = gastoRepository.findByObraId(obraId);
+        List<Gasto> gastosPeriodo = todosGastos.stream()
                 .filter(g -> dentroDoPeriodo(g.getDtGasto(), from, to))
                 .toList();
 
         List<Gasto> gastosEtapaFiltrado = "TODAS".equals(etapa)
-                ? todosGastos
-                : todosGastos.stream().filter(g -> etapa.equals(g.getEtapa())).toList();
+            ? gastosPeriodo
+            : gastosPeriodo.stream().filter(g -> etapa.equals(g.getEtapa())).toList();
 
         // StatCard 1: gastos da etapa selecionada
         BigDecimal totalGastosEtapa = somarValores(gastosEtapaFiltrado);
         int progressoEtapa = calcularPercentual(totalGastosEtapa, orcamento);
 
-        // StatCard 3: saldo restante (escopo da obra inteira no período)
+        // Recebido e saldo acumulados de toda a obra, sem filtros de etapa ou período.
+        // Parcelas não são novas despesas; orçamento não é recebido.
         BigDecimal totalGastosObra = somarValores(todosGastos);
-        BigDecimal saldoRestante = orcamento.subtract(totalGastosObra);
-        int progressoSaldo = calcularPercentual(totalGastosObra, orcamento);
+        BigDecimal saldoRestante = obra.getTotalRecebido().subtract(totalGastosObra);
+        int progressoSaldo = calcularPercentual(totalGastosObra, obra.getTotalRecebido());
 
         // StatCard 2: reembolsos pendentes (filtrado pela etapa e período)
-        List<Gasto> reembolsos = gastoRepository.findByObraIdAndReembolsoConcluidoIsNotNull(obraId).stream()
+        List<Gasto> reembolsos = gastosPeriodo.stream()
+            .filter(g -> "REEMBOLSO".equals(g.getMetodoPagamento()))
             .filter(g -> "TODAS".equals(etapa) || etapa.equals(g.getEtapa()))
-            .filter(g -> dentroDoPeriodo(g.getDtGasto(), from, to))
             .toList();
 
-        BigDecimal reembolsosPendentes = reembolsos.stream()
-                .filter(g -> !Boolean.TRUE.equals(g.getReembolsoConcluido()))
-                .map(Gasto::getValor)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        Map<Long, BigDecimal> pagos = reembolsoService.totais(reembolsos);
+        BigDecimal totalReembolsos = somarValores(reembolsos);
+        BigDecimal totalPago = pagos.values().stream().reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal reembolsosPendentes = totalReembolsos.subtract(totalPago);
 
-        // Pizza: % concluídos vs pendentes
-        List<DashboardResponseDto.PieItemDto> pizza = calcularPizza(reembolsos);
+        // Pizza: proporção monetária paga vs pendente, incluindo pagamentos parciais.
+        List<DashboardResponseDto.PieItemDto> pizza = List.of(
+            new DashboardResponseDto.PieItemDto("Concluídos", calcularPercentual(totalPago, totalReembolsos)),
+            new DashboardResponseDto.PieItemDto("Pendentes", totalReembolsos.signum() == 0 ? 0 : 100 - calcularPercentual(totalPago, totalReembolsos)));
 
         // Linha: gastos imprevistos agrupados por mês
         List<DashboardResponseDto.LineItemDto> linha = calcularLinha(gastosEtapaFiltrado);
@@ -84,22 +97,6 @@ public class DashboardService {
                 pizza,
                 linha,
                 barra
-        );
-    }
-
-    private List<DashboardResponseDto.PieItemDto> calcularPizza(List<Gasto> reembolsos) {
-        if (reembolsos.isEmpty()) {
-            return List.of(
-                    new DashboardResponseDto.PieItemDto("Concluídos", 0),
-                    new DashboardResponseDto.PieItemDto("Pendentes", 0)
-            );
-        }
-        long total = reembolsos.size();
-        long concluidos = reembolsos.stream().filter(g -> Boolean.TRUE.equals(g.getReembolsoConcluido())).count();
-        long pendentes = total - concluidos;
-        return List.of(
-                new DashboardResponseDto.PieItemDto("Concluídos", Math.round((double) concluidos / total * 100)),
-                new DashboardResponseDto.PieItemDto("Pendentes", Math.round((double) pendentes / total * 100))
         );
     }
 

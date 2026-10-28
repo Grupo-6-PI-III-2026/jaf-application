@@ -34,9 +34,20 @@ public class DatabaseSeeder implements ApplicationRunner {
         seedFuncionarios();
         seedObras();
         seedAlocacoes();
-        normalizarDadosBase();
         seedGastos();
+        seedPagamentosLegados();
         registrarResumoSeed();
+    }
+
+    private void seedPagamentosLegados() {
+        // A carga de demonstração roda depois do Flyway: não deixar gastos pagos sem histórico.
+        jdbcTemplate.update("""
+                INSERT INTO pagamento_reembolso (gasto_id, valor, data_pagamento, observacao)
+                SELECT g.id, g.valor, COALESCE(g.dt_gasto, CURRENT_DATE), 'Quitação legada da carga de demonstração.'
+                FROM gasto g
+                WHERE g.metodo_pagamento = 'REEMBOLSO' AND g.reembolso_concluido = TRUE AND g.valor > 0
+                    AND NOT EXISTS (SELECT 1 FROM pagamento_reembolso p WHERE p.gasto_id = g.id)
+                """);
     }
 
     private void seedFuncionarios() {
@@ -109,29 +120,6 @@ public class DatabaseSeeder implements ApplicationRunner {
                       AND alocacao.obra_id = obra.id
                   )
                 """, cargo, funcionarioEmail, obraTitulo);
-    }
-
-    private void normalizarDadosBase() {
-        jdbcTemplate.update("UPDATE obra SET orcamento = '65000' WHERE titulo = 'Obra Alphaville'");
-        jdbcTemplate.update("UPDATE obra SET orcamento = '25000' WHERE titulo = 'Obra Osasco'");
-        jdbcTemplate.update("UPDATE obra SET orcamento = '120000' WHERE titulo = 'Residencial Morumbi'");
-        jdbcTemplate.update("UPDATE obra SET orcamento = '85000' WHERE titulo = 'Comercial Pinheiros'");
-        jdbcTemplate.update("UPDATE obra SET orcamento = '200000' WHERE titulo = 'Galeria Shopping'");
-        jdbcTemplate.update("UPDATE gasto SET etapa = 'ETAPA 1' WHERE etapa IN ('Pintura', 'Estrutura', 'Fundação')");
-        jdbcTemplate.update("UPDATE gasto SET etapa = 'ETAPA 2' WHERE etapa IN ('Instalações', 'Acabamento')");
-        jdbcTemplate.update("UPDATE gasto SET categoria = 'Alvenaria' WHERE categoria IN ('Cimento', 'Silicone')");
-        jdbcTemplate.update("UPDATE gasto SET categoria = 'Equipamentos' WHERE categoria IN ('Eletrica', 'Hidraulica')");
-        jdbcTemplate.update("UPDATE gasto SET categoria = 'Pintura' WHERE categoria = 'Ceramica'");
-        jdbcTemplate.update("UPDATE funcionario SET cargo_global = 'RESPONSAVEL_ADMINISTRATIVO' WHERE cargo_global IN ('GESTOR_OBRA', 'MESTRE_DE_OBRAS', 'OPERADOR_LANCAMENTO')");
-        jdbcTemplate.update("UPDATE funcionario SET cargo_global = 'ENGENHEIRO' WHERE cargo_global IN ('ARQUITETO', 'PEDREIRO')");
-        jdbcTemplate.update("UPDATE funcionario SET cargo_global = 'RESPONSAVEL_ADMINISTRATIVO' WHERE email = 'rafael.pereira@jaf.com'");
-        jdbcTemplate.update("UPDATE funcionario SET cargo_global = 'RESPONSAVEL_ADMINISTRATIVO' WHERE email = 'marina.costa@jaf.com'");
-        jdbcTemplate.update("UPDATE funcionario SET cargo_global = 'RESPONSAVEL_ADMINISTRATIVO' WHERE email = 'roberto.almeida@jaf.com'");
-        jdbcTemplate.update("UPDATE funcionario SET cargo_global = 'ENGENHEIRO' WHERE email = 'gabriel.junior@jaf.com'");
-        jdbcTemplate.update("UPDATE funcionario SET cargo_global = 'ENGENHEIRO' WHERE email = 'carlos.silva@jaf.com'");
-        jdbcTemplate.update("UPDATE funcionario SET cargo_global = 'ENGENHEIRO' WHERE email = 'pedro.santos@jaf.com'");
-        jdbcTemplate.update("UPDATE funcionario SET cargo_global = 'ENGENHEIRO' WHERE email = 'lucia.ferreira@jaf.com'");
-        jdbcTemplate.update("UPDATE gasto SET reembolso_concluido = NULL WHERE metodo_pagamento <> 'REEMBOLSO' AND reembolso_concluido = false");
     }
 
     private void seedGastos() {

@@ -28,6 +28,7 @@ backend_public_access = true
 
 # ── EC2 ──────────────────────────────────────────────────────
 instance_type   = "t3.micro"
+backend_instance_type = "t3.small"
 # Caminho para sua chave pública SSH (gere com: ssh-keygen -t rsa -b 4096)
 public_key_path = "~/.ssh/id_rsa.pub"
 
@@ -55,3 +56,9 @@ ghcr_token = "SUBSTITUA_PELO_SEU_GITHUB_PAT"
 # db_url: JDBC URL completa do RDS PostgreSQL
 # Substitua <RDS_ENDPOINT> pelo valor do output "rds_endpoint" após o apply
 db_url = "jdbc:postgresql://<RDS_ENDPOINT>:5432/appdb"
+
+# ── OCR assíncrono (RabbitMQ + worker) ──────────────────────────
+# Sem esses valores a leitura de notas fiscais não funciona na AWS.
+rabbitmq_user     = "jaf"
+rabbitmq_password = "SUBSTITUA_POR_SENHA_FORTE_RABBITMQ"
+ocr_space_api_key = "SUBSTITUA_PELA_CHAVE_OCR_SPACE"

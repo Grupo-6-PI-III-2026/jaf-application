@@ -65,7 +65,7 @@ resource "aws_lb_target_group" "backend" {
     healthy_threshold   = 2
     interval            = 30
     matcher             = "200"
-    path                = "/actuator/health" # Endpoint padrão do Spring Boot Actuator
+    path                = "/actuator/health/readiness" # Banco obrigatório; OCR/RabbitMQ não derruba a API
     port                = "traffic-port"
     protocol            = "HTTP"
     timeout             = 5

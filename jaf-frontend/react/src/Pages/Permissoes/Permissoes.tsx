@@ -15,6 +15,7 @@ import {
 import { toast } from "sonner";
 import styles from "./Permissoes.module.css";
 import { permissaoService } from "../../Service/Permissoes/permissaoService";
+import { useUser } from "../../Context/useUser";
 import type { FuncionarioPermissoes, ModuloPermissao } from "../../Types/permissoes";
 import type { Cargo } from "../../Types/user";
 import PeriodoFiltro from "../../Components/PeriodoFiltro/PeriodoFiltro";
@@ -24,6 +25,7 @@ import {
   resolverPeriodo,
   type PeriodoFiltroValue,
 } from "../../Components/PeriodoFiltro/periodUtils";
+import { erroApi } from "../../Utils/financeiro";
 
 const MODULOS: ModuloPermissao[] = [
   {
@@ -53,7 +55,7 @@ const MODULOS: ModuloPermissao[] = [
     nome: "Financeiro / Gastos",
     icon: "Wallet",
     permissoes: [
-      { chave: "VISUALIZAR_GASTOS", label: "Visualizar Gastos", descricao: "Acessar orçamentos, custos alocados e notas fiscais das obras.", nivel: null },
+      { chave: "VISUALIZAR_GASTOS", label: "Visualizar Gastos", descricao: "Consultar gastos, notas fiscais e reembolsos nas obras permitidas. Totais financeiros e orçamento são exclusivos de ADMIN; pagar exige ADMIN ou RESPONSAVEL_ADMINISTRATIVO alocado.", nivel: null },
       { chave: "CRIAR_GASTO", label: "Registrar Gasto", descricao: "Lançar novas despesas e notas fiscais vinculadas às obras.", nivel: null },
       { chave: "EDITAR_GASTO", label: "Editar Gasto", descricao: "Alterar informações de gastos já registrados no sistema.", nivel: "restrito" },
       { chave: "DELETAR_GASTO", label: "Excluir Gasto", descricao: "Remover permanentemente registros de gastos e notas fiscais.", nivel: "critico" },
@@ -116,6 +118,7 @@ const CARGO_BADGES: Record<Cargo, string> = {
 const CARGOS = Object.keys(CARGO_LABELS) as Cargo[];
 
 export default function Permissoes() {
+  const { user: usuarioAtual } = useUser();
   const [funcionarios, setFuncionarios] = useState<FuncionarioPermissoes[]>([]);
   const [selectedUser, setSelectedUser] = useState<FuncionarioPermissoes | null>(null);
   const [busca, setBusca] = useState("");
@@ -127,6 +130,8 @@ export default function Permissoes() {
   const [modulosAbertos, setModulosAbertos] = useState<Set<string>>(new Set(["obras"]));
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const proprioUsuario = selectedUser !== null && selectedUser.id === usuarioAtual?.id;
+  const permissoesFixas = cargoSelecionado === "ADMIN";
 
   const carregarFuncionarios = useCallback(async () => {
     try {
@@ -197,7 +202,7 @@ export default function Permissoes() {
   };
 
   const hasChanges = (): boolean => {
-    if (!selectedUser || !cargoSelecionado) return false;
+    if (!selectedUser || !cargoSelecionado || proprioUsuario) return false;
     if (cargoSelecionado !== selectedUser.cargo) return true;
 
     if (permissoesAtivas.size !== permissoesOriginais.size) return true;
@@ -205,7 +210,7 @@ export default function Permissoes() {
   };
 
   const handleSalvar = async () => {
-    if (!selectedUser || !cargoSelecionado) return;
+    if (!selectedUser || !cargoSelecionado || proprioUsuario) return;
 
     try {
       setIsSaving(true);
@@ -234,7 +239,7 @@ export default function Permissoes() {
       setSelectedUser({ ...selectedUser, cargo: cargoSelecionado });
     } catch (error) {
       console.error("Erro ao salvar cargo:", error);
-      toast.error("Erro ao salvar cargo");
+      toast.error(erroApi(error, "Erro ao salvar cargo"));
     } finally {
       setIsSaving(false);
     }
@@ -334,12 +339,25 @@ export default function Permissoes() {
               </div>
             </div>
 
+            {proprioUsuario && (
+              <p role="alert" className={styles.avisoBloqueio}>
+                Você não pode alterar seu próprio cargo ou permissões. Peça a outro administrador.
+              </p>
+            )}
+            {permissoesFixas && !proprioUsuario && (
+              <p role="note" className={styles.avisoBloqueio}>
+                As permissões do cargo ADMIN são fixas e não podem ser editadas.
+              </p>
+            )}
+
             <div className={styles.seletorCargo}>
               {CARGOS.map((cargo) => (
                 <button
                   key={cargo}
                   className={cargoSelecionado === cargo ? styles.seletorCargoAtivo : ""}
                   onClick={() => handleCargoChange(cargo)}
+                  disabled={proprioUsuario}
+                  aria-pressed={cargoSelecionado === cargo}
                 >
                   <UserCog size={14} style={{ marginRight: 6, verticalAlign: "middle" }} />
                   {CARGO_LABELS[cargo]}
@@ -379,8 +397,10 @@ export default function Permissoes() {
                           <label className={styles.toggle}>
                             <input
                               type="checkbox"
+                              aria-label={permissao.label}
                               checked={permissoesAtivas.has(permissao.chave)}
                               onChange={() => togglePermissao(permissao.chave)}
+                              disabled={proprioUsuario || permissoesFixas}
                             />
                             <span className={styles.toggleSlider}></span>
                           </label>
