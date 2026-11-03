@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { authService } from "../../Service/Auth/Login/authService";
 import { hojeIso } from "../../Components/PeriodoFiltro/periodUtils";
 import { dataValida, erroApi } from "../../Utils/financeiro";
+import { logger } from "../../Utils/logger";
 
 type ControlePresencaProps = {
   aberto: boolean;
@@ -44,7 +45,7 @@ export default function ControlePresenca({
       setAlterados(new Set());
       setErro("");
     } catch (error) {
-      console.error("Erro ao carregar colaboradores:", error);
+      logger.erro("Erro ao carregar colaboradores", error);
       toast.error("Erro ao carregar lista de presença");
       setColaboradores([]);
       setErro("Não foi possível carregar a lista de presença. Feche e abra novamente para tentar.");
@@ -113,7 +114,7 @@ export default function ControlePresenca({
         onFechar();
       }
     } catch (error) {
-      console.error("Erro ao registrar presença:", error);
+      logger.erro("Erro ao registrar presença", error);
       toast.error(erroApi(error, "Erro ao registrar presença"));
     } finally {
       setSalvando(false);

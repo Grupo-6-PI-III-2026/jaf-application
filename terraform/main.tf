@@ -120,6 +120,9 @@ module "ec2" {
   db_password    = var.db_password
   jwt_secret     = var.jwt_secret
   jwt_expiration = var.jwt_expiration
+  cookie_secure  = coalesce(var.cookie_secure, var.enable_https)
+  bootstrap_admin_email    = var.bootstrap_admin_email
+  bootstrap_admin_password = var.bootstrap_admin_password
 
   # OCR assíncrono: broker RabbitMQ e workers
   rabbitmq_user     = var.rabbitmq_user

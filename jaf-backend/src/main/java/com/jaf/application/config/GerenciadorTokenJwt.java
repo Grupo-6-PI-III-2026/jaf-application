@@ -5,73 +5,50 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import com.jaf.application.dto.FuncionarioDetalhesDto;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 @Component
 public class GerenciadorTokenJwt {
 
-    @Value("${jwt.secret}")
-    private String secret;
-    @Value("${jwt.validity}")
-    private long jwtTokenValidity;
+    private final JwtProperties properties;
 
-    public String generateToken(final Authentication authentication) {
-        // Coleta todas as authorities (roles/perfis) do usuário separadas por vírgula
-        final String authorities = authentication.getAuthorities().stream()
-            .map(GrantedAuthority::getAuthority)
-            .collect(Collectors.joining(","));
-
-        final Object principal = authentication.getPrincipal();
-        final String cargo = principal instanceof FuncionarioDetalhesDto funcionario
-            ? funcionario.getCargo().name()
-            : null;
-
-        var builder = Jwts.builder()
-            .setSubject(authentication.getName())           // claim "sub": quem é o usuário
-            .claim("authorities", authorities)              // claim customizado: perfis do usuário
-            .setIssuedAt(new Date(System.currentTimeMillis()))                             // claim "iat"
-            .setExpiration(new Date(System.currentTimeMillis() + jwtTokenValidity * 1_000)); // claim "exp"
-
-        if (cargo != null) {
-            builder.claim("cargo", cargo);
-        }
-
-        return builder
-            .signWith(parseSecret())                        // assina com HMAC-SHA256
-            .compact();                                     // serializa para String
+    public GerenciadorTokenJwt(JwtProperties properties) {
+        this.properties = properties;
     }
 
-    public String getUsernameFromToken(String token) {
+    public String generateToken(final Authentication authentication) {
+        final Object principal = authentication.getPrincipal();
+        if (!(principal instanceof FuncionarioDetalhesDto funcionario) || funcionario.getId() == null) {
+            throw new IllegalStateException("Principal autenticado sem identificador de funcionário");
+        }
+
+        return Jwts.builder()
+            .setSubject(String.valueOf(funcionario.getId()))
+            .claim("tv", funcionario.getTokenVersion())
+            .setIssuedAt(new Date(System.currentTimeMillis()))                             // claim "iat"
+            .setExpiration(new Date(System.currentTimeMillis() + properties.expiration().toMillis()))
+            .signWith(parseSecret())
+            .compact();
+    }
+
+    public String getSubjectFromToken(String token) {
         return getClaimForToken(token, Claims::getSubject);
     }
 
-
-    public Date getExpirationDateFromToken(String token) {
-        return getClaimForToken(token, Claims::getExpiration);
-    }
-
-    public boolean validateToken(String token, UserDetails userDetails) {
-        String username = getUsernameFromToken(token);
-        return username.equals(userDetails.getUsername()) && !isTokenExpired(token);
+    public boolean tokenVigente(String token, FuncionarioDetalhesDto userDetails) {
+        Integer tokenVersion = getClaimForToken(token, claims -> claims.get("tv", Integer.class));
+        return userDetails.isEnabled() && tokenVersion != null
+                && tokenVersion.equals(userDetails.getTokenVersion());
     }
 
     public <T> T getClaimForToken(String token, Function<Claims, T> claimsResolver) {
         Claims claims = getAllClaimsFromToken(token);
         return claimsResolver.apply(claims);
-    }
-
-    private boolean isTokenExpired(String token) {
-        Date expirationDate = getExpirationDateFromToken(token);
-        return expirationDate.before(new Date(System.currentTimeMillis()));
     }
 
     private Claims getAllClaimsFromToken(String token) {
@@ -83,6 +60,6 @@ public class GerenciadorTokenJwt {
     }
 
     private SecretKey parseSecret() {
-        return Keys.hmacShaKeyFor(Decoders.BASE64.decode(this.secret));
+        return Keys.hmacShaKeyFor(Decoders.BASE64.decode(properties.secret()));
     }
 }

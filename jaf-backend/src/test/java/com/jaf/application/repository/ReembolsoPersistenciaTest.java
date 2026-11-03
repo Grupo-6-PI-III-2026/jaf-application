@@ -46,6 +46,7 @@ class ReembolsoPersistenciaTest {
     }
     private Gasto gasto(Obra obra, Funcionario pessoa, String metodo) {
         var gasto = new Gasto(); gasto.setObra(obra); gasto.setFuncionario(pessoa); gasto.setMetodoPagamento(metodo);
+        gasto.setReembolsavel("REEMBOLSO".equals(metodo));
         gasto.setCategoria("Material"); gasto.setValor(new BigDecimal("100.00")); gasto.setDtGasto(LocalDate.now().minusDays(1));
         return gastos.saveAndFlush(gasto);
     }

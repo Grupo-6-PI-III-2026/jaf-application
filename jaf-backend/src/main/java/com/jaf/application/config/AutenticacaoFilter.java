@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.web.filter.OncePerRequestFilter;
 import com.jaf.application.service.AutenticacaoService;
@@ -36,12 +37,12 @@ public class AutenticacaoFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        String username = null;
+        String subject = null;
         String jwtToken = extrairToken(request);
 
         if (jwtToken != null) {
             try {
-                username = jwtTokenManager.getUsernameFromToken(jwtToken);
+                subject = jwtTokenManager.getSubjectFromToken(jwtToken);
 
             } catch (ExpiredJwtException e) {
                 LOGGER.warn("[AUTENTICACAO] Token expirado para o usuário '{}': {}",
@@ -61,8 +62,8 @@ public class AutenticacaoFilter extends OncePerRequestFilter {
             }
         }
 
-        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            registrarAutenticacaoNoContexto(request, username, jwtToken);
+        if (subject != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            registrarAutenticacaoNoContexto(request, subject, jwtToken);
         }
 
         filterChain.doFilter(request, response);
@@ -89,15 +90,19 @@ public class AutenticacaoFilter extends OncePerRequestFilter {
         return null;
     }
 
-    private void registrarAutenticacaoNoContexto(HttpServletRequest request, String username, String jwtToken) {
-        UserDetails userDetails = autenticacaoService.loadUserByUsername(username);
-
-        if (userDetails.isEnabled() && jwtTokenManager.validateToken(jwtToken, userDetails)) {
+    private void registrarAutenticacaoNoContexto(HttpServletRequest request, String subject, String jwtToken) {
+        try {
+            Long id = Long.valueOf(subject);
+            UserDetails userDetails = autenticacaoService.loadUserById(id);
+            if (!(userDetails instanceof com.jaf.application.dto.FuncionarioDetalhesDto detalhes)
+                    || !jwtTokenManager.tokenVigente(jwtToken, detalhes)) return;
             UsernamePasswordAuthenticationToken autenticacao = new UsernamePasswordAuthenticationToken(
                     userDetails, null, userDetails.getAuthorities());
 
             autenticacao.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             SecurityContextHolder.getContext().setAuthentication(autenticacao);
+        } catch (NumberFormatException | UsernameNotFoundException ex) {
+            LOGGER.warn("[AUTENTICACAO] Token rejeitado: usuário inválido");
         }
     }
 }

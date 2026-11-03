@@ -11,7 +11,7 @@ public class FuncionarioLoginDto {
     private String email;
 
     @NotBlank(message = "Senha não pode estar vazia!")
-    @Schema(description = "Senha do funcionário", example = "Admin@123")
+    @Schema(description = "Senha do funcionário")
     private String senha;
 
     public String getEmail() {

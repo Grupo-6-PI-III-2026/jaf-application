@@ -3,7 +3,6 @@ import { useUser } from "../../Context/useUser";
 import { funcionarioService } from "../../Service/Funcionarios/funcionarioService";
 import { authService } from "../../Service/Auth/Login/authService";
 import { toast } from "sonner";
-import axios from "axios";
 import {
   CargoLabel,
   DEFAULT_AVATAR_URL,
@@ -11,6 +10,9 @@ import {
   type AlterarSenhaDto,
 } from "../../Types/user";
 import styles from "./Profile.module.css";
+import { logger } from "../../Utils/logger";
+import { validarEmail, validarNome, validarSenha } from "../../Utils/validacao";
+import { tratarErroApi } from "../../Utils/erro";
 
 const IconEdit = () => (
   <svg
@@ -118,17 +120,11 @@ const IconShield = () => (
 
 type Tab = "info" | "seguranca" | "excluir";
 
-const EMAIL_REGEX = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
-const SENHA_REGEX = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d).{6,}$/;
 const FOTO_MAX_BYTES = 5 * 1024 * 1024;
 
 const getApiMessage = (error: unknown, fallback: string) => {
-  if (axios.isAxiosError(error)) {
-    const data = error.response?.data as { message?: string; fields?: Record<string, string> } | undefined;
-    const fieldMessage = data?.fields ? Object.values(data.fields)[0] : null;
-    return fieldMessage || data?.message || fallback;
-  }
-  return error instanceof Error ? error.message : fallback;
+  const resultado = tratarErroApi(error, fallback);
+  return Object.values(resultado.campos)[0] || resultado.mensagem;
 };
 
 export default function Profile() {
@@ -196,7 +192,7 @@ export default function Profile() {
       setFotoFile(null);
       toast.success("Foto enviada com sucesso!");
     } catch (error: unknown) {
-      console.error("Erro ao fazer upload da foto:", error);
+      logger.erro("Erro ao fazer upload da foto", error);
       const message = getApiMessage(error, "Erro ao enviar foto");
       setSaveError(message);
       toast.error(message);
@@ -225,12 +221,14 @@ export default function Profile() {
     const nomeNormalizado = nome.trim();
     const emailNormalizado = email.trim().toLowerCase();
 
-    if (nomeNormalizado.length < 3 || nomeNormalizado.length > 100) {
-      setSaveError("Nome deve ter entre 3 e 100 caracteres.");
+    const erroNome = validarNome(nomeNormalizado);
+    if (erroNome) {
+      setSaveError(erroNome);
       return;
     }
-    if (!EMAIL_REGEX.test(emailNormalizado)) {
-      setSaveError("Informe um e-mail valido.");
+    const erroEmail = validarEmail(emailNormalizado);
+    if (erroEmail) {
+      setSaveError(erroEmail);
       return;
     }
 
@@ -274,8 +272,9 @@ export default function Profile() {
       setSenhaError("Nova senha e confirmacao nao conferem.");
       return;
     }
-    if (!SENHA_REGEX.test(novaSenha)) {
-      setSenhaError("A nova senha deve ter pelo menos 6 caracteres, 1 letra maiuscula, 1 minuscula e 1 numero.");
+    const erroSenha = validarSenha(novaSenha);
+    if (erroSenha) {
+      setSenhaError(erroSenha);
       return;
     }
 
@@ -302,7 +301,7 @@ export default function Profile() {
     setIsDeleting(true);
     setDeleteError(null);
     try {
-      await funcionarioService.excluirConta();
+      await funcionarioService.excluirConta(senhaAtual);
       clearUser();
       authService.logout();
     } catch (error: unknown) {
@@ -665,8 +664,7 @@ export default function Profile() {
 
               <div className={styles.dangerBox}>
                 <p className={styles.dangerText}>
-                  Esta acao e <strong>irreversivel</strong>. Todos os seus dados
-                  serao permanentemente removidos. Para confirmar, digite
+                  Esta acao e <strong>irreversivel</strong>.                   A conta sera desativada e as sessoes serao encerradas. Para confirmar, informe sua senha e digite
                   <strong> EXCLUIR</strong> no campo abaixo.
                 </p>
               </div>
@@ -674,6 +672,17 @@ export default function Profile() {
               {deleteError && (
                 <div className={styles.alertError}>{deleteError}</div>
               )}
+
+              <div className={styles.formGroup}>
+                <label className={styles.fieldLabel}>SENHA ATUAL</label>
+                <input
+                  type="password"
+                  className={styles.fieldInput}
+                  value={senhaAtual}
+                  onChange={(e) => setSenhaAtual(e.target.value)}
+                  placeholder="Digite sua senha atual"
+                />
+              </div>
 
               <div className={styles.formGroup}>
                 <label className={styles.fieldLabel}>CONFIRMACAO</label>
@@ -689,7 +698,7 @@ export default function Profile() {
               <button
                 className={styles.deleteFinalBtn}
                 onClick={handleExcluirConta}
-                disabled={isDeleting || confirmacaoExclusao !== "EXCLUIR"}
+                disabled={isDeleting || !senhaAtual || confirmacaoExclusao !== "EXCLUIR"}
               >
                 {isDeleting ? "Excluindo..." : "Confirmar exclusao"}
               </button>

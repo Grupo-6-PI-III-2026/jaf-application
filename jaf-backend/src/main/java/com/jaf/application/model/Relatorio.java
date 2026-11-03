@@ -14,7 +14,7 @@ public class Relatorio {
     private String titulo;
     private LocalDate dtEmissao;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "funcionario_id")
     private Funcionario funcionarioResponsavel;
 

@@ -149,7 +149,7 @@ class ObraServiceTest {
     void buscarPorIdComEscopo_EngenheiroAlocado_AcessoPermitido() {
         when(funcionarioRepository.findByEmailIgnoreCase(anyString())).thenReturn(Optional.of(funcionarioEngenheiro));
         when(obraRepository.findById(anyLong())).thenReturn(Optional.of(obra));
-        when(alocacaoObraRepository.existsByFuncionarioIdAndObraId(anyLong(), anyLong())).thenReturn(true);
+        when(alocacaoObraRepository.existsAtiva(anyLong(), anyLong(), any(LocalDate.class))).thenReturn(true);
 
         var resultado = obraService.buscarPorIdComEscopo(1L, "engenheiro@teste.com");
 
@@ -161,7 +161,7 @@ class ObraServiceTest {
     void buscarPorIdComEscopo_EngenheiroNaoAlocado_Forbidden() {
         when(funcionarioRepository.findByEmailIgnoreCase(anyString())).thenReturn(Optional.of(funcionarioEngenheiro));
         when(obraRepository.findById(anyLong())).thenReturn(Optional.of(obra));
-        when(alocacaoObraRepository.existsByFuncionarioIdAndObraId(anyLong(), anyLong())).thenReturn(false);
+        when(alocacaoObraRepository.existsAtiva(anyLong(), anyLong(), any(LocalDate.class))).thenReturn(false);
 
         assertThrows(Forbidden.class, () -> obraService.buscarPorIdComEscopo(1L, "engenheiro@teste.com"));
     }

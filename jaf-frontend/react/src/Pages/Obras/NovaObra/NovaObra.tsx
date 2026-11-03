@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { isAxiosError } from "axios";
 import { FileText, Calendar, User, DollarSign, ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -9,7 +8,9 @@ import { alocacaoService } from "../../../Service/Alocacoes/alocacaoService";
 import { funcionarioService } from "../../../Service/Funcionarios/funcionarioService";
 import { authService } from "../../../Service/Auth/Login/authService";
 import type { FuncionarioPermissoes } from "../../../Types/permissoes";
-import { dataValida, erroApi, valorDecimal } from "../../../Utils/financeiro";
+import { dataValida, valorDecimal } from "../../../Utils/financeiro";
+import { tratarErroApi } from "../../../Utils/erro";
+import { validarTituloObra } from "../../../Utils/validacao";
 
 interface ErrosFormulario {
   nomeObra?: string;
@@ -54,7 +55,7 @@ export default function NovaObra() {
       setFuncionarios(data);
       setResponsavelId((atual) => atual || String(data[0]?.id ?? ""));
     }).catch((error: unknown) => {
-      if (ativo) toast.error(erroApi(error, "Não foi possível carregar os usuários do sistema."));
+      if (ativo) toast.error(tratarErroApi(error, "Não foi possível carregar os usuários do sistema.").mensagem);
     }).finally(() => {
       if (ativo) setCarregandoFuncionarios(false);
     });
@@ -63,8 +64,7 @@ export default function NovaObra() {
 
   const validateInputs = () => {
     const nextErrors: ErrosFormulario = {};
-    if (!nomeObra.trim()) nextErrors.nomeObra = "O nome da obra é obrigatório.";
-    else if (nomeObra.trim().length < 5) nextErrors.nomeObra = "O título da obra deve ter no mínimo 5 caracteres.";
+    nextErrors.nomeObra = validarTituloObra(nomeObra);
     // O helper exige um limite superior: planejamento admite qualquer data ISO válida, inclusive futura.
     const inicioValido = dataValida(dataInicio, "9999-12-31");
     const fimValido = dataValida(dataFim, "9999-12-31");
@@ -107,13 +107,12 @@ export default function NovaObra() {
         // Nunca repetir o POST após uma criação confirmada, mesmo se a alocação falhar.
         obraCriadaRef.current = obraCriada;
       } catch (error: unknown) {
-        if (isAxiosError(error) && error.response?.status === 401) {
+        const resultado = tratarErroApi(error, "Falha ao criar obra. Tente novamente.");
+        if (resultado.status === 401) {
           toast.error("Sessão expirada. Faça login novamente.");
           navigate("/");
         } else {
-          toast.error(erroApi(error, isAxiosError(error) && error.response?.status === 403
-            ? "Você não tem permissão para criar obras."
-            : "Falha ao criar obra. Tente novamente."));
+          toast.error(resultado.mensagem);
         }
         return;
       }

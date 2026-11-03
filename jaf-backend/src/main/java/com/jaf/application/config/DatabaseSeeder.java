@@ -7,12 +7,14 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Profile;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.math.BigDecimal;
 
 @Component
-@ConditionalOnProperty(name = "app.seed.enabled", havingValue = "true", matchIfMissing = true)
+@Profile("dev")
+@ConditionalOnProperty(name = "app.seed.enabled", havingValue = "true")
 public class DatabaseSeeder implements ApplicationRunner {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DatabaseSeeder.class);

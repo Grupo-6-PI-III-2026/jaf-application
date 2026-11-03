@@ -5,6 +5,7 @@ import Navbar from "./Navbar/Navber";
 import styles from "./Layout.module.css";
 import { useBreakpoint } from "../../Hooks/useBreakpoint";
 import { breakpointNoIntervalo } from "../../Constants/breakpoints";
+import ErrorBoundary from "../ErrorBoundary/ErrorBoundary";
 
 export default function Layout() {
   const breakpoint = useBreakpoint();
@@ -32,7 +33,7 @@ export default function Layout() {
         />
 
         <main className={styles.content}>
-          <Outlet />
+          <ErrorBoundary><Outlet /></ErrorBoundary>
         </main>
       </div>
     </div>

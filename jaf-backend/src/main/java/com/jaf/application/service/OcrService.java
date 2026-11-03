@@ -15,6 +15,7 @@ import org.springframework.amqp.AmqpException;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -25,6 +26,12 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.transaction.annotation.Transactional;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -55,14 +62,30 @@ public class OcrService {
     private final OcrProcessamentoRepository processamentoRepository;
     private final RestTemplate restTemplate;
     private final String ocrServiceUrl;
+    private final Clock businessClock;
 
+    @Autowired
     public OcrService(RabbitTemplate rabbitTemplate,
                       OcrProcessamentoRepository processamentoRepository,
-                      @Value("${ocr.service.url:http://localhost:8000/api/ocr}") String ocrServiceUrl) {
+                      @Value("${ocr.service.url:http://localhost:8000/api/ocr}") String ocrServiceUrl,
+                      Clock businessClock,
+                      @Value("${app.ocr.timeout:PT3M}") Duration ocrTimeout) {
         this.rabbitTemplate = rabbitTemplate;
         this.processamentoRepository = processamentoRepository;
-        this.restTemplate = new RestTemplate();
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(Duration.ofSeconds(3));
+        factory.setReadTimeout(Duration.ofSeconds(30));
+        this.restTemplate = new RestTemplate(factory);
         this.ocrServiceUrl = ocrServiceUrl;
+        this.businessClock = businessClock;
+        this.ocrTimeout = ocrTimeout;
+    }
+    private final Duration ocrTimeout;
+
+    public OcrService(RabbitTemplate rabbitTemplate, OcrProcessamentoRepository processamentoRepository,
+                      String ocrServiceUrl) {
+        this(rabbitTemplate, processamentoRepository, ocrServiceUrl,
+                Clock.system(java.time.ZoneId.of("America/Sao_Paulo")), Duration.ofMinutes(3));
     }
 
     public JsonNode process(MultipartFile file) throws IOException {
@@ -92,7 +115,7 @@ public class OcrService {
         try {
             return restTemplate.postForEntity(ocrServiceUrl, new HttpEntity<>(body, requestHeaders), JsonNode.class)
                     .getBody();
-        } catch (RestClientException exception) {
+        } catch (RestClientException | org.springframework.http.InvalidMediaTypeException exception) {
             throw new IllegalStateException("Falha ao comunicar com o servico de OCR.", exception);
         }
     }
@@ -148,13 +171,37 @@ public class OcrService {
         }
 
         if (resultado.status() != StatusOcr.CONCLUIDO) {
-            processamento.marcarErro("Erro ao processar a nota fiscal: " + resultado.erro());
+            LOGGER.warn("OCR retornou erro para job {}: {}", resultado.jobId(), resultado.erro());
+            processamento.marcarErro("Não foi possível ler a nota. Tente outra foto.");
         } else if (resultado.textoBruto() == null || resultado.textoBruto().isBlank()) {
             processamento.marcarErro("Não foi possível extrair texto da nota fiscal.");
         } else {
             processamento.marcarConcluido(resultado.textoBruto());
         }
+
         processamentoRepository.save(processamento);
+    }
+
+    @Scheduled(fixedDelay = 60_000)
+    @Transactional
+    public void expirarJobsPresos() {
+        LocalDateTime limite = LocalDateTime.now(businessClock).minus(ocrTimeout);
+        processamentoRepository.findByStatusAndAtualizadoEmBefore(StatusOcr.PROCESSANDO, limite)
+                .forEach(job -> {
+                    job.marcarErro("Não foi possível ler a nota. Tente outra foto.");
+                    processamentoRepository.save(job);
+                });
+    }
+
+    @Scheduled(cron = "0 0 3 * * *")
+    @Transactional
+    public void removerTextoAntigo() {
+        LocalDateTime limite = LocalDateTime.now(businessClock).minusDays(30);
+        processamentoRepository.findByStatusAndAtualizadoEmBefore(StatusOcr.CONCLUIDO, limite)
+                .forEach(job -> {
+                    job.limparTextoBruto();
+                    processamentoRepository.save(job);
+                });
     }
 
     private OcrResponseDto paraResposta(OcrProcessamento processamento) {

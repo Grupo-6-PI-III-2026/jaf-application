@@ -23,6 +23,8 @@ import {
 import { toast } from "sonner";
 import { Responsive } from "../../Components/Responsive/Responsive";
 import { authService } from "../../Service/Auth/Login/authService";
+import { tratarErroApi } from "../../Utils/erro";
+import { logger } from "../../Utils/logger";
 
 const IMAGEM_PLACEHOLDER =
   "https://s2.glbimg.com/YgImWrcpJX6FAHRJOlZtEnTaHYc=/e.glbimg.com/og/ed/f/original/2020/12/23/apartamento-sao-paulo-260-m2-atemporal3.jpg";
@@ -105,12 +107,8 @@ export default function AlocacaoFuncionario() {
         setFuncionarios(funcionariosData);
         setPaginaAtual(1);
       } catch (error) {
-        console.error("Erro ao carregar dados:", error);
-        if (error instanceof Error) {
-          toast.error(`Erro ao carregar alocações: ${error.message}`);
-        } else {
-          toast.error("Erro ao carregar alocações da obra");
-        }
+        logger.erro("Erro ao carregar dados das alocações", error);
+        toast.error(tratarErroApi(error, "Não foi possível carregar as alocações da obra.").mensagem);
       } finally {
         setCarregando(false);
       }
@@ -185,8 +183,8 @@ export default function AlocacaoFuncionario() {
       setModalAberto(false);
       toast.success("Funcionário alocado com sucesso");
     } catch (error) {
-      console.error("Erro ao alocar funcionário:", error);
-      toast.error("Não foi possível alocar o funcionário");
+      logger.erro("Erro ao alocar funcionário", error);
+      toast.error(tratarErroApi(error, "Não foi possível alocar o funcionário.").mensagem);
     } finally {
       setSalvando(false);
     }

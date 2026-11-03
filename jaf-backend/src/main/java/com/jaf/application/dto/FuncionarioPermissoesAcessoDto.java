@@ -8,6 +8,7 @@ public class FuncionarioPermissoesAcessoDto {
     private Long funcionarioId;
     private Cargo cargo;
     private List<String> permissoes;
+    private boolean personalizada;
 
     public FuncionarioPermissoesAcessoDto() {
     }
@@ -17,6 +18,12 @@ public class FuncionarioPermissoesAcessoDto {
         this.cargo = cargo;
         this.permissoes = permissoes;
     }
+    public FuncionarioPermissoesAcessoDto(Long funcionarioId, Cargo cargo, List<String> permissoes, boolean personalizada) {
+        this(funcionarioId, cargo, permissoes);
+        this.personalizada = personalizada;
+    }
+    public boolean isPersonalizada() { return personalizada; }
+    public void setPersonalizada(boolean personalizada) { this.personalizada = personalizada; }
 
     public Long getFuncionarioId() {
         return funcionarioId;

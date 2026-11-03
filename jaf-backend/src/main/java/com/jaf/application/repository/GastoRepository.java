@@ -17,6 +17,7 @@ public interface GastoRepository extends JpaRepository<Gasto, Long>, org.springf
     List<Gasto> findByObraIdIn(Collection<Long> obraIds);
     List<Gasto> findByObraIdAndEtapa(Long obraId, String etapa);
     List<Gasto> findByObraIdAndMetodoPagamento(Long obraId, String metodoPagamento);
+    List<Gasto> findByObraIdAndReembolsavelTrue(Long obraId);
     List<Gasto> findByObraIdAndReembolsoConcluidoIsNotNull(Long obraId);
 
     Page<Gasto> findByObraId(Long obraId, Pageable pageable);

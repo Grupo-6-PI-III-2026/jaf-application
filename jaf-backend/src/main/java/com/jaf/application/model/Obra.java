@@ -1,8 +1,11 @@
 package com.jaf.application.model;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.math.BigDecimal;
 
 @Entity
 @com.fasterxml.jackson.databind.annotation.JsonSerialize(using = com.jaf.application.config.ObraSerializer.class)
@@ -12,7 +15,8 @@ public class Obra {
     private Long id;
 
     private String titulo;
-    private String orcamento;
+    @Column(nullable = false, precision = 19, scale = 2)
+    private BigDecimal orcamento = BigDecimal.ZERO;
     private String status;
 
     @Column(nullable = false, precision = 19, scale = 2)
@@ -23,6 +27,27 @@ public class Obra {
 
     private LocalDate dtInicio;
     private LocalDate dtTerminoPrevisto;
+
+    @Version
+    @Column(nullable = false)
+    @JsonIgnore
+    private Long versao;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    @JsonIgnore
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    @JsonIgnore
+    private LocalDateTime updatedAt;
+
+    @Column(name = "created_by")
+    @JsonIgnore
+    private Long createdBy;
+
+    @Column(name = "updated_by")
+    @JsonIgnore
+    private Long updatedBy;
 
     public Long getId() {
         return id;
@@ -40,12 +65,39 @@ public class Obra {
         this.titulo = titulo;
     }
 
-    public String getOrcamento() {
+    public BigDecimal getOrcamento() {
         return orcamento;
     }
 
-    public void setOrcamento(String orcamento) {
+    public void setOrcamento(BigDecimal orcamento) {
         this.orcamento = orcamento;
+    }
+
+    public void setOrcamento(String orcamento) {
+        this.orcamento = orcamento == null ? null : new BigDecimal(orcamento);
+    }
+
+    public Long getVersao() { return versao; }
+    public void setVersao(Long versao) { this.versao = versao; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public Long getCreatedBy() { return createdBy; }
+    public void setCreatedBy(Long createdBy) { this.createdBy = createdBy; }
+    public Long getUpdatedBy() { return updatedBy; }
+    public void setUpdatedBy(Long updatedBy) { this.updatedBy = updatedBy; }
+
+    @PrePersist
+    protected void onCreate() {
+        LocalDateTime now = LocalDateTime.now();
+        if (createdAt == null) createdAt = now;
+        if (updatedAt == null) updatedAt = now;
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
     }
 
     public String getStatus() {

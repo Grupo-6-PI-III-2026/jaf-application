@@ -18,6 +18,7 @@ import ControlePresenca from "../ControlePresenca/ControlePresenca";
 import { obraService, type Obra } from "../../Service/Obras/obraService";
 import { gastoService, type Gasto, type StatusReembolso } from "../../Service/Gastos/gastoService";
 import { ocrService } from "../../Service/Gastos/ocrService";
+import { notaFiscalService } from "../../Service/NotasFiscais/notaFiscalService";
 import { alocacaoService, type AlocacaoObra } from "../../Service/Alocacoes/alocacaoService";
 import { authService } from "../../Service/Auth/Login/authService";
 import PeriodoFiltro from "../../Components/PeriodoFiltro/PeriodoFiltro";
@@ -31,8 +32,11 @@ import { toast } from "sonner";
 import { Responsive } from "../../Components/Responsive/Responsive";
 import FinanceiroObra from "../../Components/Financeiro/FinanceiroObra";
 import ReembolsoModal from "../../Components/Financeiro/ReembolsoModal";
+import NotasFiscaisGasto from "../../Components/NotasFiscais/NotasFiscaisGasto";
 import ResumoReembolsos from "../../Components/Financeiro/ResumoReembolsos";
+import ExportarGastosModal from "../../Components/ExportarGastos/ExportarGastosModal";
 import { dataValida, erroApi, valorDecimal } from "../../Utils/financeiro";
+import { logger } from "../../Utils/logger";
 
 const formatarMoeda = (valor: number) =>
   valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -127,6 +131,7 @@ export default function DetalhamentoObras() {
   const [modalGastoAberto, setModalGastoAberto] = useState(false);
   const [modalEdicaoAberto, setModalEdicaoAberto] = useState(false);
   const [modalDeleteAberto, setModalDeleteAberto] = useState(false);
+  const [modalExportacaoAberto, setModalExportacaoAberto] = useState(false);
   const [salvandoGasto, setSalvandoGasto] = useState(false);
   const [salvandoObra, setSalvandoObra] = useState(false);
   const [deletandoObra, setDeletandoObra] = useState(false);
@@ -146,6 +151,8 @@ export default function DetalhamentoObras() {
   const [notaFiscalArquivo, setNotaFiscalArquivo] = useState<File | null>(null);
   const [processandoNotaFiscal, setProcessandoNotaFiscal] = useState(false);
   const [mensagemNotaFiscal, setMensagemNotaFiscal] = useState<string | null>(null);
+  const [numeroNotaFiscal, setNumeroNotaFiscal] = useState("");
+  const [cnpjNotaFiscal, setCnpjNotaFiscal] = useState("");
   const [novoGasto, setNovoGasto] = useState({
     descricao: "",
     categoria: "MATERIAL",
@@ -182,6 +189,7 @@ export default function DetalhamentoObras() {
   const podeVisualizarGastos = authService.hasAuthority("VISUALIZAR_GASTOS");
   const podeVisualizarAlocacoes = authService.hasAuthority("VISUALIZAR_ALOCACOES");
   const podeRegistrarPresenca = authService.hasAuthority("VISUALIZAR_PRESENCAS");
+  const podeGerarRelatorio = authService.hasAuthority("GERAR_RELATORIO");
 
   const carregarDados = useCallback(async () => {
       try {
@@ -220,7 +228,7 @@ export default function DetalhamentoObras() {
           }));
         }
       } catch (error) {
-        console.error("Erro ao carregar dados:", error);
+        logger.erro("Erro ao carregar dados da obra", error);
         toast.error("Erro ao carregar detalhes da obra");
       } finally {
         setCarregando(false);
@@ -322,6 +330,26 @@ export default function DetalhamentoObras() {
   function limparNotaFiscal() {
     setNotaFiscalArquivo(null);
     setMensagemNotaFiscal(null);
+    setNumeroNotaFiscal("");
+    setCnpjNotaFiscal("");
+  }
+
+  function selecionarNotaFiscal(arquivo: File | null) {
+    if (!arquivo) {
+      setNotaFiscalArquivo(null);
+      return;
+    }
+    const tiposAceitos = ["application/pdf", "image/jpeg", "image/png", "image/gif", "image/bmp", "image/tiff", "image/webp"];
+    if (arquivo.size > 10 * 1024 * 1024) {
+      toast.error("A nota fiscal deve ter no máximo 10 MB.");
+      return;
+    }
+    if (!tiposAceitos.includes(arquivo.type)) {
+      toast.error("Envie uma nota fiscal em PDF, JPG ou PNG.");
+      return;
+    }
+    setNotaFiscalArquivo(arquivo);
+    setMensagemNotaFiscal(null);
   }
 
   function fecharModalGasto() {
@@ -369,7 +397,7 @@ export default function DetalhamentoObras() {
       fecharModalEdicao();
       toast.success("Obra atualizada com sucesso");
     } catch (error) {
-      console.error("Erro ao atualizar obra:", error);
+      logger.erro("Erro ao atualizar obra", error);
       toast.error(erroApi(error, "Não foi possível atualizar a obra"));
     } finally {
       setSalvandoObra(false);
@@ -406,8 +434,22 @@ export default function DetalhamentoObras() {
         funcionarioId: Number(novoGasto.funcionarioId),
         obraId: obra.id,
       };
-      if (gastoEditando) await gastoService.atualizar(gastoEditando.id, payload);
-      else await gastoService.criar(payload);
+      const gastoSalvo = gastoEditando
+        ? await gastoService.atualizar(gastoEditando.id, payload)
+        : await gastoService.criar(payload);
+      if (notaFiscalArquivo) {
+        try {
+          await notaFiscalService.anexar(gastoSalvo.id, notaFiscalArquivo, {
+            numero: numeroNotaFiscal,
+            cnpjEmitente: cnpjNotaFiscal,
+          });
+        } catch {
+          setGastoEditando(gastoSalvo);
+          setMensagemNotaFiscal("O gasto foi salvo, mas a nota não foi anexada. Tente novamente.");
+          toast.warning("Gasto salvo. Não foi possível anexar a nota fiscal.");
+          return;
+        }
+      }
       setRevisaoFinanceira((r) => r + 1);
       setModalGastoAberto(false);
       setGastoEditando(null);
@@ -424,7 +466,7 @@ export default function DetalhamentoObras() {
       });
       toast.success(gastoEditando ? "Gasto atualizado" : "Gasto adicionado à obra");
     } catch (error) {
-      console.error("Erro ao cadastrar gasto:", error);
+      logger.erro("Erro ao cadastrar gasto", error);
       toast.error(erroApi(error, "Não foi possível salvar o gasto"));
     } finally {
       setSalvandoGasto(false);
@@ -465,7 +507,7 @@ export default function DetalhamentoObras() {
       setMensagemNotaFiscal(resultado.mensagem);
       toast.success("Campos preenchidos a partir da nota fiscal");
     } catch (error) {
-      console.error("Erro ao processar nota fiscal:", error);
+      logger.erro("Erro ao processar nota fiscal", error);
       toast.error("Não foi possível processar a nota fiscal");
     } finally {
       setProcessandoNotaFiscal(false);
@@ -534,7 +576,7 @@ export default function DetalhamentoObras() {
       toast.success("Obra excluída com sucesso");
       navegar("/home");
     } catch (error) {
-      console.error("Erro ao deletar obra:", error);
+      logger.erro("Erro ao deletar obra", error);
       if (isAxiosError(error) && error.response?.status === 409) {
         setModalDeleteAberto(false);
         toast.error("Não é possível excluir esta obra pois existem alocações vinculadas a ela. Remova as alocações antes de excluir a obra.");
@@ -677,9 +719,17 @@ export default function DetalhamentoObras() {
                   <input
                     type="file"
                     accept="image/jpeg,image/png,image/gif,image/bmp,image/tiff,image/webp,application/pdf"
-                    onChange={(evento) => setNotaFiscalArquivo(evento.target.files?.[0] ?? null)}
+                    onChange={(evento) => selecionarNotaFiscal(evento.target.files?.[0] ?? null)}
                   />
                 </label>
+                  <label>
+                    Número (opcional)
+                    <input value={numeroNotaFiscal} onChange={(evento) => setNumeroNotaFiscal(evento.target.value)} maxLength={50} />
+                  </label>
+                  <label>
+                    CNPJ do emitente (opcional)
+                    <input value={cnpjNotaFiscal} onChange={(evento) => setCnpjNotaFiscal(evento.target.value)} maxLength={18} />
+                  </label>
                 <button
                   type="button"
                   className={styles.botaoProcessarNota}
@@ -928,6 +978,11 @@ export default function DetalhamentoObras() {
                 Ver estatísticas
               </button>
             )}
+            {podeGerarRelatorio && (
+              <button type="button" className={styles.botaoSecundario} onClick={() => setModalExportacaoAberto(true)}>
+                Exportar
+              </button>
+            )}
           </div>
           <div className={styles.toolbar} role="group" aria-label="Filtros de gastos">
             <label className={`${styles.campoFiltro} ${styles.campoBusca}`}>
@@ -1040,6 +1095,7 @@ export default function DetalhamentoObras() {
                       </div>
                     </dl>
                     {renderizarAcoesGasto(gasto)}
+                    <NotasFiscaisGasto gastoId={gasto.id} podeExcluir={admin} />
                   </li>
                 ))
               ) : (
@@ -1095,7 +1151,10 @@ export default function DetalhamentoObras() {
                     <td>{gasto.etapa || "-"}</td>
                     <td>{gasto.categoria || "-"}</td>
                     <td>{formatarData(gasto.dtGasto)}</td>
-                    <td>{renderizarAcoesGasto(gasto)}</td>
+                    <td>
+                      {renderizarAcoesGasto(gasto)}
+                      <NotasFiscaisGasto gastoId={gasto.id} podeExcluir={admin} />
+                    </td>
                   </tr>
                 ))
               ) : (
@@ -1150,6 +1209,19 @@ export default function DetalhamentoObras() {
         </div>}
       </div>
       </>}
+      {modalExportacaoAberto && obra && (
+        <ExportarGastosModal
+          obraId={obra.id}
+          periodoInicial={(() => {
+            const intervalo = resolverPeriodo(periodoFinanceiro);
+            return { from: intervalo.from ?? "", to: intervalo.to ?? "" };
+          })()}
+          funcionarioId={filtroPessoa ? Number(filtroPessoa) : undefined}
+          metodoPagamento={filtroMetodoPagamento === "TODOS" ? undefined : filtroMetodoPagamento}
+          statusReembolso={filtroStatus || undefined}
+          onClose={() => setModalExportacaoAberto(false)}
+        />
+      )}
     </div>
   );
 }

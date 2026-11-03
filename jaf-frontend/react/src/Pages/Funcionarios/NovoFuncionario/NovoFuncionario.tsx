@@ -17,10 +17,11 @@ import {
   funcionarioService
 } from "../../../Service/Funcionarios/funcionarioService";
 import { toast } from "sonner";
-import { AxiosError } from "axios";
 import {type CargoApi } from "../../../Types/Register"
 import { authService } from "../../../Service/Auth/Login/authService";
-import { erroApi } from "../../../Utils/financeiro";
+import { tratarErroApi } from "../../../Utils/erro";
+import { logger } from "../../../Utils/logger";
+import { validarEmail, validarNome, validarSenha } from "../../../Utils/validacao";
 
 interface ErrosFormulario {
   nome?: string;
@@ -46,30 +47,11 @@ export default function NovoFuncionario() {
     { label: "Engenheiro", value: "ENGENHEIRO" },
   ];
 
-  const emailRegex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
-
   const validateInputs = () => {
     const nextErrors: ErrosFormulario = {};
-
-    if (!nome.trim()) {
-      nextErrors.nome = "O nome completo é obrigatório.";
-    } else if (!/^[a-zA-ZÀ-ÿ\s]+$/.test(nome)) {
-      nextErrors.nome = "O nome do usuário contém caracteres inválidos.";
-    }
-
-    if (!emailRegex.test(email)) {
-      nextErrors.email = "Use um formato de e-mail corporativo válido.";
-    }
-
-    const hasMinLength = senha.length >= 8;
-    const hasUpper = /[A-Z]/.test(senha);
-    const hasLower = /[a-z]/.test(senha);
-    const hasSpecial = /[^A-Za-z0-9]/.test(senha);
-
-    if (!hasMinLength || !hasUpper || !hasLower || !hasSpecial) {
-      nextErrors.senha =
-        "A senha precisa de 8 caracteres, 1 maiúscula, 1 minúscula e 1 especial.";
-    }
+    nextErrors.nome = validarNome(nome);
+    nextErrors.email = validarEmail(email);
+    nextErrors.senha = validarSenha(senha);
 
     if (!cargo || (cargo === "ADMIN" && !authService.isAdmin())) {
       nextErrors.cargo = "Selecione uma função para o funcionário.";
@@ -104,21 +86,11 @@ export default function NovoFuncionario() {
       setSenha("");
       setCargo("");
     } catch (error: unknown) {
-      console.error("Erro na API:", error);
+      logger.erro("Erro ao cadastrar funcionário", error);
 
-      if (error instanceof AxiosError) {
-        if (error.code === "ERR_NETWORK") {
-          toast.error("Servidor indisponível. Tente novamente mais tarde.");
-        } else if (error.response?.status === 400) {
-          toast.error(erroApi(error, "Dados inválidos. Verifique as informações e tente novamente."));
-        } else if (error.response?.status === 409) {
-          toast.error("Já existe um funcionário cadastrado com este e-mail.");
-        } else {
-          toast.error("Erro inesperado. Tente novamente.");
-        }
-      } else {
-        toast.error("Erro ao cadastrar funcionário. Tente novamente.");
-      }
+      const resultado = tratarErroApi(error, "Erro ao cadastrar funcionário. Tente novamente.");
+      setErrors((atual) => ({ ...atual, ...resultado.campos }));
+      toast.error(resultado.mensagem);
     } finally {
       enviandoRef.current = false;
       setIsLoading(false);

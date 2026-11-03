@@ -18,7 +18,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "spring.datasource.driver-class-name=org.h2.Driver", "spring.datasource.username=sa", "spring.datasource.password=",
         "spring.flyway.enabled=false", "spring.jpa.hibernate.ddl-auto=create-drop", "app.seed.enabled=false",
         "spring.rabbitmq.listener.simple.auto-startup=false",
-        "spring.rabbitmq.host=127.0.0.1", "spring.rabbitmq.port=1"
+        "spring.rabbitmq.host=127.0.0.1", "spring.rabbitmq.port=1",
+        "management.endpoint.health.probes.enabled=true",
+        "management.endpoint.health.group.liveness.include=livenessState",
+        "management.endpoint.health.group.readiness.include=readinessState,db"
 })
 @AutoConfigureMockMvc
 class HealthCheckApiTest {

@@ -45,7 +45,7 @@ public class DashboardService {
         Obra obra = obraRepository.findById(obraId)
                 .orElseThrow(() -> new NotFoundException("Obra não encontrada."));
 
-        BigDecimal orcamento = parseOrcamento(obra.getOrcamento());
+        BigDecimal orcamento = obra.getOrcamento();
 
         List<Gasto> todosGastos = gastoRepository.findByObraId(obraId);
         List<Gasto> gastosPeriodo = todosGastos.stream()
@@ -68,7 +68,7 @@ public class DashboardService {
 
         // StatCard 2: reembolsos pendentes (filtrado pela etapa e período)
         List<Gasto> reembolsos = gastosPeriodo.stream()
-            .filter(g -> "REEMBOLSO".equals(g.getMetodoPagamento()))
+            .filter(Gasto::isReembolsavel)
             .filter(g -> "TODAS".equals(etapa) || etapa.equals(g.getEtapa()))
             .toList();
 
@@ -139,14 +139,6 @@ public class DashboardService {
         return parte.multiply(BigDecimal.valueOf(100))
                 .divide(total, 0, RoundingMode.HALF_UP)
                 .intValue();
-    }
-
-    private BigDecimal parseOrcamento(String orcamento) {
-        try {
-            return new BigDecimal(orcamento);
-        } catch (NumberFormatException | NullPointerException e) {
-            return BigDecimal.ZERO;
-        }
     }
 
     private boolean dentroDoPeriodo(LocalDate data, LocalDate from, LocalDate to) {

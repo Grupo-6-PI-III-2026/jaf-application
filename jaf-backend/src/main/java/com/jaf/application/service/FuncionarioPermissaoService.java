@@ -9,7 +9,7 @@ import com.jaf.application.model.Funcionario;
 import com.jaf.application.model.FuncionarioPermissao;
 import com.jaf.application.repository.FuncionarioPermissaoRepository;
 import com.jaf.application.repository.FuncionarioRepository;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.util.EnumSet;
@@ -35,15 +35,14 @@ public class FuncionarioPermissaoService {
 
     public List<Permissao> permissoesDoFuncionario(Funcionario funcionario) {
         List<FuncionarioPermissao> permissoesCustomizadas = permissaoRepository.findByFuncionarioId(funcionario.getId());
-        if (!permissoesCustomizadas.isEmpty()) {
+        if (funcionario.isPermissoesPersonalizadas()) {
             return permissoesCustomizadas.stream()
                     .map(FuncionarioPermissao::getPermissao)
                     .distinct()
                     .toList();
         }
 
-        Cargo cargo = funcionario.getCargoGlobal() != null ? funcionario.getCargoGlobal() : Cargo.ENGENHEIRO;
-        return cargoPermissaoService.permissoesPorCargo(cargo);
+        return cargoPermissaoService.permissoesPorCargo(funcionario.getCargoGlobal());
     }
 
     public FuncionarioPermissoesAcessoDto buscar(Long funcionarioId) {
@@ -52,14 +51,14 @@ public class FuncionarioPermissaoService {
         return new FuncionarioPermissoesAcessoDto(
                 funcionario.getId(),
                 funcionario.getCargoGlobal(),
-                nomes(permissoesDoFuncionario(funcionario))
+                nomes(permissoesDoFuncionario(funcionario)), funcionario.isPermissoesPersonalizadas()
         );
     }
 
     public FuncionarioPermissoesAcessoDto minhasPermissoes() {
         Funcionario funcionario = acesso.atual();
         return new FuncionarioPermissoesAcessoDto(
-                funcionario.getId(), funcionario.getCargoGlobal(), nomes(permissoesDoFuncionario(funcionario)));
+                funcionario.getId(), funcionario.getCargoGlobal(), nomes(permissoesDoFuncionario(funcionario)), funcionario.isPermissoesPersonalizadas());
     }
 
     @Transactional
@@ -79,6 +78,11 @@ public class FuncionarioPermissaoService {
             }
         }
 
+        EnumSet<Permissao> padrao = EnumSet.noneOf(Permissao.class);
+        padrao.addAll(cargoPermissaoService.permissoesPorCargo(funcionario.getCargoGlobal()));
+        boolean igualAoPadrao = padrao.equals(permissoesValidadas);
+        funcionario.setPermissoesPersonalizadas(!igualAoPadrao);
+        funcionario.setTokenVersion(funcionario.getTokenVersion() + 1);
         permissaoRepository.deleteByFuncionarioId(funcionarioId);
         permissaoRepository.flush();
         permissaoRepository.saveAll(permissoesValidadas.stream()
@@ -88,7 +92,7 @@ public class FuncionarioPermissaoService {
         return new FuncionarioPermissoesAcessoDto(
                 funcionario.getId(),
                 funcionario.getCargoGlobal(),
-                nomes(permissoesValidadas.stream().toList())
+                nomes(permissoesValidadas.stream().toList()), funcionario.isPermissoesPersonalizadas()
         );
     }
 

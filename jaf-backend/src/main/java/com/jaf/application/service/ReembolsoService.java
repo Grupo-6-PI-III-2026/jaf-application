@@ -12,8 +12,11 @@ import com.jaf.application.repository.GastoRepository;
 import com.jaf.application.repository.PagamentoReembolsoRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.lang.Nullable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Clock;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -24,9 +27,20 @@ public class ReembolsoService {
     private final GastoRepository gastos;
     private final PagamentoReembolsoRepository pagamentos;
     private final AcessoObraService acesso;
+    private final Clock businessClock;
 
+    @Autowired
+    public ReembolsoService(GastoRepository gastos, PagamentoReembolsoRepository pagamentos, AcessoObraService acesso,
+                             @Nullable Clock businessClock) {
+        this.gastos = gastos;
+        this.pagamentos = pagamentos;
+        this.acesso = acesso;
+        this.businessClock = businessClock != null
+                ? businessClock
+                : Clock.system(java.time.ZoneId.of("America/Sao_Paulo"));
+    }
     public ReembolsoService(GastoRepository gastos, PagamentoReembolsoRepository pagamentos, AcessoObraService acesso) {
-        this.gastos = gastos; this.pagamentos = pagamentos; this.acesso = acesso;
+        this(gastos, pagamentos, acesso, Clock.system(java.time.ZoneId.of("America/Sao_Paulo")));
     }
 
     @Transactional(readOnly = true)
@@ -34,6 +48,32 @@ public class ReembolsoService {
         Gasto gasto = gastos.findById(id).orElseThrow(() -> new NotFoundException("Gasto não encontrado."));
         acesso.exigirObra(gasto.getObra().getId());
         exigirReembolso(gasto);
+        return resposta(gasto);
+    }
+
+    public Long obraId(Long gastoId) {
+        return gastos.findById(gastoId)
+                .orElseThrow(() -> new NotFoundException("Gasto não encontrado."))
+                .getObra().getId();
+    }
+
+    @Transactional
+    public ReembolsoResponse estornar(Long gastoId, Long pagamentoId, String motivo) {
+        Gasto gasto = gastos.buscarParaAtualizar(gastoId)
+                .orElseThrow(() -> new NotFoundException("Gasto não encontrado."));
+        acesso.exigirAdmin();
+        PagamentoReembolso pagamento = pagamentos.findById(pagamentoId)
+                .orElseThrow(() -> new NotFoundException("Pagamento não encontrado."));
+        if (!pagamento.getGasto().getId().equals(gastoId)) {
+            throw new BadRequest("Pagamento não pertence ao gasto informado.");
+        }
+        if (pagamento.getCanceladoEm() != null) {
+            throw new BadRequest("Pagamento já foi estornado.");
+        }
+        pagamento.setCanceladoEm(java.time.LocalDateTime.now());
+        pagamento.setCanceladoPor(acesso.atual().getId());
+        pagamento.setMotivoCancelamento(motivo);
+        pagamentos.saveAndFlush(pagamento);
         return resposta(gasto);
     }
 
@@ -46,7 +86,7 @@ public class ReembolsoService {
         BigDecimal valor = request.valor();
         if (valor == null || valor.signum() <= 0 || valor.scale() > 2 || valor.precision() - valor.scale() > 17)
             throw new BadRequest("Pagamento deve ser positivo, com até duas casas decimais.");
-        if (request.dataPagamento() == null || request.dataPagamento().isAfter(LocalDate.now())
+        if (request.dataPagamento() == null || request.dataPagamento().isAfter(LocalDate.now(businessClock))
                 || (gasto.getDtGasto() != null && request.dataPagamento().isBefore(gasto.getDtGasto())))
             throw new BadRequest("Data de pagamento deve estar entre a data do gasto e hoje.");
         if (request.observacao() != null && request.observacao().length() > 1000)
@@ -91,13 +131,16 @@ public class ReembolsoService {
     }
 
     private void exigirReembolso(Gasto gasto) {
-        if (!"REEMBOLSO".equals(gasto.getMetodoPagamento())) throw new BadRequest("Gasto não é um reembolso.");
+        if (!gasto.isReembolsavel()) throw new BadRequest("Gasto não é um reembolso.");
     }
 
     private ReembolsoResponse resposta(Gasto gasto) {
-        var lista = pagamentos.findByGastoIdOrderByDataPagamentoAscIdAsc(gasto.getId());
+        var todos = pagamentos.findByGastoIdOrderByDataPagamentoAscIdAsc(gasto.getId());
+        var lista = todos.stream().filter(p -> p.getCanceladoEm() == null).toList();
+        var estornos = todos.stream().filter(p -> p.getCanceladoEm() != null).toList();
         BigDecimal pago = lista.stream().map(PagamentoReembolso::getValor).reduce(BigDecimal.ZERO, BigDecimal::add);
         return new ReembolsoResponse(gasto.getId(), gasto.getValor(), pago, gasto.getValor().subtract(pago), status(gasto.getValor(), pago),
-                lista.stream().map(p -> new ReembolsoResponse.Pagamento(p.getId(), p.getValor(), p.getDataPagamento(), p.getObservacao())).toList());
+                lista.stream().map(p -> new ReembolsoResponse.Pagamento(p.getId(), p.getValor(), p.getDataPagamento(), p.getObservacao())).toList(),
+                estornos.stream().map(p -> new ReembolsoResponse.Estorno(p.getId(), p.getValor(), p.getCanceladoEm(), p.getMotivoCancelamento())).toList());
     }
 }

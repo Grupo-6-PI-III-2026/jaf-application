@@ -35,4 +35,11 @@ public class AutenticacaoService implements UserDetailsService {
             funcionarioPermissaoService.permissoesDoFuncionario(funcionario)
         );
     }
+
+    public UserDetails loadUserById(Long id) throws UsernameNotFoundException {
+        Funcionario funcionario = funcionarioRepository.findById(id)
+                .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado"));
+        return new FuncionarioDetalhesDto(funcionario,
+                funcionarioPermissaoService.permissoesDoFuncionario(funcionario));
+    }
 }

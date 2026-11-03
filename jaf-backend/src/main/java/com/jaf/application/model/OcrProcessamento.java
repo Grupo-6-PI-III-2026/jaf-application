@@ -74,6 +74,11 @@ public class OcrProcessamento {
         return textoBruto;
     }
 
+    public void limparTextoBruto() {
+        this.textoBruto = null;
+        this.atualizadoEm = LocalDateTime.now();
+    }
+
     public String getMensagemErro() {
         return mensagemErro;
     }

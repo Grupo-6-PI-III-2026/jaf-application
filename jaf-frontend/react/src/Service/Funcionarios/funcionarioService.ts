@@ -44,8 +44,8 @@ export const funcionarioService = {
     await api.patch("/funcionarios/me/senha", payload);
   },
 
-  excluirConta: async (): Promise<void> => {
-    await api.delete("/funcionarios/me");
+  excluirConta: async (senhaAtual: string): Promise<void> => {
+    await api.delete("/funcionarios/me", { data: { senhaAtual } });
   },
 
   deletar: async (id: number): Promise<void> => {

@@ -9,11 +9,11 @@ public class AlterarSenhaDto {
     private String senhaAtual;
 
     @Pattern(
-            regexp = "^(?=.*[A-Z])(?=.*[a-z])(?=.*\\d).{6,}$",
-            message = "Senha deve ter pelo menos 1 letra maiuscula, 1 minuscula e 1 numero"
+        regexp = "^(?=.*[A-Z])(?=.*[a-z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$",
+        message = "Senha deve ter no mínimo 8 caracteres, incluindo 1 maiúscula, 1 minúscula, 1 número e 1 caractere especial"
     )
         @NotBlank(message = "Nova senha obrigatoria")
-        @Size(min = 6, max = 100, message = "Nova senha deve ter entre 6 e 100 caracteres")
+    @Size(min = 8, max = 100, message = "Nova senha deve ter entre 8 e 100 caracteres")
     private String novaSenha;
 
         @NotBlank(message = "Confirmacao de senha obrigatoria")

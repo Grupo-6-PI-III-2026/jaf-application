@@ -1,4 +1,4 @@
-import { isAxiosError } from "axios";
+import { tratarErroApi } from "./erro";
 
 export const moeda = (valor: number) =>
   valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -25,9 +25,5 @@ export function dataValida(data: string, hoje: string, inicio?: string): boolean
 }
 
 export function erroApi(erro: unknown, padrao: string): string {
-  if (isAxiosError<{ message?: string; mensagem?: string; detail?: string }>(erro)) {
-    const body = erro.response?.data;
-    return body?.message || body?.mensagem || body?.detail || padrao;
-  }
-  return padrao;
+  return tratarErroApi(erro, padrao).mensagem;
 }

@@ -1,7 +1,9 @@
 package com.jaf.application.controller;
 
 import com.jaf.application.config.GerenciadorTokenJwt;
+import com.jaf.application.config.CookieProperties;
 import com.jaf.application.dto.FuncionarioDto;
+import com.jaf.application.dto.FuncionarioUpdateRequest;
 import com.jaf.application.dto.FuncionarioListarDto;
 import com.jaf.application.dto.FuncionarioLoginDto;
 import com.jaf.application.dto.FuncionarioResponseDto;
@@ -16,11 +18,17 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import com.jaf.application.config.ClientIpResolver;
+import com.jaf.application.exceptions.TooManyRequests;
+import com.jaf.application.service.LoginAttemptService;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.*;
 
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -28,29 +36,50 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/funcionarios")
-@SecurityRequirement(name = "Bearer")
+@SecurityRequirement(name = "cookieAuth")
 public class FuncionarioController {
     private final FuncionarioService funcionarioService;
     private final FuncionarioPermissaoService funcionarioPermissaoService;
     private final AuthenticationManager authenticationManager;
     private final GerenciadorTokenJwt gerenciadorTokenJwt;
+    private final CookieProperties cookieProperties;
+    private final LoginAttemptService loginAttempts;
+    private final ClientIpResolver clientIpResolver;
 
     public FuncionarioController(
             FuncionarioService funcionarioService,
             FuncionarioPermissaoService funcionarioPermissaoService,
             AuthenticationManager authenticationManager,
-            GerenciadorTokenJwt gerenciadorTokenJwt) {
+            GerenciadorTokenJwt gerenciadorTokenJwt,
+            CookieProperties cookieProperties,
+            LoginAttemptService loginAttempts,
+            ClientIpResolver clientIpResolver) {
         this.funcionarioService = funcionarioService;
         this.funcionarioPermissaoService = funcionarioPermissaoService;
         this.authenticationManager = authenticationManager;
         this.gerenciadorTokenJwt = gerenciadorTokenJwt;
+        this.cookieProperties = cookieProperties;
+        this.loginAttempts = loginAttempts;
+        this.clientIpResolver = clientIpResolver;
     }
 
     @PostMapping("/login")
-    public ResponseEntity<FuncionarioTokenDto> login(@Valid @RequestBody FuncionarioLoginDto loginDto, HttpServletResponse response) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginDto.getEmail(), loginDto.getSenha())
-        );
+    public ResponseEntity<FuncionarioTokenDto> login(@Valid @RequestBody FuncionarioLoginDto loginDto,
+                                                     HttpServletResponse response, HttpServletRequest request) {
+        String email = loginDto.getEmail().trim().toLowerCase(java.util.Locale.ROOT);
+        String ip = clientIpResolver.resolve(request);
+        if (loginAttempts.bloqueado(ip, email)) {
+            throw new TooManyRequests("Muitas tentativas. Aguarde alguns minutos e tente novamente.");
+        }
+        Authentication authentication;
+        try {
+            authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(email, loginDto.getSenha()));
+            loginAttempts.limpar(ip, email);
+        } catch (BadCredentialsException ex) {
+            loginAttempts.registrarFalha(ip, email);
+            throw ex;
+        }
         
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String token = gerenciadorTokenJwt.generateToken(authentication);
@@ -58,13 +87,7 @@ public class FuncionarioController {
         // CORREÇÃO DE SEGURANÇA A07: Envio de token via cookie HttpOnly em vez de no corpo da resposta
         // Antes: return ResponseEntity.ok(new FuncionarioTokenDto(loginDto.getEmail(), token));
         // Agora: Token enviado via cookie com flags de segurança
-        Cookie jwtCookie = new Cookie("jwt", token);
-        jwtCookie.setHttpOnly(true);      // Não acessível via JavaScript (proteção contra XSS)
-        // Secure deve ser true em produção (HTTPS), false em desenvolvimento (HTTP)
-        jwtCookie.setSecure(false);       // Ajustado para desenvolvimento (localhost sem HTTPS)
-        jwtCookie.setPath("/");            // Disponível em todo o domínio
-        jwtCookie.setMaxAge(3600);         // 1 hora de validade (mesma configuração do JWT)
-        response.addCookie(jwtCookie);
+        response.addHeader("Set-Cookie", construirCookie(token).toString());
         
         // Busca informações do funcionário para retornar no DTO (sem o token)
         var funcionario = funcionarioService.buscarPorEmail(loginDto.getEmail());
@@ -73,23 +96,30 @@ public class FuncionarioController {
         dto.setNome(funcionario.getNome());
         dto.setId(funcionario.getId());
         dto.setCargo(funcionario.getCargoGlobal());
-        dto.setToken(null); // Token está no cookie, não no corpo da resposta
-        
         return ResponseEntity.ok(dto);
     }
 
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(HttpServletResponse response) {
         // CORREÇÃO DE SEGURANÇA A07: Limpa o cookie HttpOnly no logout
-        Cookie jwtCookie = new Cookie("jwt", "");
-        jwtCookie.setHttpOnly(true);
-        jwtCookie.setSecure(false);       // Ajustado para desenvolvimento (localhost sem HTTPS)
-        jwtCookie.setPath("/");
-        jwtCookie.setMaxAge(0); // Remove o cookie imediatamente
-        response.addCookie(jwtCookie);
+        response.addHeader("Set-Cookie", construirCookie("", java.time.Duration.ZERO).toString());
         
         SecurityContextHolder.clearContext();
         return ResponseEntity.noContent().build();
+    }
+
+    private ResponseCookie construirCookie(String token) {
+        return construirCookie(token, cookieProperties.maxAge());
+    }
+
+    private ResponseCookie construirCookie(String token, java.time.Duration maxAge) {
+        return ResponseCookie.from("jwt", token)
+                .httpOnly(true)
+                .secure(cookieProperties.secure())
+                .path("/")
+                .sameSite(cookieProperties.sameSite())
+                .maxAge(maxAge)
+                .build();
     }
 
     @PostMapping
@@ -112,7 +142,8 @@ public class FuncionarioController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('EDITAR_FUNCIONARIO')")
-    public ResponseEntity<FuncionarioResponseDto> atualizar(@PathVariable Long id, @Valid @RequestBody FuncionarioDto dto) {
+    public ResponseEntity<FuncionarioResponseDto> atualizar(@PathVariable Long id,
+                                                             @Valid @RequestBody FuncionarioUpdateRequest dto) {
         return ResponseEntity.ok(funcionarioService.atualizar(id, dto));
     }
 
@@ -139,9 +170,8 @@ public class FuncionarioController {
     @PreAuthorize("@acessoObraService.isAdmin()")
     public ResponseEntity<FuncionarioResponseDto> atualizarCargo(
             @PathVariable Long id,
-            @RequestBody java.util.Map<String, String> body) {
-        String novoCargo = body.get("cargo");
-        return ResponseEntity.ok(funcionarioService.atualizarCargo(id, novoCargo));
+            @Valid @RequestBody com.jaf.application.dto.AtualizarCargoDto body) {
+        return ResponseEntity.ok(funcionarioService.atualizarCargo(id, body.cargo().name()));
     }
 
     @GetMapping("/{id}/permissoes")
@@ -154,7 +184,7 @@ public class FuncionarioController {
     @PreAuthorize("@acessoObraService.isAdmin()")
     public ResponseEntity<FuncionarioPermissoesAcessoDto> atualizarPermissoes(
             @PathVariable Long id,
-            @RequestBody AtualizarCargoPermissoesDto dto) {
+            @Valid @RequestBody AtualizarCargoPermissoesDto dto) {
         return ResponseEntity.ok(funcionarioPermissaoService.atualizar(id, dto.getPermissoes()));
     }
 

@@ -1,0 +1,45 @@
+.container {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.titulo {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #495057;
+  font-weight: 600;
+}
+
+.nota {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.nota a {
+  overflow: hidden;
+  color: #495057;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nota small {
+  color: #6c757d;
+}
+
+.nota button {
+  display: inline-flex;
+  padding: 2px;
+  border: 0;
+  background: transparent;
+  color: #c82333;
+  cursor: pointer;
+}
+
+.erro {
+  color: #c82333;
+}

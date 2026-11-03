@@ -1,6 +1,7 @@
 package com.jaf.application.model;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -11,11 +12,11 @@ public class Presenca {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "funcionario_id")
     private Funcionario funcionario;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "obra_id")
     private Obra obra;
 
@@ -26,6 +27,19 @@ public class Presenca {
     private LocalTime horarioEntrada;
 
     private LocalTime horarioSaida;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    @JsonIgnore
+    private java.time.LocalDateTime createdAt;
+    @Column(name = "updated_at", nullable = false)
+    @JsonIgnore
+    private java.time.LocalDateTime updatedAt;
+    @Column(name = "created_by")
+    @JsonIgnore
+    private Long createdBy;
+    @Column(name = "updated_by")
+    @JsonIgnore
+    private Long updatedBy;
 
     public Long getId() {
         return id;
@@ -82,4 +96,23 @@ public class Presenca {
     public void setHorarioSaida(LocalTime horarioSaida) {
         this.horarioSaida = horarioSaida;
     }
+
+    public java.time.LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(java.time.LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public java.time.LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(java.time.LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public Long getCreatedBy() { return createdBy; }
+    public void setCreatedBy(Long createdBy) { this.createdBy = createdBy; }
+    public Long getUpdatedBy() { return updatedBy; }
+    public void setUpdatedBy(Long updatedBy) { this.updatedBy = updatedBy; }
+
+    @PrePersist
+    protected void onCreate() {
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        if (createdAt == null) createdAt = now;
+        if (updatedAt == null) updatedAt = now;
+    }
+
+    @PreUpdate
+    protected void onUpdate() { updatedAt = java.time.LocalDateTime.now(); }
 }

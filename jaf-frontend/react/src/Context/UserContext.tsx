@@ -8,6 +8,7 @@ import { funcionarioService } from "../Service/Funcionarios/funcionarioService";
 import { authService } from "../Service/Auth/Login/authService";
 import type { FuncionarioResponseDto } from "../Types/user";
 import { UserContext } from "./UserContextDefinition";
+import { logger } from "../Utils/logger";
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<FuncionarioResponseDto | null>(null);
@@ -55,7 +56,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       authService.clearAuthorization();
       setUser(null);
       setIsLoading(false);
-      console.error(err);
+      logger.erro("Erro ao carregar dados do usuário", err);
       // Cookie expirado/encerrado: tentar de novo não resolve, a rota privada volta ao login.
       if ((err as { response?: { status?: number } } | null)?.response?.status === 401) {
         authService.clearSession();

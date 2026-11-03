@@ -48,7 +48,7 @@ class AcessoFinanceiroTest {
         assertThrows(Forbidden.class, () -> acesso.exigirRegistroReembolso(1L));
         usuario.setCargoGlobal(Cargo.RESPONSAVEL_ADMINISTRATIVO);
         assertThrows(Forbidden.class, () -> acesso.exigirRegistroReembolso(1L));
-        when(alocacoes.existsByFuncionarioIdAndObraId(7L, 1L)).thenReturn(true);
+        when(alocacoes.existsAtiva(eq(7L), eq(1L), any())).thenReturn(true);
         assertDoesNotThrow(() -> acesso.exigirRegistroReembolso(1L));
         usuario.setCargoGlobal(Cargo.ADMIN);
         assertDoesNotThrow(() -> acesso.exigirRegistroReembolso(99L));
@@ -73,6 +73,9 @@ class AcessoFinanceiroTest {
             assertEquals("Obra", direto.get("titulo").asText());
         }
         usuario.setCargoGlobal(Cargo.ADMIN);
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("teste", "", List.of(
+                        new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMIN"))));
         assertTrue(mapper.readTree(mapper.writeValueAsString(obra)).has("orcamento"));
         assertTrue(mapper.readTree(mapper.writeValueAsString(gasto)).get("obra").has("totalRecebido"));
     }
@@ -86,7 +89,7 @@ class AcessoFinanceiroTest {
         var resultado = service.atualizar(1L, new ObraFinanceiroRequest(new BigDecimal("100.00")));
         assertEquals(new BigDecimal("30.00"), resultado.saldo());
         assertEquals(new BigDecimal("70.00"), resultado.totalGasto());
-        assertEquals("9999", obra.getOrcamento());
+        assertEquals(new BigDecimal("9999"), obra.getOrcamento());
         assertThrows(BadRequest.class, () -> service.atualizar(1L, new ObraFinanceiroRequest(new BigDecimal("-1"))));
     }
 }

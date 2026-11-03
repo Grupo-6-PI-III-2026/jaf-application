@@ -69,6 +69,9 @@ locals {
     db_password       = var.db_password
     jwt_secret        = var.jwt_secret
     jwt_expiration    = var.jwt_expiration
+    cookie_secure      = var.cookie_secure
+    bootstrap_admin_email    = var.bootstrap_admin_email
+    bootstrap_admin_password = var.bootstrap_admin_password
     rabbitmq_host     = local.rabbitmq_host
     rabbitmq_user     = var.rabbitmq_user
     rabbitmq_password = var.rabbitmq_password

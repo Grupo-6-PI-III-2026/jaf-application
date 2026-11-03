@@ -22,7 +22,7 @@ public class DashboardController {
     }
 
     @GetMapping("/stats")
-    @PreAuthorize("hasAuthority('VISUALIZAR_GASTOS')")
+    @PreAuthorize("hasAuthority('VISUALIZAR_GASTOS') and @acessoObraService.podeVerObra(#obraId)")
     public ResponseEntity<DashboardResponseDto> buscarStats(
             @RequestParam Long obraId,
             @RequestParam(defaultValue = "ETAPA 1") String etapa,

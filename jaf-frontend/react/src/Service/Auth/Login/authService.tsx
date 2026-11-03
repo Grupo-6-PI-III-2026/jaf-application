@@ -1,6 +1,7 @@
 import { type LoginCredentials, type LoginResponse } from "../../../Types/auth";
 import type { Cargo, JwtPayload } from "../../../Types/user";
 import api from "./Api/Api";
+import { logger } from "../../../Utils/logger";
 import axios from "axios";
 import { authorizationSession } from "./authorizationSession.ts";
 
@@ -33,7 +34,7 @@ export const authService = {
 
       return response.data;
     } catch (error: unknown) {
-      console.error("Erro ao fazer login:", error);
+      logger.erro("Erro ao fazer login", error);
 
       if (axios.isAxiosError(error) && error.code === "ERR_NETWORK") {
         throw new Error("Servidor indisponivel. Tente novamente mais tarde.");
@@ -57,7 +58,7 @@ export const authService = {
     try {
       await api.post("/funcionarios/logout");
     } catch (error) {
-      console.error("Erro ao fazer logout:", error);
+      logger.erro("Erro ao fazer logout", error);
     }
 
     window.location.replace("/");

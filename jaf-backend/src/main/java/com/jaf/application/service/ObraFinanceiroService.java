@@ -7,8 +7,11 @@ import com.jaf.application.exceptions.NotFoundException;
 import com.jaf.application.model.Obra;
 import com.jaf.application.repository.GastoRepository;
 import com.jaf.application.repository.ObraRepository;
+import com.jaf.application.repository.RecebimentoObraRepository;
+import com.jaf.application.model.RecebimentoObra;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
 import java.math.BigDecimal;
 
 @Service
@@ -16,9 +19,15 @@ public class ObraFinanceiroService {
     private final ObraRepository obras;
     private final GastoRepository gastos;
     private final AcessoObraService acesso;
+    private final RecebimentoObraRepository recebimentos;
 
+    @Autowired
+    public ObraFinanceiroService(ObraRepository obras, GastoRepository gastos, AcessoObraService acesso,
+                                 RecebimentoObraRepository recebimentos) {
+        this.obras = obras; this.gastos = gastos; this.acesso = acesso; this.recebimentos = recebimentos;
+    }
     public ObraFinanceiroService(ObraRepository obras, GastoRepository gastos, AcessoObraService acesso) {
-        this.obras = obras; this.gastos = gastos; this.acesso = acesso;
+        this(obras, gastos, acesso, null);
     }
 
     @Transactional(readOnly = true)
@@ -34,7 +43,21 @@ public class ObraFinanceiroService {
         if (valor == null || valor.signum() < 0 || valor.scale() > 2 || valor.precision() - valor.scale() > 17)
             throw new BadRequest("Total recebido deve ser não negativo e ter até duas casas decimais.");
         Obra obra = obra(id);
-        obra.setTotalRecebido(valor);
+        BigDecimal diferenca = valor.subtract(obra.getTotalRecebido());
+        if (recebimentos != null && diferenca.signum() != 0) {
+            RecebimentoObra ajuste = new RecebimentoObra();
+            ajuste.setObra(obra);
+            ajuste.setValor(diferenca);
+            ajuste.setData(java.time.LocalDate.now());
+            ajuste.setDescricao("Ajuste via PUT financeiro");
+            ajuste.setCriadoPor(acesso.atual().getId());
+            recebimentos.save(ajuste);
+        }
+        if (recebimentos != null) {
+            obra.setTotalRecebido(recebimentos.totalPorObra(id));
+        } else {
+            obra.setTotalRecebido(valor);
+        }
         obras.save(obra);
         return resposta(obra);
     }

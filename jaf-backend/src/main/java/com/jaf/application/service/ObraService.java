@@ -20,13 +20,16 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.math.BigDecimal;
 
 @Service
+@Transactional
 public class ObraService {
     private static final Logger logger = LoggerFactory.getLogger(ObraService.class);
 
@@ -57,7 +60,7 @@ public class ObraService {
 
         Obra obra = new Obra();
         obra.setTitulo(dto.getTitulo());
-        obra.setOrcamento(dto.getOrcamento());
+        obra.setOrcamento(new BigDecimal(dto.getOrcamento()));
         obra.setStatus(dto.getStatus());
         obra.setDtInicio(dto.getDtInicio());
         obra.setDtTerminoPrevisto(dto.getDtTerminoPrevisto());
@@ -88,8 +91,8 @@ public class ObraService {
         Funcionario funcionario = funcionarioRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new NotFoundException("Usuario nao encontrado."));
 
-        Sort sort = sortDir.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
-        Pageable pageable = PageRequest.of(page, size, sort);
+        Pageable pageable = PaginacaoUtil.validar(page, size, sortBy, sortDir,
+                Set.of("id", "titulo", "status", "dtInicio", "dtTerminoPrevisto"), 100);
 
         if (funcionario.getCargoGlobal() == Cargo.ADMIN) {
             if (status != null && !status.isEmpty()) {
@@ -121,7 +124,7 @@ public class ObraService {
             return obra;
         }
 
-        boolean alocado = alocacaoObraRepository.existsByFuncionarioIdAndObraId(funcionario.getId(), id);
+        boolean alocado = alocacaoObraRepository.existsAtiva(funcionario.getId(), id, java.time.LocalDate.now());
         if (!alocado) {
             throw new Forbidden("Funcionario nao esta alocado nesta obra.");
         }
@@ -142,7 +145,7 @@ public class ObraService {
         }
 
         existente.setTitulo(dto.getTitulo());
-        existente.setOrcamento(dto.getOrcamento());
+        existente.setOrcamento(new BigDecimal(dto.getOrcamento()));
         existente.setStatus(dto.getStatus());
         existente.setDtInicio(dto.getDtInicio());
         existente.setDtTerminoPrevisto(dto.getDtTerminoPrevisto());

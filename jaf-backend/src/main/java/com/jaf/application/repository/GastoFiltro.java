@@ -12,20 +12,31 @@ import java.util.Set;
 public final class GastoFiltro {
     private GastoFiltro() {}
     public static Specification<Gasto> criar(Set<Long> obrasPermitidas, Long obraId, Long funcionarioId,
-            String categoria, String metodo, StatusReembolso status) {
+            String categoria, String metodo, StatusReembolso status,
+            java.time.LocalDate from, java.time.LocalDate to) {
         return (root, query, cb) -> {
             var filtros = new ArrayList<Predicate>();
             if (obrasPermitidas != null) filtros.add(obrasPermitidas.isEmpty() ? cb.disjunction() : root.get("obra").get("id").in(obrasPermitidas));
             if (obraId != null) filtros.add(cb.equal(root.get("obra").get("id"), obraId));
             if (funcionarioId != null) filtros.add(cb.equal(root.get("funcionario").get("id"), funcionarioId));
             if (categoria != null && !categoria.isBlank()) filtros.add(cb.equal(root.get("categoria"), categoria));
-            if (metodo != null && !metodo.isBlank()) filtros.add(cb.equal(root.get("metodoPagamento"), metodo));
+            if (metodo != null && !metodo.isBlank()) {
+                if ("REEMBOLSO".equalsIgnoreCase(metodo.trim())) {
+                    filtros.add(cb.isTrue(root.get("reembolsavel")));
+                } else {
+                    filtros.add(cb.equal(root.get("metodoPagamento"), metodo.trim().toUpperCase(java.util.Locale.ROOT)));
+                }
+            }
+            if (from != null) filtros.add(cb.greaterThanOrEqualTo(root.get("dtGasto"), from));
+            if (to != null) filtros.add(cb.lessThanOrEqualTo(root.get("dtGasto"), to));
             if (status != null) {
-                filtros.add(cb.equal(root.get("metodoPagamento"), "REEMBOLSO"));
+                filtros.add(cb.isTrue(root.get("reembolsavel")));
                 var soma = query.subquery(BigDecimal.class);
                 var pagamento = soma.from(PagamentoReembolso.class);
                 soma.select(cb.coalesce(cb.sum(pagamento.<BigDecimal>get("valor")), BigDecimal.ZERO));
-                soma.where(cb.equal(pagamento.get("gasto").get("id"), root.get("id")));
+                soma.where(cb.and(
+                        cb.equal(pagamento.get("gasto").get("id"), root.get("id")),
+                        cb.isNull(pagamento.get("canceladoEm"))));
                 filtros.add(switch (status) {
                     case PENDENTE -> cb.equal(soma, BigDecimal.ZERO);
                     case PARCIAL -> cb.and(cb.greaterThan(soma, BigDecimal.ZERO), cb.lessThan(soma, root.<BigDecimal>get("valor")));

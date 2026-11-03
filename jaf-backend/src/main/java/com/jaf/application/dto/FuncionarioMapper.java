@@ -22,17 +22,6 @@ public class FuncionarioMapper {
         return funcionario;
     }
 
-    public static FuncionarioTokenDto of(Funcionario funcionario, String token) {
-        FuncionarioTokenDto funcionarioTokenDto = new FuncionarioTokenDto();
-
-        funcionarioTokenDto.setId(funcionario.getId());
-        funcionarioTokenDto.setEmail(funcionario.getEmail());
-        funcionarioTokenDto.setNome(funcionario.getNome());
-        funcionarioTokenDto.setToken(token);
-
-        return funcionarioTokenDto;
-    }
-
     public static FuncionarioListarDto of(Funcionario funcionario) {
         FuncionarioListarDto funcionarioListarDto = new FuncionarioListarDto();
 

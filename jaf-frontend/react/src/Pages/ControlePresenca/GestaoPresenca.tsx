@@ -14,6 +14,7 @@ import {
 } from "../../Components/PeriodoFiltro/periodUtils";
 import { Responsive } from "../../Components/Responsive/Responsive";
 import { dataValida, erroApi } from "../../Utils/financeiro";
+import { logger } from "../../Utils/logger";
 
 const formatarCargoObra = (cargo: string) =>
   cargo.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (letra) => letra.toUpperCase());
@@ -75,7 +76,7 @@ export default function GestaoPresenca() {
         const primeiraObraId = dados[0]?.id ?? null;
         setObraId(primeiraObraId);
       } catch (error) {
-        console.error("Erro ao carregar gestão de presença:", error);
+        logger.erro("Erro ao carregar gestão de presença", error);
         toast.error("Erro ao carregar controle de presença");
       } finally {
         setCarregando(false);
@@ -93,7 +94,7 @@ export default function GestaoPresenca() {
     setErro("");
     carregarPresencas()
       .catch((error) => {
-        console.error("Erro ao atualizar lista de presença:", error);
+        logger.erro("Erro ao atualizar lista de presença", error);
         toast.error("Erro ao atualizar lista de presença");
         setErro("Não foi possível carregar os registros. Altere os filtros para tentar novamente.");
       })
@@ -170,7 +171,7 @@ export default function GestaoPresenca() {
       await carregarPresencas();
       toast.success(presente ? "Presença marcada" : "Ausência registrada");
     } catch (error) {
-      console.error("Erro ao salvar presença:", error);
+      logger.erro("Erro ao salvar presença", error);
       toast.error(erroApi(error, "Não foi possível salvar o registro"));
     } finally {
       setSalvandoId(null);
@@ -191,7 +192,7 @@ export default function GestaoPresenca() {
       await carregarPresencas();
       toast.success("Registro removido");
     } catch (error) {
-      console.error("Erro ao excluir presença:", error);
+      logger.erro("Erro ao excluir presença", error);
       toast.error("Não foi possível remover o registro");
     } finally {
       setSalvandoId(null);

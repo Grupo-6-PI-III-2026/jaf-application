@@ -4,6 +4,11 @@ uploads/fotos/
 _bmad 
 _bmad-output
 .agents
+*.mv.db
+*.trace.db
+hs_err_pid*.log
+jaf-frontend/banco.json
+jaf-frontend/endpoint.js
 
 # Terraform
 terraform.tfvars

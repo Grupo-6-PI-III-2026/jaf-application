@@ -8,14 +8,8 @@ public class FuncionarioTokenDto {
     private String nome;
     private String email;
     private Cargo cargo;
-    private String token;
 
     public FuncionarioTokenDto() {
-    }
-
-    public FuncionarioTokenDto(String email, String token) {
-        this.email = email;
-        this.token = token;
     }
 
     public Long getId() { return id; }
@@ -46,7 +40,4 @@ public class FuncionarioTokenDto {
         this.cargo = cargo;
     }
 
-    public String getToken() { return token; }
-
-    public void setToken(String token) { this.token = token; }
 }

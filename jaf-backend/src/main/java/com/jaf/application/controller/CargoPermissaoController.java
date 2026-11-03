@@ -4,6 +4,7 @@ import com.jaf.application.dto.AtualizarCargoPermissoesDto;
 import com.jaf.application.dto.CargoPermissoesDto;
 import com.jaf.application.enums.Cargo;
 import com.jaf.application.service.CargoPermissaoService;
+import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -36,7 +37,7 @@ public class CargoPermissaoController {
     @PreAuthorize("@acessoObraService.isAdmin()")
     public ResponseEntity<CargoPermissoesDto> atualizar(
             @PathVariable Cargo cargo,
-            @RequestBody AtualizarCargoPermissoesDto dto) {
+            @Valid @RequestBody AtualizarCargoPermissoesDto dto) {
         return ResponseEntity.ok(service.atualizar(cargo, dto.getPermissoes()));
     }
 }

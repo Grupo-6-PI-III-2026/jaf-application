@@ -3,6 +3,7 @@ package com.jaf.application.service;
 import com.jaf.application.dto.GastoDto;
 import com.jaf.application.enums.Cargo;
 import com.jaf.application.enums.StatusReembolso;
+import com.jaf.application.enums.MetodoPagamento;
 import com.jaf.application.exceptions.BadRequest;
 import com.jaf.application.exceptions.Conflict;
 import com.jaf.application.exceptions.Forbidden;
@@ -62,18 +63,20 @@ public class GastoService {
         Obra obra = obraRepository.findById(dto.getObraId())
                 .orElseThrow(() -> new NotFoundException("Obra nao encontrada."));
 
-        if (!alocacaoObraRepository.existsByFuncionarioIdAndObraId(funcionario.getId(), obra.getId())) {
+        if (!alocacaoObraRepository.existsAtiva(funcionario.getId(), obra.getId(), java.time.LocalDate.now())) {
             throw new Forbidden("Funcionario nao esta alocado nesta obra e nao pode registrar gastos.");
         }
 
         Gasto gasto = new Gasto();
         gasto.setDescricao(dto.getDescricao());
         gasto.setCategoria(dto.getCategoria());
-        gasto.setMetodoPagamento(dto.getMetodoPagamento());
+        boolean reembolsavel = ehReembolso(dto.getMetodoPagamento());
+        gasto.setMetodoPagamento(reembolsavel ? "REEMBOLSO" : normalizarMetodo(dto.getMetodoPagamento()));
+        gasto.setReembolsavel(reembolsavel);
         gasto.setEtapa(dto.getEtapa());
         gasto.setValor(dto.getValor());
         gasto.setDtGasto(dto.getDtGasto());
-        gasto.setReembolsoConcluido("REEMBOLSO".equals(dto.getMetodoPagamento()) ? false : null);
+        gasto.setReembolsoConcluido(reembolsavel ? false : null);
         gasto.setFuncionario(funcionario);
         gasto.setObra(obra);
         return gastoRepository.save(gasto);
@@ -107,7 +110,7 @@ public class GastoService {
     }
 
     public Page<Gasto> listarPaginadoPorUsuario(String email, Long obraId, int page, int size, String sortBy, String sortDir, String categoria, String metodoPagamento) {
-        return listarPaginadoFiltrado(obraId, null, categoria, metodoPagamento, null, page, size, sortBy, sortDir);
+        return listarPaginadoFiltrado(obraId, null, categoria, metodoPagamento, null, null, null, page, size, sortBy, sortDir);
     }
 
     public Gasto buscarPorId(Long id) {
@@ -124,7 +127,7 @@ public class GastoService {
             return gasto;
         }
 
-        boolean alocado = alocacaoObraRepository.existsByFuncionarioIdAndObraId(funcionario.getId(), gasto.getObra().getId());
+        boolean alocado = alocacaoObraRepository.existsAtiva(funcionario.getId(), gasto.getObra().getId(), java.time.LocalDate.now());
         if (!alocado) {
             throw new Forbidden("Funcionario nao possui acesso a este gasto.");
         }
@@ -155,17 +158,19 @@ public class GastoService {
         Obra obra = obraRepository.findById(dto.getObraId())
                 .orElseThrow(() -> new NotFoundException("Obra nao encontrada."));
 
-        if (!alocacaoObraRepository.existsByFuncionarioIdAndObraId(funcionario.getId(), obra.getId())) {
+        if (!alocacaoObraRepository.existsAtiva(funcionario.getId(), obra.getId(), java.time.LocalDate.now())) {
             throw new Forbidden("Funcionario nao esta alocado nesta obra.");
         }
 
         existente.setDescricao(dto.getDescricao());
         existente.setCategoria(dto.getCategoria());
-        existente.setMetodoPagamento(dto.getMetodoPagamento());
+        boolean reembolsavel = ehReembolso(dto.getMetodoPagamento());
+        existente.setMetodoPagamento(reembolsavel ? "REEMBOLSO" : normalizarMetodo(dto.getMetodoPagamento()));
+        existente.setReembolsavel(reembolsavel);
         existente.setEtapa(dto.getEtapa());
         existente.setValor(dto.getValor());
         existente.setDtGasto(dto.getDtGasto());
-        existente.setReembolsoConcluido("REEMBOLSO".equals(dto.getMetodoPagamento()) ? pago.compareTo(dto.getValor()) == 0 : null);
+        existente.setReembolsoConcluido(reembolsavel ? pago.compareTo(dto.getValor()) == 0 : null);
         existente.setFuncionario(funcionario);
         existente.setObra(obra);
         return gastoRepository.save(existente);
@@ -182,31 +187,64 @@ public class GastoService {
     }
 
     private void validarFlag(GastoDto dto, BigDecimal pago) {
-        boolean concluido = "REEMBOLSO".equals(dto.getMetodoPagamento()) && pago.compareTo(dto.getValor()) == 0;
+        boolean concluido = ehReembolso(dto.getMetodoPagamento()) && pago.compareTo(dto.getValor()) == 0;
         if (Boolean.TRUE.equals(dto.getReembolsoConcluido()) && !concluido)
             throw new BadRequest("Registre a quitação pelo endpoint de reembolsos, não pela flag legada.");
     }
 
+    private boolean ehReembolso(String metodo) {
+        return metodo != null && "REEMBOLSO".equalsIgnoreCase(metodo.trim());
+    }
+
+    private String normalizarMetodo(String metodo) {
+        try {
+            return MetodoPagamento.valueOf(metodo.trim().toUpperCase(java.util.Locale.ROOT)).name();
+        } catch (IllegalArgumentException ex) {
+            throw new BadRequest("Método de pagamento inválido.");
+        }
+    }
+
     private Specification<Gasto> filtro(Long obraId, Long funcionarioId,
-            String categoria, String metodo, StatusReembolso status) {
+            String categoria, String metodo, StatusReembolso status,
+            java.time.LocalDate from, java.time.LocalDate to) {
         Funcionario usuario = acesso.atual();
         Set<Long> permitidas = usuario.getCargoGlobal() == Cargo.ADMIN ? null :
                 alocacaoObraRepository.findByFuncionarioId(usuario.getId()).stream()
                         .map(a -> a.getObra().getId()).collect(java.util.stream.Collectors.toSet());
-        return GastoFiltro.criar(permitidas, obraId, funcionarioId, categoria, metodo, status);
+        return GastoFiltro.criar(permitidas, obraId, funcionarioId, categoria, metodo, status, from, to);
+    }
+
+    public List<Gasto> listarFiltrado(Long obraId, Long funcionarioId, String categoria, String metodo,
+            StatusReembolso status, java.time.LocalDate from, java.time.LocalDate to) {
+        validarPeriodo(from, to);
+        return gastoRepository.findAll(filtro(obraId, funcionarioId, categoria, metodo, status, from, to));
     }
 
     public List<Gasto> listarFiltrado(Long obraId, Long funcionarioId, String categoria, String metodo,
             StatusReembolso status) {
-        return gastoRepository.findAll(filtro(obraId, funcionarioId, categoria, metodo, status));
+        return listarFiltrado(obraId, funcionarioId, categoria, metodo, status, null, null);
+    }
+
+    public Page<Gasto> listarPaginadoFiltrado(Long obraId, Long funcionarioId, String categoria, String metodo,
+            StatusReembolso status, java.time.LocalDate from, java.time.LocalDate to,
+            int page, int size, String sortBy, String sortDir) {
+        validarPeriodo(from, to);
+        if (page < 0 || size < 1 || size > 200 || !Set.of("id", "dtGasto", "valor", "descricao", "categoria", "metodoPagamento", "etapa").contains(sortBy)
+                || !("asc".equalsIgnoreCase(sortDir) || "desc".equalsIgnoreCase(sortDir)))
+            throw new BadRequest("Paginação ou ordenação inválida (size: 1 a 200).");
+        return gastoRepository.findAll(filtro(obraId, funcionarioId, categoria, metodo, status, from, to),
+                PageRequest.of(page, size, Sort.by(Sort.Direction.fromString(sortDir), sortBy)));
     }
 
     public Page<Gasto> listarPaginadoFiltrado(Long obraId, Long funcionarioId, String categoria, String metodo,
             StatusReembolso status, int page, int size, String sortBy, String sortDir) {
-        if (page < 0 || size < 1 || size > 200 || !Set.of("id", "dtGasto", "valor", "descricao", "categoria", "metodoPagamento", "etapa").contains(sortBy)
-                || !("asc".equalsIgnoreCase(sortDir) || "desc".equalsIgnoreCase(sortDir)))
-            throw new BadRequest("Paginação ou ordenação inválida (size: 1 a 200).");
-        return gastoRepository.findAll(filtro(obraId, funcionarioId, categoria, metodo, status),
-                PageRequest.of(page, size, Sort.by(Sort.Direction.fromString(sortDir), sortBy)));
+        return listarPaginadoFiltrado(obraId, funcionarioId, categoria, metodo, status, null, null,
+                page, size, sortBy, sortDir);
+    }
+
+    private void validarPeriodo(java.time.LocalDate from, java.time.LocalDate to) {
+        if (from != null && to != null && from.isAfter(to)) {
+            throw new BadRequest("A data inicial não pode ser posterior à data final.");
+        }
     }
 }

@@ -25,6 +25,7 @@ import { useUser } from "../../Context/useUser";
 import type { FuncionarioPermissoes, ModuloPermissao } from "../../Types/permissoes";
 import type { Cargo } from "../../Types/user";
 import { erroApi } from "../../Utils/financeiro";
+import { logger } from "../../Utils/logger";
 
 const MENSAGEM_USUARIO_COM_REGISTROS =
   "Não é possível excluir este usuário pois existem registros vinculados a ele. Caso queira desativá-lo, utilize a opção de inativar usuário.";
@@ -168,7 +169,7 @@ export default function Permissoes() {
       setPermissoesAtivas(new Set(acesso.permissoes));
       setPermissoesOriginais(new Set(acesso.permissoes));
     } catch (error) {
-      console.error("Erro ao carregar permissões do usuário:", error);
+      logger.erro("Erro ao carregar permissões do usuário", error);
       toast.error("Erro ao carregar permissões do usuário");
     }
   }, [permissoesPorCargo]);
@@ -242,7 +243,7 @@ export default function Permissoes() {
       );
       setSelectedUser({ ...selectedUser, cargo: cargoSelecionado });
     } catch (error) {
-      console.error("Erro ao salvar cargo:", error);
+      logger.erro("Erro ao salvar cargo", error);
       toast.error(erroApi(error, "Erro ao salvar cargo"));
     } finally {
       setIsSaving(false);

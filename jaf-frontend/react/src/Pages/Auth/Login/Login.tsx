@@ -5,6 +5,7 @@ import { authService } from "../../../Service/Auth/Login/authService";
 import { useUser } from "../../../Context/useUser";
 import { toast } from "sonner";
 import { Responsive } from "../../../Components/Responsive/Responsive";
+import { logger } from "../../../Utils/logger";
 
 function Login() {
   const navigate = useNavigate();
@@ -48,7 +49,7 @@ function Login() {
       toast.success("Login realizado com sucesso!");
       navigate("/home", { replace: true });
     } catch (error: unknown) {
-      console.error(error);
+      logger.erro("Erro ao validar sessão no login", error);
       const message = error instanceof Error ? error.message : "Erro inesperado. Tente novamente.";
       setErrorMessage(message);
       toast.error(message);

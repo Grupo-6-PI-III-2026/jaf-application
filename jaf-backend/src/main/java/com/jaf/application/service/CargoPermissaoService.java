@@ -39,7 +39,7 @@ public class CargoPermissaoService {
 
     public List<Permissao> permissoesPorCargo(Cargo cargo) {
         if (cargo == null) {
-            return Cargo.ENGENHEIRO.getPermissoes();
+            throw new BadRequest("Cargo obrigatório.");
         }
 
         if (cargo == Cargo.ADMIN) {

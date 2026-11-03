@@ -193,17 +193,17 @@ class FuncionarioAutorizacaoTest {
     }
 
     @Test
-    void exclusaoComRegistrosVinculadosRetornaConflitoSemExcluir() {
+    void exclusaoComRegistrosVinculadosDesativaSemExcluirFisicamente() {
         ator.setCargoGlobal(Cargo.ADMIN);
         persistirAtor();
         Funcionario alvo = new Funcionario();
         alvo.setId(4L);
         alvo.setCargoGlobal(Cargo.ENGENHEIRO);
         when(funcionarios.findById(4L)).thenReturn(Optional.of(alvo));
-        when(presencas.existsByFuncionarioId(4L)).thenReturn(true);
-        assertThrows(com.jaf.application.exceptions.Conflict.class, () -> service.deletar(4L));
+        service.deletar(4L);
+        assertFalse(alvo.isAtivo());
+        verify(funcionarios).save(alvo);
         verify(funcionarios, never()).deleteById(any());
-        verifyNoInteractions(individuais);
     }
 
     @Test
@@ -215,7 +215,9 @@ class FuncionarioAutorizacaoTest {
         alvo.setCargoGlobal(Cargo.ENGENHEIRO);
         when(funcionarios.findById(4L)).thenReturn(Optional.of(alvo));
         service.deletar(4L);
-        verify(funcionarios).deleteById(4L);
+        assertFalse(alvo.isAtivo());
+        verify(funcionarios).save(alvo);
+        verify(funcionarios, never()).deleteById(any());
     }
 
     @Test

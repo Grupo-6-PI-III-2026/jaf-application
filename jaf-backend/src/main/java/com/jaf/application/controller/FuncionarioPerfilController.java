@@ -3,6 +3,7 @@ package com.jaf.application.controller;
 import com.jaf.application.dto.AlterarSenhaDto;
 import com.jaf.application.dto.FuncionarioPerfilUpdateDto;
 import com.jaf.application.dto.FuncionarioResponseDto;
+import com.jaf.application.dto.ExcluirContaDto;
 import com.jaf.application.model.Funcionario;
 import com.jaf.application.service.FuncionarioService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -28,8 +29,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Set;
 import java.util.UUID;
+import java.io.InputStream;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/funcionarios/me")
@@ -76,11 +78,10 @@ public class FuncionarioPerfilController {
         if (file.getSize() > FOTO_MAX_BYTES) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A foto deve ter no maximo 5 MB.");
         }
-        if (file.getContentType() == null || !TIPOS_IMAGEM_ACEITOS.contains(file.getContentType())) {
+        String ext = detectarExtensao(file);
+        if (ext == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Envie uma imagem JPG, PNG, WEBP ou GIF.");
         }
-
-        String ext = getExtensao(file.getOriginalFilename());
         String filename = UUID.randomUUID().toString() + "." + ext;
 
         Path uploadDir = UPLOAD_DIR.toAbsolutePath().normalize();
@@ -102,16 +103,28 @@ public class FuncionarioPerfilController {
     }
 
     @DeleteMapping
-    public ResponseEntity<Void> excluirConta(@AuthenticationPrincipal UserDetails userDetails) {
-        funcionarioService.excluirConta(userDetails.getUsername());
+    public ResponseEntity<Void> excluirConta(@AuthenticationPrincipal UserDetails userDetails,
+                                             @RequestBody @Valid ExcluirContaDto dto) {
+        funcionarioService.excluirConta(userDetails.getUsername(), dto.senhaAtual());
         return ResponseEntity.noContent().build();
     }
 
-    private String getExtensao(String filename) {
-        if (filename == null || !filename.contains(".")) {
-            return "jpg";
+    private String detectarExtensao(MultipartFile file) throws IOException {
+        byte[] header = new byte[12];
+        try (InputStream input = file.getInputStream()) {
+            int read = input.read(header);
+            if (read >= 3 && (header[0] & 0xff) == 0xff && (header[1] & 0xff) == 0xd8
+                    && (header[2] & 0xff) == 0xff) return "jpg";
+            if (read >= 8 && (header[0] & 0xff) == 0x89 && header[1] == 'P' && header[2] == 'N'
+                    && header[3] == 'G' && (header[4] & 0xff) == 0x0d && (header[5] & 0xff) == 0x0a
+                    && (header[6] & 0xff) == 0x1a && (header[7] & 0xff) == 0x0a) return "png";
+            if (read >= 6 && header[0] == 'G' && header[1] == 'I' && header[2] == 'F'
+                    && header[3] == '8') return "gif";
+            if (read >= 12 && header[0] == 'R' && header[1] == 'I' && header[2] == 'F'
+                    && header[3] == 'F' && header[8] == 'W' && header[9] == 'E'
+                    && header[10] == 'B' && header[11] == 'P') return "webp";
+            return null;
         }
-        return filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
     }
 
     public record FotoUploadResponse(String url) {}

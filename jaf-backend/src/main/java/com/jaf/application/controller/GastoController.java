@@ -1,6 +1,8 @@
 package com.jaf.application.controller;
 
 import com.jaf.application.dto.GastoDto;
+import com.jaf.application.dto.GastoResponse;
+import com.jaf.application.dto.PageResponse;
 import com.jaf.application.model.Gasto;
 import com.jaf.application.service.GastoService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -11,12 +13,16 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.time.LocalDate;
+import org.springframework.format.annotation.DateTimeFormat;
 
 @RestController
 @RequestMapping("/gastos")
 @SecurityRequirement(name = "Bearer")
+@Transactional
 public class GastoController {
     private final GastoService gastoService;
 
@@ -26,24 +32,27 @@ public class GastoController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('CRIAR_GASTO')")
-    public ResponseEntity<Gasto> criar(@Valid @RequestBody GastoDto dto) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(gastoService.criar(dto));
+    public ResponseEntity<GastoResponse> criar(@Valid @RequestBody GastoDto dto, Authentication authentication) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(GastoResponse.de(gastoService.criar(dto), isAdmin(authentication)));
     }
  
     @GetMapping
     @PreAuthorize("hasAuthority('VISUALIZAR_GASTOS')")
-    public ResponseEntity<List<Gasto>> listar(Authentication authentication,
+    public ResponseEntity<List<GastoResponse>> listar(Authentication authentication,
                                               @RequestParam(required = false) Long obraId,
                                               @RequestParam(required = false) Long funcionarioId,
                                               @RequestParam(required = false) String categoria,
                                               @RequestParam(required = false) String metodoPagamento,
-                                              @RequestParam(required = false) com.jaf.application.enums.StatusReembolso statusReembolso) {
-        return ResponseEntity.ok(gastoService.listarFiltrado(obraId, funcionarioId, categoria, metodoPagamento, statusReembolso));
+                                              @RequestParam(required = false) com.jaf.application.enums.StatusReembolso statusReembolso,
+                                              @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+                                              @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return ResponseEntity.ok(gastoService.listarFiltrado(obraId, funcionarioId, categoria, metodoPagamento, statusReembolso, from, to)
+                .stream().map(gasto -> GastoResponse.de(gasto, isAdmin(authentication))).toList());
     }
 
     @GetMapping("/paginado")
     @PreAuthorize("hasAuthority('VISUALIZAR_GASTOS')")
-    public ResponseEntity<Page<Gasto>> listarPaginado(
+    public ResponseEntity<PageResponse<GastoResponse>> listarPaginado(
             Authentication authentication,
             @RequestParam(required = false) Long obraId,
             @RequestParam(defaultValue = "0") int page,
@@ -53,21 +62,25 @@ public class GastoController {
             @RequestParam(required = false) String categoria,
             @RequestParam(required = false) String metodoPagamento,
             @RequestParam(required = false) Long funcionarioId,
-            @RequestParam(required = false) com.jaf.application.enums.StatusReembolso statusReembolso) {
-        return ResponseEntity.ok(gastoService.listarPaginadoFiltrado(
-                obraId, funcionarioId, categoria, metodoPagamento, statusReembolso, page, size, sortBy, sortDir));
+            @RequestParam(required = false) com.jaf.application.enums.StatusReembolso statusReembolso,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        Page<GastoResponse> resposta = gastoService.listarPaginadoFiltrado(
+                obraId, funcionarioId, categoria, metodoPagamento, statusReembolso, from, to, page, size, sortBy, sortDir)
+                .map(gasto -> GastoResponse.de(gasto, isAdmin(authentication)));
+        return ResponseEntity.ok(PageResponse.de(resposta));
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('VISUALIZAR_GASTOS')")
-    public ResponseEntity<Gasto> buscarPorId(@PathVariable Long id, Authentication authentication) {
-        return ResponseEntity.ok(gastoService.buscarPorIdComEscopo(id, authentication.getName()));
+    public ResponseEntity<GastoResponse> buscarPorId(@PathVariable Long id, Authentication authentication) {
+        return ResponseEntity.ok(GastoResponse.de(gastoService.buscarPorIdComEscopo(id, authentication.getName()), isAdmin(authentication)));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('EDITAR_GASTO')")
-    public ResponseEntity<Gasto> atualizar(@PathVariable Long id, @Valid @RequestBody GastoDto dto) {
-        return ResponseEntity.ok(gastoService.atualizar(id, dto));
+    public ResponseEntity<GastoResponse> atualizar(@PathVariable Long id, @Valid @RequestBody GastoDto dto, Authentication authentication) {
+        return ResponseEntity.ok(GastoResponse.de(gastoService.atualizar(id, dto), isAdmin(authentication)));
     }
 
     @DeleteMapping("/{id}")
@@ -75,5 +88,10 @@ public class GastoController {
     public ResponseEntity<Void> deletar(@PathVariable Long id) {
         gastoService.deletar(id);
         return ResponseEntity.noContent().build();
+    }
+
+    private boolean isAdmin(Authentication authentication) {
+        return authentication.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()) || "ADMIN".equals(authority.getAuthority()));
     }
 }

@@ -1,6 +1,9 @@
 package com.jaf.application.controller;
 
 import com.jaf.application.dto.ObraDto;
+import com.jaf.application.dto.ObraResponse;
+import com.jaf.application.dto.GastoResponse;
+import com.jaf.application.dto.AlocacaoResponse;
 import com.jaf.application.model.AlocacaoObra;
 import com.jaf.application.model.Gasto;
 import com.jaf.application.model.Obra;
@@ -15,12 +18,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/obras")
 @SecurityRequirement(name = "Bearer")
+@Transactional
 public class ObraController {
     private final ObraService obraService;
     private final GastoService gastoService;
@@ -36,54 +41,59 @@ public class ObraController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('CRIAR_OBRA')")
-    public ResponseEntity<Obra> criar(@Valid @RequestBody ObraDto dto) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(obraService.criar(dto));
+    public ResponseEntity<ObraResponse> criar(@Valid @RequestBody ObraDto dto, Authentication authentication) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(ObraResponse.de(obraService.criar(dto), isAdmin(authentication)));
     }
 
     @GetMapping
     @PreAuthorize("hasAuthority('VISUALIZAR_OBRA')")
-    public ResponseEntity<List<Obra>> listar(Authentication authentication) {
-        return ResponseEntity.ok(obraService.listarPorUsuario(authentication.getName()));
+    public ResponseEntity<List<ObraResponse>> listar(Authentication authentication) {
+        boolean admin = isAdmin(authentication);
+        return ResponseEntity.ok(obraService.listarPorUsuario(authentication.getName()).stream().map(obra -> ObraResponse.de(obra, admin)).toList());
     }
 
     @GetMapping("/paginado")
     @PreAuthorize("hasAuthority('VISUALIZAR_OBRA')")
-    public ResponseEntity<Page<Obra>> listarPaginado(
+    public ResponseEntity<com.jaf.application.dto.PageResponse<ObraResponse>> listarPaginado(
             Authentication authentication,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "titulo") String sortBy,
             @RequestParam(defaultValue = "asc") String sortDir,
             @RequestParam(required = false) String status) {
-        return ResponseEntity.ok(obraService.listarPaginadoPorUsuario(
-                authentication.getName(), page, size, sortBy, sortDir, status));
+        boolean admin = isAdmin(authentication);
+        Page<ObraResponse> resposta = obraService.listarPaginadoPorUsuario(
+                authentication.getName(), page, size, sortBy, sortDir, status).map(obra -> ObraResponse.de(obra, admin));
+        return ResponseEntity.ok(com.jaf.application.dto.PageResponse.de(resposta));
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('VISUALIZAR_OBRA')")
-    public ResponseEntity<Obra> buscarPorId(@PathVariable Long id, Authentication authentication) {
-        return ResponseEntity.ok(obraService.buscarPorIdComEscopo(id, authentication.getName()));
+    public ResponseEntity<ObraResponse> buscarPorId(@PathVariable Long id, Authentication authentication) {
+        return ResponseEntity.ok(ObraResponse.de(obraService.buscarPorIdComEscopo(id, authentication.getName()), isAdmin(authentication)));
     }
 
     @GetMapping("/{id}/gastos")
     @PreAuthorize("hasAuthority('VISUALIZAR_GASTOS')")
-    public ResponseEntity<List<Gasto>> listarGastosDaObra(@PathVariable Long id, Authentication authentication) {
+    public ResponseEntity<List<GastoResponse>> listarGastosDaObra(@PathVariable Long id, Authentication authentication) {
         obraService.buscarPorIdComEscopo(id, authentication.getName());
-        return ResponseEntity.ok(gastoService.listarPorUsuario(authentication.getName(), id));
+        boolean admin = isAdmin(authentication);
+        return ResponseEntity.ok(gastoService.listarPorUsuario(authentication.getName(), id).stream().map(gasto -> GastoResponse.de(gasto, admin)).toList());
     }
 
     @GetMapping("/{id}/alocacoes")
     @PreAuthorize("hasAuthority('VISUALIZAR_ALOCACOES')")
-    public ResponseEntity<List<AlocacaoObra>> listarAlocacoesDaObra(@PathVariable Long id, Authentication authentication) {
+    public ResponseEntity<List<AlocacaoResponse>> listarAlocacoesDaObra(@PathVariable Long id, Authentication authentication) {
         obraService.buscarPorIdComEscopo(id, authentication.getName());
-        return ResponseEntity.ok(alocacaoObraService.listarPorObra(id));
+        boolean admin = isAdmin(authentication);
+        return ResponseEntity.ok(alocacaoObraService.listarPorObra(id).stream().map(alocacao -> AlocacaoResponse.de(alocacao, admin)).toList());
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('EDITAR_OBRA')")
-    public ResponseEntity<Obra> atualizar(@PathVariable Long id, @Valid @RequestBody ObraDto dto, Authentication authentication) {
+    public ResponseEntity<ObraResponse> atualizar(@PathVariable Long id, @Valid @RequestBody ObraDto dto, Authentication authentication) {
         obraService.buscarPorIdComEscopo(id, authentication.getName());
-        return ResponseEntity.ok(obraService.atualizar(id, dto));
+        return ResponseEntity.ok(ObraResponse.de(obraService.atualizar(id, dto), isAdmin(authentication)));
     }
 
     @DeleteMapping("/{id}")
@@ -92,5 +102,10 @@ public class ObraController {
         obraService.buscarPorIdComEscopo(id, authentication.getName());
         obraService.deletar(id);
         return ResponseEntity.noContent().build();
+    }
+
+    private boolean isAdmin(Authentication authentication) {
+        return authentication.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()) || "ADMIN".equals(authority.getAuthority()));
     }
 }

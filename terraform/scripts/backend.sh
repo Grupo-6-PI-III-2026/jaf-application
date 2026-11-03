@@ -62,6 +62,14 @@ docker run -d \
   -e SPRING_DATASOURCE_PASSWORD="${db_password}" \
   -e JWT_SECRET="${jwt_secret}" \
   -e JWT_EXPIRATION="${jwt_expiration}" \
+  -e APP_COOKIE_SECURE="${cookie_secure}" \
+  -e APP_TRUSTED_PROXY_HOPS=3 \
+  -e TZ=America/Sao_Paulo \
+  -e JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75 -Duser.timezone=America/Sao_Paulo" \
+  -e SPRING_PROFILES_ACTIVE=prod \
+  -e APP_SEED_ENABLED=false \
+  -e APP_BOOTSTRAP_ADMIN_EMAIL="${bootstrap_admin_email}" \
+  -e APP_BOOTSTRAP_ADMIN_PASSWORD="${bootstrap_admin_password}" \
   -e RABBITMQ_HOST="${rabbitmq_host}" \
   -e RABBITMQ_PORT=5672 \
   -e RABBITMQ_USER="${rabbitmq_user}" \

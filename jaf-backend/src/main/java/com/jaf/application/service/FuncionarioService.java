@@ -1,17 +1,15 @@
 package com.jaf.application.service;
 
-import com.jaf.application.config.GerenciadorTokenJwt;
 import com.jaf.application.dto.AlterarSenhaDto;
 import com.jaf.application.dto.FuncionarioDto;
 import com.jaf.application.dto.FuncionarioListarDto;
 import com.jaf.application.dto.FuncionarioMapper;
 import com.jaf.application.dto.FuncionarioPerfilUpdateDto;
 import com.jaf.application.dto.FuncionarioResponseDto;
-import com.jaf.application.dto.FuncionarioTokenDto;
+import com.jaf.application.dto.FuncionarioUpdateRequest;
 import com.jaf.application.exceptions.BadRequest;
 import com.jaf.application.exceptions.Conflict;
 import com.jaf.application.exceptions.Forbidden;
-import com.jaf.application.exceptions.NoContent;
 import com.jaf.application.exceptions.NotFoundException;
 import com.jaf.application.model.Funcionario;
 import com.jaf.application.repository.AlocacaoObraRepository;
@@ -24,12 +22,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
 
@@ -45,8 +40,6 @@ public class FuncionarioService {
 
     private final PasswordEncoder passwordEncoder;
     private final FuncionarioRepository funcionarioRepository;
-    private final GerenciadorTokenJwt gerenciadorTokenJwt;
-    private final AuthenticationManager authenticationManager;
     private final AcessoObraService acesso;
     private final AlocacaoObraRepository alocacaoObraRepository;
     private final PresencaRepository presencaRepository;
@@ -54,16 +47,14 @@ public class FuncionarioService {
     private final RelatorioRepository relatorioRepository;
     private final FuncionarioPermissaoRepository funcionarioPermissaoRepository;
 
+    @Autowired
     public FuncionarioService(PasswordEncoder passwordEncoder, FuncionarioRepository funcionarioRepository,
-                              GerenciadorTokenJwt gerenciadorTokenJwt, AuthenticationManager authenticationManager,
                               AcessoObraService acesso, AlocacaoObraRepository alocacaoObraRepository,
                               PresencaRepository presencaRepository, GastoRepository gastoRepository,
                               RelatorioRepository relatorioRepository,
                               FuncionarioPermissaoRepository funcionarioPermissaoRepository) {
         this.passwordEncoder = passwordEncoder;
         this.funcionarioRepository = funcionarioRepository;
-        this.gerenciadorTokenJwt = gerenciadorTokenJwt;
-        this.authenticationManager = authenticationManager;
         this.acesso = acesso;
         this.alocacaoObraRepository = alocacaoObraRepository;
         this.presencaRepository = presencaRepository;
@@ -72,55 +63,38 @@ public class FuncionarioService {
         this.funcionarioPermissaoRepository = funcionarioPermissaoRepository;
     }
 
+    @Deprecated
+    public FuncionarioService(PasswordEncoder passwordEncoder, FuncionarioRepository funcionarioRepository,
+                              com.jaf.application.config.GerenciadorTokenJwt ignoredToken,
+                              org.springframework.security.authentication.AuthenticationManager ignoredAuthentication,
+                              AcessoObraService acesso, AlocacaoObraRepository alocacaoObraRepository,
+                              PresencaRepository presencaRepository, GastoRepository gastoRepository,
+                              RelatorioRepository relatorioRepository,
+                              FuncionarioPermissaoRepository funcionarioPermissaoRepository) {
+        this(passwordEncoder, funcionarioRepository, acesso, alocacaoObraRepository, presencaRepository,
+                gastoRepository, relatorioRepository, funcionarioPermissaoRepository);
+    }
+
     public FuncionarioResponseDto criar(FuncionarioDto dto) {
         acesso.exigirCriacaoFuncionario(dto.getCargo());
         logger.info("Tentando criar novo funcionário: {}", dto.getEmail());
+        String emailNormalizado = normalizarEmail(dto.getEmail());
 
-        funcionarioRepository.findByEmailIgnoreCase(dto.getEmail())
+        funcionarioRepository.findByEmailIgnoreCase(emailNormalizado)
                 .ifPresent(f -> {
-                    logger.warn("Tentativa de criar funcionário com email duplicato: {}", dto.getEmail());
+                    logger.warn("Tentativa de criar funcionário com email duplicado: {}", emailNormalizado);
                     throw new Conflict("E-mail já cadastrado.");
                 });
 
         Funcionario novoFuncionario = new Funcionario();
         novoFuncionario.setNome(dto.getNome());
-        novoFuncionario.setEmail(dto.getEmail());
+        novoFuncionario.setEmail(emailNormalizado);
         novoFuncionario.setSenha(passwordEncoder.encode(dto.getSenha()));
         novoFuncionario.setCargoGlobal(dto.getCargo());
 
         Funcionario salvo = funcionarioRepository.save(novoFuncionario);
         logger.info("Funcionário criado com sucesso: ID={}, Email={}", salvo.getId(), salvo.getEmail());
         return new FuncionarioResponseDto(salvo);
-    }
-
-    public List<FuncionarioResponseDto> listar() {
-        List<Funcionario> funcionariosEncontrados = funcionarioRepository.findAll();
-        if (funcionariosEncontrados.isEmpty()) {
-            throw new NoContent("Lista de funcionários vazia.");
-        }
-
-        return funcionariosEncontrados.stream()
-                .map(FuncionarioResponseDto::new)
-                .toList();
-    }
-
-    public FuncionarioTokenDto autenticar(Funcionario funcionario) {
-        logger.info("Tentativa de autenticação: {}", funcionario.getEmail());
-
-        UsernamePasswordAuthenticationToken credentials = new UsernamePasswordAuthenticationToken(
-                funcionario.getEmail(), funcionario.getSenha());
-
-        Authentication authentication = this.authenticationManager.authenticate(credentials);
-
-        Funcionario funcionarioAutenticado = funcionarioRepository.findByEmailIgnoreCase(funcionario.getEmail())
-                .orElseThrow(() -> new NotFoundException("Email de funcionário não encontrado."));
-
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-
-        String token = gerenciadorTokenJwt.generateToken(authentication);
-
-        logger.info("Autenticação bem-sucedida: Email={}, Cargo={}", funcionarioAutenticado.getEmail(), funcionarioAutenticado.getCargoGlobal());
-        return FuncionarioMapper.of(funcionarioAutenticado, token);
     }
 
     public Funcionario buscarPorEmail(String email) {
@@ -139,16 +113,34 @@ public class FuncionarioService {
         return new FuncionarioResponseDto(funcionario);
     }
 
-    public FuncionarioResponseDto atualizar(Long id, FuncionarioDto dto) {
+    public FuncionarioResponseDto atualizar(Long id, FuncionarioUpdateRequest dto) {
         Funcionario existente = funcionarioRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Usuário não encontrado."));
 
         acesso.exigirEdicaoFuncionario(existente, dto.getCargo());
+        String emailNormalizado = normalizarEmail(dto.getEmail());
+        funcionarioRepository.findByEmailIgnoreCase(emailNormalizado)
+                .filter(outro -> !outro.getId().equals(id))
+                .ifPresent(outro -> {
+                    throw new Conflict("E-mail já cadastrado.");
+                });
         existente.setNome(dto.getNome());
-        existente.setEmail(dto.getEmail());
+        existente.setEmail(emailNormalizado);
         existente.setCargoGlobal(dto.getCargo());
 
         return new FuncionarioResponseDto(funcionarioRepository.save(existente));
+    }
+
+    public FuncionarioResponseDto atualizar(Long id, FuncionarioDto dto) {
+        FuncionarioUpdateRequest request = new FuncionarioUpdateRequest();
+        request.setNome(dto.getNome());
+        request.setEmail(dto.getEmail());
+        request.setCargo(dto.getCargo());
+        return atualizar(id, request);
+    }
+
+    private String normalizarEmail(String email) {
+        return email == null ? null : email.trim().toLowerCase(java.util.Locale.ROOT);
     }
 
     public FuncionarioResponseDto atualizarPerfil(String emailAtual, FuncionarioPerfilUpdateDto dto) {
@@ -190,16 +182,18 @@ public class FuncionarioService {
         }
 
         existente.setSenha(passwordEncoder.encode(dto.getNovaSenha()));
+        existente.setTokenVersion(existente.getTokenVersion() + 1);
         funcionarioRepository.save(existente);
         logger.info("Senha alterada com sucesso para o usuário: {}", email);
     }
 
     @Transactional
-    public void excluirConta(String email) {
+    public void excluirConta(String email, String senhaAtual) {
         Funcionario existente = buscarPorEmail(email);
-        exigirSemRegistrosVinculados(existente, MENSAGEM_CONTA_COM_REGISTROS);
-        removerPermissoesIndividuais(existente);
-        excluir(existente, MENSAGEM_CONTA_COM_REGISTROS);
+        if (!passwordEncoder.matches(senhaAtual, existente.getSenha())) {
+            throw new BadRequest("Senha atual incorreta.");
+        }
+        desativar(existente);
     }
 
     @Transactional
@@ -208,9 +202,7 @@ public class FuncionarioService {
                 .orElseThrow(() -> new NotFoundException("Usuário não encontrado."));
         acesso.exigirExclusaoFuncionario(existente);
         acesso.exigirExclusaoDeOutro(existente);
-        exigirSemRegistrosVinculados(existente, MENSAGEM_REGISTROS_VINCULADOS);
-        removerPermissoesIndividuais(existente);
-        excluir(existente, MENSAGEM_REGISTROS_VINCULADOS);
+        desativar(existente);
     }
 
     public FuncionarioResponseDto alterarStatus(Long id, boolean ativo) {
@@ -218,8 +210,25 @@ public class FuncionarioService {
                 .orElseThrow(() -> new NotFoundException("Usuário não encontrado."));
         acesso.exigirExclusaoFuncionario(existente);
         acesso.exigirInativacaoDeOutro(existente);
+        if (!ativo && existente.getCargoGlobal() == com.jaf.application.enums.Cargo.ADMIN
+                && funcionarioRepository.countByCargoGlobalAndAtivo(com.jaf.application.enums.Cargo.ADMIN, true) <= 1) {
+            throw new Conflict("Não é possível remover o último administrador.");
+        }
         existente.setAtivo(ativo);
+        existente.setDesativadoEm(ativo ? null : java.time.LocalDateTime.now());
+        existente.setTokenVersion(existente.getTokenVersion() + 1);
         return new FuncionarioResponseDto(funcionarioRepository.save(existente));
+    }
+
+    private void desativar(Funcionario funcionario) {
+        if (funcionario.getCargoGlobal() == com.jaf.application.enums.Cargo.ADMIN
+                && funcionarioRepository.countByCargoGlobalAndAtivo(com.jaf.application.enums.Cargo.ADMIN, true) <= 1) {
+            throw new Conflict("Não é possível remover o último administrador.");
+        }
+        funcionario.setAtivo(false);
+        funcionario.setDesativadoEm(java.time.LocalDateTime.now());
+        funcionario.setTokenVersion(funcionario.getTokenVersion() + 1);
+        funcionarioRepository.save(funcionario);
     }
 
     private void exigirSemRegistrosVinculados(Funcionario funcionario, String mensagem) {

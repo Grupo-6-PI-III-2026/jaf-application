@@ -14,6 +14,7 @@ import com.jaf.application.repository.FuncionarioRepository;
 import com.jaf.application.repository.ObraRepository;
 import com.jaf.application.repository.PresencaRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -22,6 +23,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
+@Transactional
 public class PresencaService {
     private final PresencaRepository presencaRepository;
     private final FuncionarioRepository funcionarioRepository;
@@ -133,7 +135,7 @@ public class PresencaService {
             throw new BadRequest("A data final deve ser maior ou igual à data inicial.");
         }
 
-        Map<Long, Cargo> cargoPorFuncionario = alocacaoObraRepository.findByObraId(obraId).stream()
+        Map<Long, com.jaf.application.enums.FuncaoObra> cargoPorFuncionario = alocacaoObraRepository.findByObraId(obraId).stream()
                 .collect(Collectors.toMap(
                         a -> a.getFuncionario().getId(),
                         AlocacaoObra::getCargo,
@@ -151,7 +153,7 @@ public class PresencaService {
                     dto.setId(presenca.getId());
                     dto.setFuncionarioId(presenca.getFuncionario().getId());
                     dto.setFuncionarioNome(presenca.getFuncionario().getNome());
-                    Cargo cargo = cargoPorFuncionario.get(presenca.getFuncionario().getId());
+                    com.jaf.application.enums.FuncaoObra cargo = cargoPorFuncionario.get(presenca.getFuncionario().getId());
                     dto.setFuncionarioCargo(cargo != null ? cargo.name() : "");
                     dto.setData(presenca.getData());
                     dto.setPresente(presenca.getPresente());

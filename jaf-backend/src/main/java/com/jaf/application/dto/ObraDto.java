@@ -10,11 +10,11 @@ public class ObraDto {
     @NotBlank(message = "O título da obra é obrigatório")
     @Size(min = 5, message = "O título da obra deve ter no mínimo 5 caracteres")
     @Size(max = 150, message = "O título da obra deve ter no máximo 150 caracteres")
-    @Pattern(regexp = "^[a-zA-Z0-9À-ÿ\\s\\-]+$", message = "O título da obra contém caracteres inválidos. Use apenas letras, números, espaços e hífens")
+    @Pattern(regexp = "^[\\p{L}\\p{N}\\s\\-.,()/'&]+$", message = "O título da obra contém caracteres inválidos")
     private String titulo;
 
     @NotBlank(message = "O orçamento é obrigatório")
-    @Pattern(regexp = "^\\d+(\\.\\d{1,2})?$", message = "O orçamento deve ser um valor numérico válido")
+    @Pattern(regexp = "^(?=.*[1-9])\\d+(\\.\\d{1,2})?$", message = "O orçamento deve ser maior que zero")
     private String orcamento;
 
     @NotBlank(message = "O status é obrigatório")

@@ -16,6 +16,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -61,7 +62,7 @@ class FinanceiroApiTest {
     @Test void financeiroEDashboardNegadosMesmoComPermissaoDeVisualizarGastos() throws Exception {
         for (var pessoa : List.of(engenheiro, responsavel)) {
             mvc.perform(get("/obras/{id}/financeiro", obra.getId()).with(usuario(pessoa, "VISUALIZAR_GASTOS"))).andExpect(status().isForbidden());
-            mvc.perform(put("/obras/{id}/financeiro", obra.getId()).with(usuario(pessoa)).contentType("application/json").content("{\"totalRecebido\":1000}"))
+            mvc.perform(put("/obras/{id}/financeiro", obra.getId()).with(usuario(pessoa)).with(csrf()).contentType("application/json").content("{\"totalRecebido\":1000}"))
                     .andExpect(status().isForbidden());
             mvc.perform(get("/dashboard/stats").param("obraId", obra.getId().toString()).with(usuario(pessoa, "VISUALIZAR_GASTOS")))
                     .andExpect(status().isForbidden());
@@ -75,12 +76,12 @@ class FinanceiroApiTest {
     }
     @Test void cargosEAlocacaoControlamRegistroEPermissaoControlaLeitura() throws Exception {
         String corpo = "{\"valor\":30,\"dataPagamento\":\"" + LocalDate.now() + "\",\"observacao\":\"Parcela\"}";
-        mvc.perform(post("/gastos/{id}/reembolsos", gasto.getId()).with(usuario(engenheiro, "EDITAR_GASTO")).contentType("application/json").content(corpo))
+        mvc.perform(post("/gastos/{id}/reembolsos", gasto.getId()).with(usuario(engenheiro, "EDITAR_GASTO")).with(csrf()).contentType("application/json").content(corpo))
                 .andExpect(status().isForbidden());
         alocacoes.deleteAll(); alocacoes.flush();
-        mvc.perform(post("/gastos/{id}/reembolsos", gasto.getId()).with(usuario(responsavel)).contentType("application/json").content(corpo))
+        mvc.perform(post("/gastos/{id}/reembolsos", gasto.getId()).with(usuario(responsavel)).with(csrf()).contentType("application/json").content(corpo))
                 .andExpect(status().isForbidden());
-        mvc.perform(post("/gastos/{id}/reembolsos", gasto.getId()).with(usuario(admin)).contentType("application/json").content(corpo))
+        mvc.perform(post("/gastos/{id}/reembolsos", gasto.getId()).with(usuario(admin)).with(csrf()).contentType("application/json").content(corpo))
                 .andExpect(status().isCreated()).andExpect(jsonPath("$.status").value("PARCIAL")).andExpect(jsonPath("$.totalPago").value(30))
                 .andExpect(jsonPath("$.saldoPendente").value(70)).andExpect(jsonPath("$.pagamentos.length()").value(1));
         mvc.perform(get("/gastos/{id}/reembolsos", gasto.getId()).with(usuario(engenheiro)))
@@ -91,15 +92,15 @@ class FinanceiroApiTest {
                 .andExpect(status().isBadRequest());
         mvc.perform(get("/gastos").param("statusReembolso", "INVALIDO").with(usuario(admin, "VISUALIZAR_GASTOS")))
                 .andExpect(status().isBadRequest());
-        mvc.perform(post("/gastos/{id}/reembolsos", gasto.getId()).with(usuario(admin)).contentType("application/json")
+        mvc.perform(post("/gastos/{id}/reembolsos", gasto.getId()).with(usuario(admin)).with(csrf()).contentType("application/json")
                 .content("{\"valor\":0.001,\"dataPagamento\":\"" + LocalDate.now() + "\"}"))
                 .andExpect(status().isBadRequest());
     }
     @Test void presencaManualExigePermissaoELeituraExigeEscopo() throws Exception {
         String corpo = "{\"funcionarioId\":" + engenheiro.getId() + ",\"obraId\":" + obra.getId() + ",\"data\":\"" + LocalDate.now() + "\",\"presente\":true}";
-        mvc.perform(post("/presencas").with(usuario(engenheiro, "VISUALIZAR_PRESENCAS")).contentType("application/json").content(corpo))
+        mvc.perform(post("/presencas").with(usuario(engenheiro, "VISUALIZAR_PRESENCAS")).with(csrf()).contentType("application/json").content(corpo))
                 .andExpect(status().isForbidden());
-        mvc.perform(post("/presencas").with(usuario(engenheiro, "REGISTRAR_PRESENCA")).contentType("application/json").content(corpo))
+        mvc.perform(post("/presencas").with(usuario(engenheiro, "REGISTRAR_PRESENCA")).with(csrf()).contentType("application/json").content(corpo))
                 .andExpect(status().isCreated());
         var fora = obras.saveAndFlush(new Obra());
         mvc.perform(get("/presencas/obra/{id}/data/{data}", fora.getId(), LocalDate.now()).with(usuario(engenheiro, "VISUALIZAR_PRESENCAS")))

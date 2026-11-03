@@ -5,6 +5,7 @@ import com.jaf.application.exceptions.Conflict;
 import com.jaf.application.exceptions.Forbidden;
 import com.jaf.application.exceptions.NoContent;
 import com.jaf.application.exceptions.NotFoundException;
+import com.jaf.application.exceptions.TooManyRequests;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -37,7 +38,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BadRequest.class)
     public ResponseEntity<ErrorResponse> handleBadRequest(BadRequest ex, WebRequest request) {
-        logger.error("BadRequest: {} - Path: {}", ex.getMessage(), request.getDescription(false));
+        logger.warn("BadRequest: {} - Path: {}", ex.getMessage(), request.getDescription(false));
         ErrorResponse error = new ErrorResponse(
                 LocalDateTime.now(),
                 HttpStatus.BAD_REQUEST.value(),
@@ -46,6 +47,14 @@ public class GlobalExceptionHandler {
                 request.getDescription(false).replace("uri=", "")
         );
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(TooManyRequests.class)
+    public ResponseEntity<ErrorResponse> handleTooManyRequests(TooManyRequests ex, WebRequest request) {
+        logger.warn("Login rate limit atingido - Path: {}", request.getDescription(false));
+        ErrorResponse error = new ErrorResponse(LocalDateTime.now(), 429, "Too Many Requests",
+                ex.getMessage(), request.getDescription(false).replace("uri=", ""));
+        return ResponseEntity.status(429).header("Retry-After", "900").body(error);
     }
 
     @ExceptionHandler(NotFoundException.class)

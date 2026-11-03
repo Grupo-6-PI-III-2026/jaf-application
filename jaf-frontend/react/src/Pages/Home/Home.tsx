@@ -13,6 +13,7 @@ import { gastoService, type Gasto } from "../../Service/Gastos/gastoService";
 import { alocacaoService, type AlocacaoObra } from "../../Service/Alocacoes/alocacaoService";
 import { authService } from "../../Service/Auth/Login/authService";
 import { toast } from "sonner";
+import { logger } from "../../Utils/logger";
 
 const formatarMoeda = (valor: number) =>
   valor.toLocaleString("pt-BR", {
@@ -65,7 +66,7 @@ export default function Home() {
         setGastos(gastosData);
         setResponsaveisPorObra(responsaveis);
       } catch (error) {
-        console.error("Erro ao carregar dados:", error);
+        logger.erro("Erro ao carregar obras", error);
         toast.error("Não foi possível carregar as obras. Atualize a página para tentar novamente.");
       } finally {
         setCarregando(false);

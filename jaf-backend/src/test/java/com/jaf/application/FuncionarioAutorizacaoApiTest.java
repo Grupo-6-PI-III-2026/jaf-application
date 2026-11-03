@@ -26,6 +26,7 @@ import java.util.stream.Stream;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -69,6 +70,11 @@ class FuncionarioAutorizacaoApiTest {
                 Stream.of(new SimpleGrantedAuthority("ROLE_ADMIN"))).toList());
     }
 
+    private UserRequestPostProcessor autenticado(Funcionario funcionario) {
+        return user(funcionario.getEmail()).authorities(
+                autenticacao.loadUserByUsername(funcionario.getEmail()).getAuthorities());
+    }
+
     private String corpo(Cargo cargo, String email) {
         return "{\"nome\":\"Pessoa Teste\",\"email\":\"" + email
                 + "\",\"senha\":\"Teste123!\",\"cargo\":\"" + cargo.name() + "\"}";
@@ -78,7 +84,7 @@ class FuncionarioAutorizacaoApiTest {
     void naoAdminNaoCriaAdminMesmoComTodasAuthorities() throws Exception {
         long antes = funcionarios.count();
         for (Funcionario ator : List.of(responsavel, engenheiro)) {
-            mvc.perform(post("/funcionarios").with(privilegiado(ator)).contentType("application/json")
+            mvc.perform(post("/funcionarios").with(privilegiado(ator)).with(csrf()).contentType("application/json")
                             .content(corpo(Cargo.ADMIN, "novo@seguranca.invalid")))
                     .andExpect(status().isForbidden());
         }
@@ -88,11 +94,11 @@ class FuncionarioAutorizacaoApiTest {
     @Test
     void putNaoPermitePromoverNemGerenciarCargoDeNaoAdmin() throws Exception {
         for (Cargo cargo : List.of(Cargo.ADMIN, Cargo.RESPONSAVEL_ADMINISTRATIVO)) {
-            mvc.perform(put("/funcionarios/{id}", engenheiro.getId()).with(privilegiado(responsavel))
+            mvc.perform(put("/funcionarios/{id}", engenheiro.getId()).with(privilegiado(responsavel)).with(csrf())
                             .contentType("application/json").content(corpo(cargo, "alterado@seguranca.invalid")))
                     .andExpect(status().isForbidden());
         }
-        mvc.perform(put("/funcionarios/{id}", responsavel.getId()).with(privilegiado(responsavel))
+        mvc.perform(put("/funcionarios/{id}", responsavel.getId()).with(privilegiado(responsavel)).with(csrf())
                         .contentType("application/json").content(corpo(Cargo.ADMIN, responsavel.getEmail())))
                 .andExpect(status().isForbidden());
         assertEquals(Cargo.ENGENHEIRO, funcionarios.findById(engenheiro.getId()).orElseThrow().getCargoGlobal());
@@ -103,7 +109,7 @@ class FuncionarioAutorizacaoApiTest {
     @Test
     void patchCargoSempreExigeAdminPersistido() throws Exception {
         for (Cargo cargo : List.of(Cargo.ADMIN, Cargo.GESTOR_OBRA)) {
-            mvc.perform(patch("/funcionarios/{id}/cargo", engenheiro.getId()).with(privilegiado(responsavel))
+            mvc.perform(patch("/funcionarios/{id}/cargo", engenheiro.getId()).with(privilegiado(responsavel)).with(csrf())
                             .contentType("application/json").content("{\"cargo\":\"" + cargo.name() + "\"}"))
                     .andExpect(status().isForbidden());
         }
@@ -113,11 +119,11 @@ class FuncionarioAutorizacaoApiTest {
     @Test
     void naoAdminNaoEditaRebaixaOuExcluiOutroAdmin() throws Exception {
         for (Cargo cargo : List.of(Cargo.ADMIN, Cargo.ENGENHEIRO)) {
-            mvc.perform(put("/funcionarios/{id}", admin.getId()).with(privilegiado(responsavel))
+            mvc.perform(put("/funcionarios/{id}", admin.getId()).with(privilegiado(responsavel)).with(csrf())
                             .contentType("application/json").content(corpo(cargo, "tomada@seguranca.invalid")))
                     .andExpect(status().isForbidden());
         }
-        mvc.perform(delete("/funcionarios/{id}", admin.getId()).with(privilegiado(responsavel)))
+        mvc.perform(delete("/funcionarios/{id}", admin.getId()).with(privilegiado(responsavel)).with(csrf()))
                 .andExpect(status().isForbidden());
         assertEquals(Cargo.ADMIN, admin.getCargoGlobal());
         assertEquals("admin@seguranca.invalid", admin.getEmail());
@@ -127,13 +133,13 @@ class FuncionarioAutorizacaoApiTest {
     @Test
     void gestaoDePermissoesNaoAceitaEditarFuncionarioComoAdmin() throws Exception {
         mvc.perform(get("/permissoes/cargos").with(privilegiado(responsavel))).andExpect(status().isForbidden());
-        mvc.perform(put("/permissoes/cargos/ENGENHEIRO").with(privilegiado(responsavel))
+        mvc.perform(put("/permissoes/cargos/ENGENHEIRO").with(privilegiado(responsavel)).with(csrf())
                         .contentType("application/json").content("{\"permissoes\":[\"EDITAR_FUNCIONARIO\"]}"))
                 .andExpect(status().isForbidden());
         for (Funcionario alvo : List.of(responsavel, engenheiro, admin)) {
             mvc.perform(get("/funcionarios/{id}/permissoes", alvo.getId()).with(privilegiado(responsavel)))
                     .andExpect(status().isForbidden());
-            mvc.perform(put("/funcionarios/{id}/permissoes", alvo.getId()).with(privilegiado(responsavel))
+            mvc.perform(put("/funcionarios/{id}/permissoes", alvo.getId()).with(privilegiado(responsavel)).with(csrf())
                             .contentType("application/json").content("{\"permissoes\":[\"EDITAR_FUNCIONARIO\"]}"))
                     .andExpect(status().isForbidden());
             assertTrue(permissoes.findByFuncionarioId(alvo.getId()).isEmpty());
@@ -142,11 +148,11 @@ class FuncionarioAutorizacaoApiTest {
 
     @Test
     void responsavelContinuaCadastrandoEAtualizandoDadosNormais() throws Exception {
-        mvc.perform(post("/funcionarios").with(privilegiado(responsavel)).contentType("application/json")
+        mvc.perform(post("/funcionarios").with(privilegiado(responsavel)).with(csrf()).contentType("application/json")
                         .content(corpo(Cargo.PEDREIRO, "novo@seguranca.invalid")))
                 .andExpect(status().isCreated()).andExpect(jsonPath("$.cargo").value("PEDREIRO"))
                 .andExpect(jsonPath("$.senha").doesNotExist());
-        mvc.perform(put("/funcionarios/{id}", engenheiro.getId()).with(privilegiado(responsavel))
+        mvc.perform(put("/funcionarios/{id}", engenheiro.getId()).with(privilegiado(responsavel)).with(csrf())
                         .contentType("application/json").content(corpo(Cargo.ENGENHEIRO, "editado@seguranca.invalid")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.email").value("editado@seguranca.invalid"))
                 .andExpect(jsonPath("$.senha").doesNotExist());
@@ -155,52 +161,53 @@ class FuncionarioAutorizacaoApiTest {
 
     @Test
     void adminRealPodeConcederRemoverAdminEEditarOutroAdmin() throws Exception {
-        mvc.perform(post("/funcionarios").with(privilegiado(admin)).contentType("application/json")
+        mvc.perform(post("/funcionarios").with(privilegiado(admin)).with(csrf()).contentType("application/json")
                         .content(corpo(Cargo.ADMIN, "outroadmin@seguranca.invalid")))
                 .andExpect(status().isCreated()).andExpect(jsonPath("$.senha").doesNotExist());
-        mvc.perform(patch("/funcionarios/{id}/cargo", engenheiro.getId()).with(user(admin.getEmail()))
+        mvc.perform(patch("/funcionarios/{id}/cargo", engenheiro.getId()).with(autenticado(admin)).with(csrf())
                         .contentType("application/json").content("{\"cargo\":\"ADMIN\"}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.cargo").value("ADMIN"));
-        mvc.perform(put("/funcionarios/{id}", engenheiro.getId()).with(privilegiado(admin))
+        mvc.perform(put("/funcionarios/{id}", engenheiro.getId()).with(privilegiado(admin)).with(csrf())
                         .contentType("application/json").content(corpo(Cargo.ENGENHEIRO, "editado@seguranca.invalid")))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.cargo").value("ENGENHEIRO"));
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("O cargo de um administrador não pode ser alterado."));
         Funcionario outroAdmin = funcionarios.findByEmailIgnoreCase("outroadmin@seguranca.invalid").orElseThrow();
-        mvc.perform(delete("/funcionarios/{id}", outroAdmin.getId()).with(privilegiado(admin)))
+        mvc.perform(delete("/funcionarios/{id}", outroAdmin.getId()).with(privilegiado(admin)).with(csrf()))
                 .andExpect(status().isNoContent());
     }
 
     @Test
     void adminNaoAlteraProprioCargoPermissoesNemExcluiPropriaContaPelaGestao() throws Exception {
         String mensagem = "Não é permitido alterar o próprio cargo ou as próprias permissões.";
-        mvc.perform(patch("/funcionarios/{id}/cargo", admin.getId()).with(privilegiado(admin))
+        mvc.perform(patch("/funcionarios/{id}/cargo", admin.getId()).with(privilegiado(admin)).with(csrf())
                         .contentType("application/json").content("{\"cargo\":\"ENGENHEIRO\"}"))
                 .andExpect(status().isForbidden()).andExpect(jsonPath("$.message").value(mensagem));
-        mvc.perform(put("/funcionarios/{id}", admin.getId()).with(privilegiado(admin))
+        mvc.perform(put("/funcionarios/{id}", admin.getId()).with(privilegiado(admin)).with(csrf())
                         .contentType("application/json").content(corpo(Cargo.ENGENHEIRO, admin.getEmail())))
                 .andExpect(status().isForbidden()).andExpect(jsonPath("$.message").value(mensagem));
-        mvc.perform(put("/funcionarios/{id}/permissoes", admin.getId()).with(privilegiado(admin))
+        mvc.perform(put("/funcionarios/{id}/permissoes", admin.getId()).with(privilegiado(admin)).with(csrf())
                         .contentType("application/json").content("{\"permissoes\":[\"VISUALIZAR_OBRA\"]}"))
                 .andExpect(status().isForbidden()).andExpect(jsonPath("$.message").value(mensagem));
-        mvc.perform(delete("/funcionarios/{id}", admin.getId()).with(privilegiado(admin)))
+        mvc.perform(delete("/funcionarios/{id}", admin.getId()).with(privilegiado(admin)).with(csrf()))
                 .andExpect(status().isForbidden());
         assertEquals(Cargo.ADMIN, funcionarios.findById(admin.getId()).orElseThrow().getCargoGlobal());
         assertTrue(permissoes.findByFuncionarioId(admin.getId()).isEmpty());
         assertTrue(funcionarios.existsById(admin.getId()));
 
-        mvc.perform(put("/funcionarios/{id}", admin.getId()).with(privilegiado(admin))
+        mvc.perform(put("/funcionarios/{id}", admin.getId()).with(privilegiado(admin)).with(csrf())
                         .contentType("application/json").content(corpo(Cargo.ADMIN, admin.getEmail())))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.cargo").value("ADMIN"));
-        mvc.perform(patch("/funcionarios/{id}/cargo", engenheiro.getId()).with(user(admin.getEmail()))
+        mvc.perform(patch("/funcionarios/{id}/cargo", engenheiro.getId()).with(autenticado(admin)).with(csrf())
                         .contentType("application/json").content("{\"cargo\":\"RESPONSAVEL_ADMINISTRATIVO\"}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.cargo").value("RESPONSAVEL_ADMINISTRATIVO"));
-        mvc.perform(put("/funcionarios/{id}/permissoes", engenheiro.getId()).with(user(admin.getEmail()))
+        mvc.perform(put("/funcionarios/{id}/permissoes", engenheiro.getId()).with(autenticado(admin)).with(csrf())
                         .contentType("application/json").content("{\"permissoes\":[\"VISUALIZAR_OBRA\"]}"))
                 .andExpect(status().isOk());
     }
 
     @Test
     void regrasDoCargoAdminSaoFixas() throws Exception {
-        mvc.perform(put("/permissoes/cargos/ADMIN").with(user(admin.getEmail()))
+        mvc.perform(put("/permissoes/cargos/ADMIN").with(autenticado(admin)).with(csrf())
                         .contentType("application/json").content("{\"permissoes\":[\"VISUALIZAR_OBRA\"]}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("As permissões do cargo ADMIN são fixas."));
@@ -211,7 +218,7 @@ class FuncionarioAutorizacaoApiTest {
         for (Funcionario pessoa : List.of(engenheiro, responsavel, admin)) {
             Object[] esperadas = autenticacao.loadUserByUsername(pessoa.getEmail()).getAuthorities().stream()
                     .map(GrantedAuthority::getAuthority).filter(nome -> !nome.startsWith("ROLE_")).toArray();
-            mvc.perform(get("/funcionarios/me/permissoes").with(user(pessoa.getEmail())))
+            mvc.perform(get("/funcionarios/me/permissoes").with(autenticado(pessoa)))
                     .andExpect(status().isOk()).andExpect(jsonPath("$.funcionarioId").value(pessoa.getId()))
                     .andExpect(jsonPath("$.cargo").value(pessoa.getCargoGlobal().name()))
                     .andExpect(jsonPath("$.permissoes", containsInAnyOrder(esperadas)))
@@ -221,26 +228,26 @@ class FuncionarioAutorizacaoApiTest {
 
     @Test
     void consultaPropriaRefleteRegrasEOverrideIndividualPersistidos() throws Exception {
-        mvc.perform(put("/permissoes/cargos/ENGENHEIRO").with(user(admin.getEmail()))
+        mvc.perform(put("/permissoes/cargos/ENGENHEIRO").with(autenticado(admin)).with(csrf())
                         .contentType("application/json").content("{\"permissoes\":[\"VISUALIZAR_OBRA\"]}"))
                 .andExpect(status().isOk());
-        mvc.perform(get("/funcionarios/me/permissoes").with(user(engenheiro.getEmail())))
+        mvc.perform(get("/funcionarios/me/permissoes").with(autenticado(engenheiro)))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.permissoes", containsInAnyOrder("VISUALIZAR_OBRA")));
-        mvc.perform(put("/funcionarios/{id}/permissoes", engenheiro.getId()).with(user(admin.getEmail()))
+        mvc.perform(put("/funcionarios/{id}/permissoes", engenheiro.getId()).with(autenticado(admin)).with(csrf())
                         .contentType("application/json").content("{\"permissoes\":[\"REGISTRAR_PRESENCA\"]}"))
                 .andExpect(status().isOk());
-        mvc.perform(get("/funcionarios/me/permissoes").with(user(engenheiro.getEmail())))
+        mvc.perform(get("/funcionarios/me/permissoes").with(autenticado(engenheiro)))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.permissoes", containsInAnyOrder("REGISTRAR_PRESENCA")));
         assertEquals(List.of("REGISTRAR_PRESENCA"), autenticacao.loadUserByUsername(engenheiro.getEmail())
                 .getAuthorities().stream().map(GrantedAuthority::getAuthority)
                 .filter(nome -> !nome.startsWith("ROLE_")).toList());
-        mvc.perform(get("/funcionarios/{id}/permissoes", engenheiro.getId()).with(user(admin.getEmail())))
+        mvc.perform(get("/funcionarios/{id}/permissoes", engenheiro.getId()).with(autenticado(admin)))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.permissoes", containsInAnyOrder("REGISTRAR_PRESENCA")));
     }
 
     @Test
     void consultaPropriaNaoAceitaAnonimoOuContaInexistente() throws Exception {
-        mvc.perform(get("/funcionarios/me/permissoes")).andExpect(status().isForbidden());
+        mvc.perform(get("/funcionarios/me/permissoes")).andExpect(status().isUnauthorized());
         mvc.perform(get("/funcionarios/me/permissoes").with(user("removido@seguranca.invalid").roles("ADMIN")))
                 .andExpect(status().isForbidden());
     }
@@ -249,7 +256,7 @@ class FuncionarioAutorizacaoApiTest {
     void rebaixamentoNoBancoRevogaGestaoMesmoComAuthoritiesAntigas() throws Exception {
         admin.setCargoGlobal(Cargo.ENGENHEIRO);
         funcionarios.saveAndFlush(admin);
-        mvc.perform(put("/permissoes/cargos/ENGENHEIRO").with(privilegiado(admin))
+        mvc.perform(put("/permissoes/cargos/ENGENHEIRO").with(privilegiado(admin)).with(csrf())
                         .contentType("application/json").content("{\"permissoes\":[\"EDITAR_FUNCIONARIO\"]}"))
                 .andExpect(status().isForbidden());
         mvc.perform(post("/funcionarios").with(privilegiado(admin)).contentType("application/json")

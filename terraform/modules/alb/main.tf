@@ -13,6 +13,7 @@ resource "aws_lb" "main" {
 
   enable_deletion_protection = false
   enable_http2               = true
+  drop_invalid_header_fields = true
 
   tags = {
     Name        = "alb-${var.project_name}"

@@ -164,8 +164,28 @@ variable "jwt_secret" {
 }
 
 variable "jwt_expiration" {
-  description = "Tempo de expiração do JWT (em milissegundos)"
+  description = "Tempo de expiração do JWT (em segundos)"
   type        = string
+}
+
+variable "cookie_secure" {
+  description = "Habilita Secure no cookie JWT"
+  type        = bool
+  default     = false
+}
+
+variable "bootstrap_admin_email" {
+  description = "E-mail opcional do administrador inicial"
+  type        = string
+  sensitive   = true
+  default     = null
+}
+
+variable "bootstrap_admin_password" {
+  description = "Senha opcional do administrador inicial"
+  type        = string
+  sensitive   = true
+  default     = null
 }
 
 # ── OCR assíncrono (RabbitMQ + worker) ──────────────────────────

@@ -6,7 +6,7 @@ import jakarta.validation.constraints.*;
 public class FuncionarioDto {
     @NotBlank(message = "O nome do usuário é obrigatório")
     @Size(min = 3, max = 100, message = "O nome do usuário deve ter entre 3 e 100 caracteres")
-    @Pattern(regexp = "^[a-zA-ZÀ-ÿ\\s]+$", message = "O nome do usuário contém caracteres inválidos")
+    @Pattern(regexp = "^[\\p{L}][\\p{L}\\s'.\\-]+$", message = "O nome do usuário contém caracteres inválidos")
     private String nome;
 
     @NotBlank(message = "E-mail não deve ser vazio!")

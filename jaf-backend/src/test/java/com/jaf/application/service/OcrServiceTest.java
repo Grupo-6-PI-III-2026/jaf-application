@@ -127,7 +127,7 @@ class OcrServiceTest {
         ocrService.receberResultado(new OcrResultadoMensagem("job-2", StatusOcr.ERRO, null, null, "timeout"));
 
         assertEquals(StatusOcr.ERRO, processamento.getStatus());
-        assertTrue(processamento.getMensagemErro().contains("timeout"));
+        assertEquals("Não foi possível ler a nota. Tente outra foto.", processamento.getMensagemErro());
     }
 
     @Test

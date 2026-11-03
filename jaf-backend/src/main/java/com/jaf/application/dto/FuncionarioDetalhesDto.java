@@ -13,14 +13,18 @@ import java.util.List;
 
 public class FuncionarioDetalhesDto implements UserDetails {
     private final String nome;
+    private final Long id;
     private final String email;
     private final String senha;
     private final Cargo cargo;
     private final List<Permissao> permissoes;
     private final boolean ativo;
+    private final Integer tokenVersion;
 
     public FuncionarioDetalhesDto(Funcionario funcionario, List<Permissao> permissoes) {
         this.ativo = funcionario.isAtivo();
+        this.id = funcionario.getId();
+        this.tokenVersion = funcionario.getTokenVersion();
         this.nome = funcionario.getNome();
         this.email = funcionario.getEmail();
         this.senha = funcionario.getSenha();
@@ -31,6 +35,9 @@ public class FuncionarioDetalhesDto implements UserDetails {
     public String getNome() {
         return nome;
     }
+
+    public Long getId() { return id; }
+    public Integer getTokenVersion() { return tokenVersion; }
 
     public String getEmail() {
         return email;

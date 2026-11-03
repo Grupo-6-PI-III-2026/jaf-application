@@ -98,6 +98,17 @@ variable "enable_https" {
   description = "Habilita HTTPS no ALB quando houver certificado ACM válido"
   type        = bool
   default     = false
+  validation {
+    condition     = !var.enable_https || var.acm_certificate_arn != null
+    error_message = "enable_https=true exige acm_certificate_arn."
+  }
+}
+
+variable "cookie_secure" {
+  description = "Força Secure no cookie JWT; por padrão acompanha enable_https"
+  type        = bool
+  default     = null
+  nullable     = true
 }
 
 variable "backend_public_access" {
@@ -305,9 +316,23 @@ variable "jwt_secret" {
 }
 
 variable "jwt_expiration" {
-  description = "Tempo de expiração do JWT (em milissegundos)"
+  description = "Tempo de expiração do JWT (em segundos)"
   type        = string
-  default     = "86400000" # 24 horas por padrão, se não for passado
+  default     = "3600"
+}
+
+variable "bootstrap_admin_email" {
+  description = "E-mail opcional do administrador inicial; nunca commitar valor real"
+  type        = string
+  sensitive   = true
+  default     = null
+}
+
+variable "bootstrap_admin_password" {
+  description = "Senha opcional do administrador inicial; nunca commitar valor real"
+  type        = string
+  sensitive   = true
+  default     = null
 }
 
 # ── OCR assíncrono (RabbitMQ + worker) ──────────────────────────

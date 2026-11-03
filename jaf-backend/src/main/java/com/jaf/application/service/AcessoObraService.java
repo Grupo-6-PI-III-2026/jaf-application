@@ -6,6 +6,7 @@ import com.jaf.application.model.Funcionario;
 import com.jaf.application.repository.AlocacaoObraRepository;
 import com.jaf.application.repository.FuncionarioRepository;
 import org.springframework.security.core.context.SecurityContextHolder;
+import com.jaf.application.dto.FuncionarioDetalhesDto;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -23,13 +24,21 @@ public class AcessoObraService {
     public Funcionario atual() {
         var auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated()) throw new Forbidden("Autenticação obrigatória.");
+        if (auth.getPrincipal() instanceof FuncionarioDetalhesDto detalhes) {
+            return funcionarios.findById(detalhes.getId())
+                    .orElseThrow(() -> new Forbidden("Usuário autenticado não encontrado."));
+        }
         return funcionarios.findByEmailIgnoreCase(auth.getName())
                 .orElseThrow(() -> new Forbidden("Usuário autenticado não encontrado."));
     }
 
     public boolean isAdmin() {
         var auth = SecurityContextHolder.getContext().getAuthentication();
-        return auth != null && auth.isAuthenticated() && funcionarios.findByEmailIgnoreCase(auth.getName())
+        if (auth == null || !auth.isAuthenticated()) return false;
+        if (auth.getPrincipal() instanceof FuncionarioDetalhesDto detalhes) {
+            return detalhes.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        }
+        return funcionarios.findByEmailIgnoreCase(auth.getName())
                 .map(f -> f.getCargoGlobal() == Cargo.ADMIN).orElse(false);
     }
 
@@ -79,7 +88,7 @@ public class AcessoObraService {
     public void exigirObra(Long obraId) {
         Funcionario usuario = atual();
         if (usuario.getCargoGlobal() != Cargo.ADMIN
-                && !alocacoes.existsByFuncionarioIdAndObraId(usuario.getId(), obraId)) {
+                && !alocacoes.existsAtiva(usuario.getId(), obraId, java.time.LocalDate.now())) {
             throw new Forbidden("Usuário não possui acesso a esta obra.");
         }
     }
@@ -90,5 +99,15 @@ public class AcessoObraService {
             throw new Forbidden("Somente ADMIN e RESPONSAVEL_ADMINISTRATIVO podem registrar reembolsos.");
         }
         exigirObra(obraId);
+    }
+
+    public boolean podeVerObra(Long obraId) {
+        exigirObra(obraId);
+        return true;
+    }
+
+    public boolean podeRegistrarReembolso(Long obraId) {
+        exigirRegistroReembolso(obraId);
+        return true;
     }
 }

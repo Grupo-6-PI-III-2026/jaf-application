@@ -1,7 +1,8 @@
 //DTO = TRANSPORTAR DADOS
 package com.jaf.application.dto;
-import com.jaf.application.enums.Cargo;
+import com.jaf.application.enums.FuncaoObra;
 import jakarta.validation.constraints.NotNull;
+import java.time.LocalDate;
 
 public class AlocacaoObraDto {
     @NotNull(message = "O ID do funcionário é obrigatório")
@@ -11,7 +12,9 @@ public class AlocacaoObraDto {
     private Long obraId;
 
     @NotNull(message = "O cargo na obra é obrigatório")
-    private Cargo cargoNaObra;
+    private FuncaoObra cargoNaObra;
+    private LocalDate dtInicio;
+    private LocalDate dtFim;
 
     public Long getFuncionarioId() {
         return funcionarioId;
@@ -29,11 +32,16 @@ public class AlocacaoObraDto {
         this.obraId = obraId;
     }
 
-    public Cargo getCargoNaObra() {
+    public FuncaoObra getCargoNaObra() {
         return cargoNaObra;
     }
 
-    public void setCargoNaObra(Cargo cargoNaObra) {
+    public void setCargoNaObra(FuncaoObra cargoNaObra) {
         this.cargoNaObra = cargoNaObra;
     }
+
+    public LocalDate getDtInicio() { return dtInicio; }
+    public void setDtInicio(LocalDate dtInicio) { this.dtInicio = dtInicio; }
+    public LocalDate getDtFim() { return dtFim; }
+    public void setDtFim(LocalDate dtFim) { this.dtFim = dtFim; }
 }

@@ -60,7 +60,7 @@ class GastoServiceTest {
         comPagamento(); dto.setDescricao("Nota corrigida"); dto.setValor(new BigDecimal("120.00"));
         when(funcionarioRepository.findById(2L)).thenReturn(Optional.of(gasto.getFuncionario()));
         when(obraRepository.findById(1L)).thenReturn(Optional.of(gasto.getObra()));
-        when(alocacaoObraRepository.existsByFuncionarioIdAndObraId(2L, 1L)).thenReturn(true);
+        when(alocacaoObraRepository.existsAtiva(eq(2L), eq(1L), any(LocalDate.class))).thenReturn(true);
         when(gastoRepository.save(any())).thenAnswer(i -> i.getArgument(0));
         assertEquals("Nota corrigida", service.atualizar(3L, dto).getDescricao());
         verify(pagamentos, never()).deleteAll();
@@ -87,7 +87,7 @@ class GastoServiceTest {
         when(pagamentos.existsByGastoIdAndDataPagamentoBefore(3L, dto.getDtGasto())).thenReturn(false);
         when(funcionarioRepository.findById(2L)).thenReturn(Optional.of(gasto.getFuncionario()));
         when(obraRepository.findById(1L)).thenReturn(Optional.of(gasto.getObra()));
-        when(alocacaoObraRepository.existsByFuncionarioIdAndObraId(2L, 1L)).thenReturn(true);
+        when(alocacaoObraRepository.existsAtiva(eq(2L), eq(1L), any(LocalDate.class))).thenReturn(true);
         when(gastoRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
         assertEquals(dto.getDtGasto(), service.atualizar(3L, dto).getDtGasto());

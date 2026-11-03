@@ -11,11 +11,14 @@ public class GastoDto {
     private String descricao;
 
     @NotBlank(message = "A categoria é obrigatória")
+    @Size(max = 255)
     private String categoria;
 
     @NotBlank(message = "O método de pagamento é obrigatório")
+    @Size(max = 255)
     private String metodoPagamento;
 
+    @Size(max = 255)
     private String etapa;
 
     @NotNull(message = "O valor do gasto é obrigatório")
