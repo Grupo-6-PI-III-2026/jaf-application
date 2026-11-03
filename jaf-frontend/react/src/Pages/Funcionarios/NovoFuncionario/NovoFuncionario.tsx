@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { AxiosError } from "axios";
 import {type CargoApi } from "../../../Types/Register"
 import { authService } from "../../../Service/Auth/Login/authService";
+import { erroApi } from "../../../Utils/financeiro";
 
 interface ErrosFormulario {
   nome?: string;
@@ -52,6 +53,8 @@ export default function NovoFuncionario() {
 
     if (!nome.trim()) {
       nextErrors.nome = "O nome completo é obrigatório.";
+    } else if (!/^[a-zA-ZÀ-ÿ\s]+$/.test(nome)) {
+      nextErrors.nome = "O nome do usuário contém caracteres inválidos.";
     }
 
     if (!emailRegex.test(email)) {
@@ -107,7 +110,7 @@ export default function NovoFuncionario() {
         if (error.code === "ERR_NETWORK") {
           toast.error("Servidor indisponível. Tente novamente mais tarde.");
         } else if (error.response?.status === 400) {
-          toast.error("Dados inválidos. Verifique as informações e tente novamente.");
+          toast.error(erroApi(error, "Dados inválidos. Verifique as informações e tente novamente."));
         } else if (error.response?.status === 409) {
           toast.error("Já existe um funcionário cadastrado com este e-mail.");
         } else {

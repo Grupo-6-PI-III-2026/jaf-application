@@ -22,6 +22,8 @@ const formatarMoeda = (valor: number) =>
 
 const normalizar = (valor: string) => valor.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/_/g, " ").trim().toLowerCase();
 
+const STATUS_OBRA = ["PLANEJADA", "EM_ANDAMENTO", "CONCLUIDA", "CANCELADA"];
+
 // Array de imagens placeholder para as obras
 const imagensObras = [
   "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800",
@@ -88,7 +90,7 @@ export default function Home() {
     totalGastoPorObra.set(gasto.obra.id, (totalGastoPorObra.get(gasto.obra.id) ?? 0) + gasto.valor);
   });
 
-  const statusDisponiveis = Array.from(new Set(obras.map((obra) => normalizar(obra.status)))).sort();
+  const statusDisponiveis = Array.from(new Set([...STATUS_OBRA, ...obras.map((obra) => obra.status)].map(normalizar))).sort();
   const obrasFiltradas = obras
     .slice()
     .sort((a, b) => new Date(b.dtInicio).getTime() - new Date(a.dtInicio).getTime())
@@ -175,7 +177,13 @@ export default function Home() {
                   );
                 })
               ) : (
-                <p>{obras.length ? "Nenhuma obra corresponde aos filtros. Tente outro título ou status." : "Nenhuma obra encontrada."}</p>
+                <p>{
+                  status && !busca
+                    ? "Nenhuma obra encontrada com esse status."
+                    : obras.length
+                      ? "Nenhuma obra corresponde aos filtros. Tente outro título ou status."
+                      : "Nenhuma obra encontrada."
+                }</p>
               )}
             </div>
           </section>

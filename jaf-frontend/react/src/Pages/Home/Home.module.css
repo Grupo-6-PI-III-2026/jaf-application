@@ -140,3 +140,36 @@
   width: 100%;
   box-sizing: border-box;
 }
+
+.filtros select {
+  appearance: none;
+  padding-right: 36px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23495057' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  cursor: pointer;
+}
+
+/* Lista suspensa com bordas arredondadas nos navegadores que suportam a personalização */
+@supports (appearance: base-select) {
+  .filtros select,
+  .filtros select::picker(select) {
+    appearance: base-select;
+  }
+
+  .filtros select::picker(select) {
+    border: 1px solid #adb5bd;
+    border-radius: 8px;
+    background: #fff;
+    padding: 4px;
+  }
+
+  .filtros select option {
+    border-radius: 6px;
+    padding: 8px 10px;
+  }
+
+  .filtros select option:checked {
+    background: #e9ecef;
+  }
+}

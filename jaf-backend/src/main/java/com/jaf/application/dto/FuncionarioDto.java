@@ -4,9 +4,9 @@ import com.jaf.application.enums.Cargo;
 import jakarta.validation.constraints.*;
 
 public class FuncionarioDto {
-    @NotBlank(message = "Nome não pode ser vazio!")
-    @Size(min = 3, max = 100, message = "Nome deve ter entre 3 e 100 caracteres!")
-    @Pattern(regexp = "^[a-zA-ZÀ-ÿ\\s]+$", message = "Nome deve conter apenas letras e espaços")
+    @NotBlank(message = "O nome do usuário é obrigatório")
+    @Size(min = 3, max = 100, message = "O nome do usuário deve ter entre 3 e 100 caracteres")
+    @Pattern(regexp = "^[a-zA-ZÀ-ÿ\\s]+$", message = "O nome do usuário contém caracteres inválidos")
     private String nome;
 
     @NotBlank(message = "E-mail não deve ser vazio!")

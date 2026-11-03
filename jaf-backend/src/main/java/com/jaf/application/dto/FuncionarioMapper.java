@@ -41,6 +41,7 @@ public class FuncionarioMapper {
         funcionarioListarDto.setNome(funcionario.getNome());
         funcionarioListarDto.setCargo(funcionario.getCargoGlobal());
         funcionarioListarDto.setCreatedAt(funcionario.getCreatedAt());
+        funcionarioListarDto.setAtivo(funcionario.isAtivo());
 
         return funcionarioListarDto;
     }

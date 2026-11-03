@@ -64,6 +64,7 @@ export default function NovaObra() {
   const validateInputs = () => {
     const nextErrors: ErrosFormulario = {};
     if (!nomeObra.trim()) nextErrors.nomeObra = "O nome da obra é obrigatório.";
+    else if (nomeObra.trim().length < 5) nextErrors.nomeObra = "O título da obra deve ter no mínimo 5 caracteres.";
     // O helper exige um limite superior: planejamento admite qualquer data ISO válida, inclusive futura.
     const inicioValido = dataValida(dataInicio, "9999-12-31");
     const fimValido = dataValida(dataFim, "9999-12-31");

@@ -17,8 +17,10 @@ public class FuncionarioDetalhesDto implements UserDetails {
     private final String senha;
     private final Cargo cargo;
     private final List<Permissao> permissoes;
+    private final boolean ativo;
 
     public FuncionarioDetalhesDto(Funcionario funcionario, List<Permissao> permissoes) {
+        this.ativo = funcionario.isAtivo();
         this.nome = funcionario.getNome();
         this.email = funcionario.getEmail();
         this.senha = funcionario.getSenha();
@@ -74,6 +76,6 @@ public class FuncionarioDetalhesDto implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return ativo;
     }
 }

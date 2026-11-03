@@ -123,6 +123,18 @@ public class FuncionarioController {
         return ResponseEntity.noContent().build();
     }
 
+    @PatchMapping("/{id}/inativar")
+    @PreAuthorize("hasAuthority('EDITAR_FUNCIONARIO')")
+    public ResponseEntity<FuncionarioResponseDto> inativar(@PathVariable Long id) {
+        return ResponseEntity.ok(funcionarioService.alterarStatus(id, false));
+    }
+
+    @PatchMapping("/{id}/reativar")
+    @PreAuthorize("hasAuthority('EDITAR_FUNCIONARIO')")
+    public ResponseEntity<FuncionarioResponseDto> reativar(@PathVariable Long id) {
+        return ResponseEntity.ok(funcionarioService.alterarStatus(id, true));
+    }
+
     @PatchMapping("/{id}/cargo")
     @PreAuthorize("@acessoObraService.isAdmin()")
     public ResponseEntity<FuncionarioResponseDto> atualizarCargo(

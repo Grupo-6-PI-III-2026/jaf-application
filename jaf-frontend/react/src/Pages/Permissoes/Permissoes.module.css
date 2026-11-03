@@ -47,10 +47,6 @@
   margin-bottom: 8px;
 }
 
-.periodoUsuarios {
-  margin-bottom: 12px;
-}
-
 .buscaUsuarios input {
   width: 100%;
   padding: 10px 12px 10px 36px;
@@ -195,6 +191,19 @@
   color: #adb5bd;
   font-size: 13px;
   margin: 4px 0 20px;
+}
+
+.avisoBloqueio {
+  display: block;
+  margin: 0 0 20px;
+  padding: 12px 16px;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  border-left: 4px solid #fbbf24;
+  border-radius: 8px;
+  background-color: rgba(251, 191, 36, 0.12);
+  color: #fde68a;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .seletorCargo {
@@ -415,6 +424,37 @@
   margin-top: 24px;
   padding-top: 20px;
   border-top: 1px solid #4d4d4d;
+}
+
+.acoesUsuario {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.acoesUsuario button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btnExcluirUsuario {
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  background-color: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btnExcluirUsuario:hover:not(:disabled) {
+  background-color: rgba(239, 68, 68, 0.22);
+  color: #fff;
 }
 
 .btnCancelar,

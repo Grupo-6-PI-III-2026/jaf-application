@@ -217,6 +217,15 @@ class ObraServiceTest {
         when(obraRepository.existsById(999L)).thenReturn(false);
 
         assertThrows(NotFoundException.class, () -> obraService.deletar(999L));
+    }
+
+    @Test
+    void deletarObra_ComAlocacoes_Conflict() {
+        when(obraRepository.existsById(1L)).thenReturn(true);
+        when(alocacaoObraRepository.existsByObraId(1L)).thenReturn(true);
+
+        var ex = assertThrows(com.jaf.application.exceptions.Conflict.class, () -> obraService.deletar(1L));
+        assertTrue(ex.getMessage().contains("alocações vinculadas"));
         verify(obraRepository, never()).deleteById(anyLong());
     }
 }

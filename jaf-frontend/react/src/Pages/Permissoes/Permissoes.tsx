@@ -11,21 +11,23 @@ import {
   FileBarChart,
   ClipboardCheck,
   UserCog,
+  UserX,
+  UserCheck,
+  Trash2,
 } from "lucide-react";
+import { isAxiosError } from "axios";
 import { toast } from "sonner";
 import styles from "./Permissoes.module.css";
 import { permissaoService } from "../../Service/Permissoes/permissaoService";
+import { funcionarioService } from "../../Service/Funcionarios/funcionarioService";
+import { authService } from "../../Service/Auth/Login/authService";
 import { useUser } from "../../Context/useUser";
 import type { FuncionarioPermissoes, ModuloPermissao } from "../../Types/permissoes";
 import type { Cargo } from "../../Types/user";
-import PeriodoFiltro from "../../Components/PeriodoFiltro/PeriodoFiltro";
-import {
-  dataNoPeriodo,
-  periodoFiltroInicial,
-  resolverPeriodo,
-  type PeriodoFiltroValue,
-} from "../../Components/PeriodoFiltro/periodUtils";
 import { erroApi } from "../../Utils/financeiro";
+
+const MENSAGEM_USUARIO_COM_REGISTROS =
+  "Não é possível excluir este usuário pois existem registros vinculados a ele. Caso queira desativá-lo, utilize a opção de inativar usuário.";
 
 const MODULOS: ModuloPermissao[] = [
   {
@@ -122,7 +124,6 @@ export default function Permissoes() {
   const [funcionarios, setFuncionarios] = useState<FuncionarioPermissoes[]>([]);
   const [selectedUser, setSelectedUser] = useState<FuncionarioPermissoes | null>(null);
   const [busca, setBusca] = useState("");
-  const [periodo, setPeriodo] = useState<PeriodoFiltroValue>(periodoFiltroInicial);
   const [permissoesPorCargo, setPermissoesPorCargo] = useState<Record<Cargo, string[]>>(permissaoService.getMapaPadraoPermissoes());
   const [permissoesAtivas, setPermissoesAtivas] = useState<Set<string>>(new Set());
   const [permissoesOriginais, setPermissoesOriginais] = useState<Set<string>>(new Set());
@@ -131,7 +132,9 @@ export default function Permissoes() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const proprioUsuario = selectedUser !== null && selectedUser.id === usuarioAtual?.id;
+  const alvoAdmin = selectedUser?.cargo === "ADMIN";
   const permissoesFixas = cargoSelecionado === "ADMIN";
+  const [isProcessandoUsuario, setIsProcessandoUsuario] = useState(false);
 
   const carregarFuncionarios = useCallback(async () => {
     try {
@@ -171,6 +174,7 @@ export default function Permissoes() {
   }, [permissoesPorCargo]);
 
   const handleCargoChange = (cargo: Cargo) => {
+    if (alvoAdmin) return;
     setCargoSelecionado(cargo);
     const permissoes = permissoesPorCargo[cargo] ?? [];
     setPermissoesAtivas(new Set(permissoes));
@@ -202,7 +206,7 @@ export default function Permissoes() {
   };
 
   const hasChanges = (): boolean => {
-    if (!selectedUser || !cargoSelecionado || proprioUsuario) return false;
+    if (!selectedUser || !cargoSelecionado || proprioUsuario || alvoAdmin) return false;
     if (cargoSelecionado !== selectedUser.cargo) return true;
 
     if (permissoesAtivas.size !== permissoesOriginais.size) return true;
@@ -210,7 +214,7 @@ export default function Permissoes() {
   };
 
   const handleSalvar = async () => {
-    if (!selectedUser || !cargoSelecionado || proprioUsuario) return;
+    if (!selectedUser || !cargoSelecionado || proprioUsuario || alvoAdmin) return;
 
     try {
       setIsSaving(true);
@@ -251,17 +255,54 @@ export default function Permissoes() {
     }
   };
 
-  const intervalo = resolverPeriodo(periodo);
-
   const funcionariosFiltrados = funcionarios.filter((funcionario) => {
     const termo = busca.toLowerCase();
-    const correspondeBusca =
+    return (
       !termo ||
       funcionario.nome.toLowerCase().includes(termo) ||
-      funcionario.email.toLowerCase().includes(termo);
-    const correspondePeriodo = dataNoPeriodo(funcionario.createdAt, intervalo);
-    return correspondeBusca && correspondePeriodo;
+      funcionario.email.toLowerCase().includes(termo)
+    );
   });
+
+  const handleAlterarStatus = async (ativar: boolean) => {
+    if (!selectedUser || isProcessandoUsuario) return;
+    const acao = ativar ? "reativar" : "inativar";
+    if (!window.confirm(`Deseja ${acao} o usuário “${selectedUser.nome}”?`)) return;
+    try {
+      setIsProcessandoUsuario(true);
+      const atualizado = ativar
+        ? await funcionarioService.reativar(selectedUser.id)
+        : await funcionarioService.inativar(selectedUser.id);
+      const ativo = atualizado.ativo !== false;
+      setFuncionarios((prev) => prev.map((f) => (f.id === selectedUser.id ? { ...f, ativo } : f)));
+      setSelectedUser({ ...selectedUser, ativo });
+      toast.success(ativar ? "Usuário reativado com sucesso." : "Usuário inativado com sucesso.");
+    } catch (error) {
+      toast.error(erroApi(error, `Não foi possível ${acao} o usuário.`));
+    } finally {
+      setIsProcessandoUsuario(false);
+    }
+  };
+
+  const handleExcluirUsuario = async () => {
+    if (!selectedUser || isProcessandoUsuario) return;
+    if (!window.confirm(`Excluir o usuário “${selectedUser.nome}”? Esta ação é irreversível.`)) return;
+    try {
+      setIsProcessandoUsuario(true);
+      await funcionarioService.deletar(selectedUser.id);
+      setFuncionarios((prev) => prev.filter((f) => f.id !== selectedUser.id));
+      setSelectedUser(null);
+      toast.success("Usuário excluído com sucesso.");
+    } catch (error) {
+      if (isAxiosError(error) && error.response?.status === 409) {
+        toast.error(MENSAGEM_USUARIO_COM_REGISTROS);
+      } else {
+        toast.error(erroApi(error, "Não foi possível excluir o usuário."));
+      }
+    } finally {
+      setIsProcessandoUsuario(false);
+    }
+  };
 
   const getModuloIcon = (iconName: string) => {
     const Icon = ICON_MAP[iconName];
@@ -287,9 +328,6 @@ export default function Permissoes() {
             onChange={(event) => setBusca(event.target.value)}
           />
         </div>
-        <div className={styles.periodoUsuarios}>
-          <PeriodoFiltro value={periodo} onChange={setPeriodo} temaEscuro />
-        </div>
 
         {isLoading ? (
           <div className={styles.loading}>Carregando...</div>
@@ -304,7 +342,7 @@ export default function Permissoes() {
               <div className={styles.avatarUsuario}>{user.nome.charAt(0).toUpperCase()}</div>
               <div className={styles.infoUsuario}>
                 <h4>{user.nome}</h4>
-                <span>{user.cargo ? CARGO_LABELS[user.cargo] : "Sem cargo"}</span>
+                <span>{user.cargo ? CARGO_LABELS[user.cargo] : "Sem cargo"}{user.ativo === false ? " · Inativo" : ""}</span>
               </div>
               {user.cargo && (
                 <span
@@ -347,6 +385,7 @@ export default function Permissoes() {
             {permissoesFixas && !proprioUsuario && (
               <p role="note" className={styles.avisoBloqueio}>
                 As permissões do cargo ADMIN são fixas e não podem ser editadas.
+                {alvoAdmin && " O cargo de um administrador também não pode ser alterado."}
               </p>
             )}
 
@@ -356,7 +395,7 @@ export default function Permissoes() {
                   key={cargo}
                   className={cargoSelecionado === cargo ? styles.seletorCargoAtivo : ""}
                   onClick={() => handleCargoChange(cargo)}
-                  disabled={proprioUsuario}
+                  disabled={proprioUsuario || alvoAdmin}
                   aria-pressed={cargoSelecionado === cargo}
                 >
                   <UserCog size={14} style={{ marginRight: 6, verticalAlign: "middle" }} />
@@ -421,6 +460,60 @@ export default function Permissoes() {
                 {isSaving ? "Salvando..." : "Salvar Alterações"}
               </button>
             </div>
+
+            {!proprioUsuario && (authService.hasAuthority("EDITAR_FUNCIONARIO") || authService.hasAuthority("DELETAR_FUNCIONARIO")) && (
+              <div className={styles.acoesUsuario}>
+                {authService.hasAuthority("EDITAR_FUNCIONARIO") && (
+                  <button
+                    type="button"
+                    className={styles.btnCancelar}
+                    onClick={() => handleAlterarStatus(selectedUser.ativo === false)}
+                    disabled={isProcessandoUsuario}
+                  >
+                    {selectedUser.ativo === false ? <UserCheck size={16} /> : <UserX size={16} />}
+                    {selectedUser.ativo === false ? "Reativar usuário" : "Inativar usuário"}
+                  </button>
+                )}
+                {authService.hasAuthority("DELETAR_FUNCIONARIO") && (
+                  <button
+                    type="button"
+                    className={styles.btnExcluirUsuario}
+                    onClick={handleExcluirUsuario}
+                    disabled={isProcessandoUsuario}
+                  >
+                    <Trash2 size={16} />
+                    Excluir usuário
+                  </button>
+                )}
+              </div>
+            )}
+
+            {!proprioUsuario && (authService.hasAuthority("EDITAR_FUNCIONARIO") || authService.hasAuthority("DELETAR_FUNCIONARIO")) && (
+              <div className={styles.acoesUsuario}>
+                {authService.hasAuthority("EDITAR_FUNCIONARIO") && (
+                  <button
+                    type="button"
+                    className={styles.btnCancelar}
+                    onClick={() => handleAlterarStatus(selectedUser.ativo === false)}
+                    disabled={isProcessandoUsuario}
+                  >
+                    {selectedUser.ativo === false ? <UserCheck size={16} /> : <UserX size={16} />}
+                    {selectedUser.ativo === false ? "Reativar usuário" : "Inativar usuário"}
+                  </button>
+                )}
+                {authService.hasAuthority("DELETAR_FUNCIONARIO") && (
+                  <button
+                    type="button"
+                    className={styles.btnExcluirUsuario}
+                    onClick={handleExcluirUsuario}
+                    disabled={isProcessandoUsuario}
+                  >
+                    <Trash2 size={16} />
+                    Excluir usuário
+                  </button>
+                )}
+              </div>
+            )}
           </div>
       ) : (
         <div className={styles.estadoVazio}>

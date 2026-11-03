@@ -133,9 +133,6 @@ function Login() {
             <div className={styles.fieldGroup}>
               <div className={styles.fieldRow}>
                 <label htmlFor="login-senha" className={styles.fieldLabel}>Senha</label>
-                <button className={styles.forgotLink} type="button" onClick={() => toast.info("A recuperação de senha não está disponível nesta plataforma. Entre em contato com o administrador da sua empresa.")}>
-                  Esqueceu a senha?
-                </button>
               </div>
               <div className={styles.inputWrap}>
                 <input

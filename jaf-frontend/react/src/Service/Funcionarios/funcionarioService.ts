@@ -48,6 +48,20 @@ export const funcionarioService = {
     await api.delete("/funcionarios/me");
   },
 
+  deletar: async (id: number): Promise<void> => {
+    await api.delete(`/funcionarios/${id}`);
+  },
+
+  inativar: async (id: number): Promise<FuncionarioPermissoes> => {
+    const response = await api.patch<FuncionarioPermissoes>(`/funcionarios/${id}/inativar`);
+    return response.data;
+  },
+
+  reativar: async (id: number): Promise<FuncionarioPermissoes> => {
+    const response = await api.patch<FuncionarioPermissoes>(`/funcionarios/${id}/reativar`);
+    return response.data;
+  },
+
   uploadFoto: async (file: File): Promise<{ url: string }> => {
     const formData = new FormData();
     formData.append("file", file);

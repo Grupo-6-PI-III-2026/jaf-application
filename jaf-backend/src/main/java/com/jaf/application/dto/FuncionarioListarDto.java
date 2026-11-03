@@ -21,6 +21,12 @@ public class FuncionarioListarDto {
     @Schema(description = "Data de cadastro do funcionário", example = "2026-03-15")
     private LocalDate createdAt;
 
+    @Schema(description = "Indica se o usuário está ativo", example = "true")
+    private boolean ativo = true;
+
+    public boolean isAtivo() { return ativo; }
+
+    public void setAtivo(boolean ativo) { this.ativo = ativo; }
     public Long getId() { return id; }
 
     public void setId(Long id) { this.id = id; }

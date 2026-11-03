@@ -10,7 +10,12 @@ import com.jaf.application.exceptions.Conflict;
 import com.jaf.application.exceptions.Forbidden;
 import com.jaf.application.exceptions.NotFoundException;
 import com.jaf.application.model.Funcionario;
+import com.jaf.application.repository.AlocacaoObraRepository;
+import com.jaf.application.repository.FuncionarioPermissaoRepository;
 import com.jaf.application.repository.FuncionarioRepository;
+import com.jaf.application.repository.GastoRepository;
+import com.jaf.application.repository.PresencaRepository;
+import com.jaf.application.repository.RelatorioRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,6 +50,21 @@ class FuncionarioServiceTest {
     @Mock
     private AcessoObraService acesso;
 
+    @Mock
+    private AlocacaoObraRepository alocacaoObraRepository;
+
+    @Mock
+    private PresencaRepository presencaRepository;
+
+    @Mock
+    private GastoRepository gastoRepository;
+
+    @Mock
+    private RelatorioRepository relatorioRepository;
+
+    @Mock
+    private FuncionarioPermissaoRepository funcionarioPermissaoRepository;
+
     @InjectMocks
     private FuncionarioService funcionarioService;
 
@@ -69,7 +89,6 @@ class FuncionarioServiceTest {
 
     @Test
     void criarFuncionario_Sucesso() {
-        when(funcionarioRepository.existsByNome(anyString())).thenReturn(false);
         when(funcionarioRepository.findByEmailIgnoreCase(anyString())).thenReturn(Optional.empty());
         when(passwordEncoder.encode(anyString())).thenReturn("senhaCriptografada");
         when(funcionarioRepository.save(any(Funcionario.class))).thenReturn(funcionario);
@@ -82,16 +101,17 @@ class FuncionarioServiceTest {
     }
 
     @Test
-    void criarFuncionario_NomeDuplicado_Conflict() {
-        when(funcionarioRepository.existsByNome(anyString())).thenReturn(true);
+    void criarFuncionario_MesmoNomeEEmailDiferente_Sucesso() {
+        when(funcionarioRepository.findByEmailIgnoreCase(anyString())).thenReturn(Optional.empty());
+        when(passwordEncoder.encode(anyString())).thenReturn("senhaCriptografada");
+        when(funcionarioRepository.save(any(Funcionario.class))).thenReturn(funcionario);
 
-        assertThrows(Conflict.class, () -> funcionarioService.criar(funcionarioDto));
-        verify(funcionarioRepository, never()).save(any(Funcionario.class));
+        assertDoesNotThrow(() -> funcionarioService.criar(funcionarioDto));
+        verify(funcionarioRepository, times(1)).save(any(Funcionario.class));
     }
 
     @Test
     void criarFuncionario_EmailDuplicado_Conflict() {
-        when(funcionarioRepository.existsByNome(anyString())).thenReturn(false);
         when(funcionarioRepository.findByEmailIgnoreCase(anyString())).thenReturn(Optional.of(funcionario));
 
         assertThrows(Conflict.class, () -> funcionarioService.criar(funcionarioDto));

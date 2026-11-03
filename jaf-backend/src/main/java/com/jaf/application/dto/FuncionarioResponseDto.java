@@ -12,8 +12,10 @@ public class FuncionarioResponseDto {
     private String fotoUrl;
     private Cargo cargo;
     private LocalDate createdAt;
+    private boolean ativo;
 
     public FuncionarioResponseDto(Funcionario funcionario) {
+        this.ativo = funcionario.isAtivo();
         this.id = funcionario.getId();
         this.nome = funcionario.getNome();
         this.email = funcionario.getEmail();
@@ -28,6 +30,14 @@ public class FuncionarioResponseDto {
 
     public Long getId() {
         return id;
+    }
+
+    public boolean isAtivo() {
+        return ativo;
+    }
+
+    public void setAtivo(boolean ativo) {
+        this.ativo = ativo;
     }
 
     public void setId(Long id) {

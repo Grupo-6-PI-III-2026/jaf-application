@@ -47,6 +47,16 @@ describe("Home sem vazamento financeiro", () => {
     // KPIs não devem variar com a busca.
     expect(screen.getByText("Obras ativas")).toBeInTheDocument();
   });
+  it("lista todos os status do sistema e informa quando não há obras com o status", async () => {
+    validarSessao("ENGENHEIRO", ["VISUALIZAR_ALOCACOES"]);
+    render(<MemoryRouter><Home /></MemoryRouter>);
+    const lista = await screen.findByRole("region", { name: "Todas as obras" });
+    const select = screen.getByLabelText("Status da obra");
+    ["PLANEJADA", "EM ANDAMENTO", "CONCLUIDA", "CANCELADA"].forEach((rotulo) =>
+      expect(within(select).getByRole("option", { name: rotulo })).toBeInTheDocument());
+    fireEvent.change(select, { target: { value: "cancelada" } });
+    expect(within(lista).getByText("Nenhuma obra encontrada com esse status.")).toBeInTheDocument();
+  });
   it.each(["ENGENHEIRO", "RESPONSAVEL_ADMINISTRATIVO"] as const)("esconde totais e dashboard para %s mesmo com orçamento na resposta", async (cargo) => {
     validarSessao(cargo, ["VISUALIZAR_GASTOS"]);
     render(<MemoryRouter><Home /></MemoryRouter>);

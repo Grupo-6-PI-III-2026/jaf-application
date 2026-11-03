@@ -1,0 +1,87 @@
+Contexto 
+A construção civil é um dos setores que mais movimenta a economia brasileira, 
+respondendo por uma parcela significativa do PIB nacional e empregando milhões 
+de trabalhadores em todo o país. Dentro desse setor, empresas de pequeno e 
+médio porte que gerenciam múltiplas obras simultaneamente enfrentam um desafio 
+recorrente: o controle financeiro das operações. 
+Nesse sentido, o fluxo de caixa de uma construtora ou empreiteira pode ser 
+extremamente intenso, com entradas e saídas de dinheiro distribuídas entre 
+diferentes obras, fornecedores, funcionários, matérias  e categorias de gasto. 
+Quando esse controle é feito de forma manual por meio de planilhas ou papéis pode 
+ocorrer os riscos de desorganização, perda de informações e erros contábeis. 
+Um problema muito comum nesse contexto é a dificuldade na gestão das Notas 
+Fiscais e na consolidação das informações financeiras para envio à contabilidade. A 
+falta de uma solução centralizada e de fácil uso faz com que percam tempo precioso 
+tentando reunir dados que deveriam estar organizados e acessíveis de forma 
+imediata. 
+Nesse cenário, identificamos que o nosso cliente, a JAF, enfrenta exatamente essas 
+dores. A empresa precisa reunir diversas informações financeiras de diferentes 
+obras para a contabilidade, mas a falta de uma ferramenta centralizada sendo 
+utilizado apenas planilhas para todo esse controle causa desorganização e perda de 
+tempo. O Projeto JAF nasce para resolver essa dor específica 
+Objetivo 
+Desenvolver uma plataforma web para a JAF focada na gestão financeira de obras, 
+com o objetivo de centralizar o registro de gastos, o controle de Notas Fiscais e a 
+geração de relatórios, oferecendo ao gestor uma visão clara e organizada das 
+movimentações financeiras de cada obra de forma prática e acessível via 
+dispositivos móveis. 
+Justificativa 
+A JAF movimenta grandes recursos em múltiplas frentes de trabalho, mas a 
+ausência de uma ferramenta intuitiva dificulta a clareza sobre as saídas de dinheiro 
+e a agilidade contábil. 
+Diante disso, o desenvolvimento do Projeto JAF se justifica pela necessidade real e 
+identificada de uma solução prática, intuitiva e compatível com o perfil do usuário, 
+que não possui alta familiaridade com tecnologia e que seja capaz de centralizar, 
+organizar e simplificar a gestão financeira das obras com um sistema simples. 
+Escopo 
+O projeto tem como objetivo desenvolver uma plataforma web dedicada à gestão 
+financeira de obras, permitindo o registro e controle de gastos, o gerenciamento de 
+Notas Fiscais e a exportação de relatórios financeiros. A solução será voltada 
+exclusivamente para o contexto de obras gerenciadas pelo cliente (JAF) com foco 
+em praticidade, organização e acessibilidade. 
+A plataforma contará com um sistema de login e um cadastro pré feito dos principais 
+funcionarios da JAF, com a funcionalidade de criação de mais contas através da 
+conta de administrador, contará também com controle de acesso por nível de 
+permissão, cadastro e gestão de obras, além de um Dashboard que centralizará as 
+principais informações financeiras. O sistema também permitirá a aplicação de filtros 
+por data para facilitar a visualização e a exportação dos dados. 
+A proposta busca resolver diretamente as dores identificadas no mapeamento com 
+o cliente: a dificuldade na organização das Notas Fiscais, a falta de centralização 
+das informações e os problemas na identificação da saída de dinheiro. Com isso, o 
+Projeto da JAF visa entregar uma ferramenta que otimize o tempo, melhore a 
+comunicação com a contabilidade e traga mais controle e transparência às 
+operações financeiras das obras. 
+Requisitos 
+Essenciais: 
+• Interface para inserção de gastos 
+• Inserção e gestão de Notas Fiscais 
+• Login e cadastro de funcionários 
+• Cadastro e gestão de obras 
+• Dashboard 
+• Controle de acesso por nível de permissão 
+• Associar funcionários às obras 
+• Exportação de relatório de gastos 
+• Filtro de data relacionado aos gastos 
+• Documentação 
+• Protótipo do site 
+• Responsividade (Mobile) 
+Desejáveis: 
+• Envio de e-mail automatizado com o relatório anexado 
+• Monitoramento de entradas/saídas anuais 
+Premissas e Restrições 
+Premissas: 
+• Os usuários terão acesso à internet para utilizar a plataforma 
+• O  administrador será responsável pelo cadastro e gerenciamento dos novos 
+funcionários no sistema 
+• As informações financeiras inseridas na plataforma refletem os dados reais 
+das obras gerenciadas pelo cliente 
+Restrições: 
+• A plataforma será desenvolvida exclusivamente para o contexto de obras do 
+cliente (JAF), não sendo destinado ao mercado em geral 
+•  o envio à contabilidade será feito por meio da exportação de relatórios 
+• O projeto terá apenas as edições e funcionalidades definidas neste escopo, 
+sendo que as funcionalidades dispensáveis serão somente implementadas se 
+houver tempo e disponibilidade  
+• A interface será desenvolvida com foco para ser utilizada em dispositivos 
+Mobile (Mobile first) sendo intuitiva considerando o perfil de usuário com 
+baixa familiaridade tecnológica 

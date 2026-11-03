@@ -14,9 +14,16 @@ import com.jaf.application.exceptions.Forbidden;
 import com.jaf.application.exceptions.NoContent;
 import com.jaf.application.exceptions.NotFoundException;
 import com.jaf.application.model.Funcionario;
+import com.jaf.application.repository.AlocacaoObraRepository;
+import com.jaf.application.repository.FuncionarioPermissaoRepository;
 import com.jaf.application.repository.FuncionarioRepository;
+import com.jaf.application.repository.GastoRepository;
+import com.jaf.application.repository.PresencaRepository;
+import com.jaf.application.repository.RelatorioRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -29,31 +36,45 @@ import java.util.List;
 @Service
 public class FuncionarioService {
     private static final Logger logger = LoggerFactory.getLogger(FuncionarioService.class);
+    private static final String MENSAGEM_REGISTROS_VINCULADOS =
+            "Não é possível excluir este usuário pois existem registros vinculados a ele. "
+                    + "Caso queira desativá-lo, utilize a opção de inativar usuário.";
+    private static final String MENSAGEM_CONTA_COM_REGISTROS =
+            "Não é possível excluir sua conta pois existem registros vinculados a ela. "
+                    + "Peça a um administrador para inativá-la.";
 
     private final PasswordEncoder passwordEncoder;
     private final FuncionarioRepository funcionarioRepository;
     private final GerenciadorTokenJwt gerenciadorTokenJwt;
     private final AuthenticationManager authenticationManager;
     private final AcessoObraService acesso;
+    private final AlocacaoObraRepository alocacaoObraRepository;
+    private final PresencaRepository presencaRepository;
+    private final GastoRepository gastoRepository;
+    private final RelatorioRepository relatorioRepository;
+    private final FuncionarioPermissaoRepository funcionarioPermissaoRepository;
 
     public FuncionarioService(PasswordEncoder passwordEncoder, FuncionarioRepository funcionarioRepository,
                               GerenciadorTokenJwt gerenciadorTokenJwt, AuthenticationManager authenticationManager,
-                              AcessoObraService acesso) {
+                              AcessoObraService acesso, AlocacaoObraRepository alocacaoObraRepository,
+                              PresencaRepository presencaRepository, GastoRepository gastoRepository,
+                              RelatorioRepository relatorioRepository,
+                              FuncionarioPermissaoRepository funcionarioPermissaoRepository) {
         this.passwordEncoder = passwordEncoder;
         this.funcionarioRepository = funcionarioRepository;
         this.gerenciadorTokenJwt = gerenciadorTokenJwt;
         this.authenticationManager = authenticationManager;
         this.acesso = acesso;
+        this.alocacaoObraRepository = alocacaoObraRepository;
+        this.presencaRepository = presencaRepository;
+        this.gastoRepository = gastoRepository;
+        this.relatorioRepository = relatorioRepository;
+        this.funcionarioPermissaoRepository = funcionarioPermissaoRepository;
     }
 
     public FuncionarioResponseDto criar(FuncionarioDto dto) {
         acesso.exigirCriacaoFuncionario(dto.getCargo());
         logger.info("Tentando criar novo funcionário: {}", dto.getEmail());
-
-        if (funcionarioRepository.existsByNome(dto.getNome())) {
-            logger.warn("Tentativa de criar funcionário com nome duplicado: {}", dto.getNome());
-            throw new Conflict("Usuário já existe.");
-        }
 
         funcionarioRepository.findByEmailIgnoreCase(dto.getEmail())
                 .ifPresent(f -> {
@@ -173,17 +194,55 @@ public class FuncionarioService {
         logger.info("Senha alterada com sucesso para o usuário: {}", email);
     }
 
+    @Transactional
     public void excluirConta(String email) {
         Funcionario existente = buscarPorEmail(email);
-        funcionarioRepository.delete(existente);
+        exigirSemRegistrosVinculados(existente, MENSAGEM_CONTA_COM_REGISTROS);
+        removerPermissoesIndividuais(existente);
+        excluir(existente, MENSAGEM_CONTA_COM_REGISTROS);
     }
 
+    @Transactional
     public void deletar(Long id) {
         Funcionario existente = funcionarioRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Usuário não encontrado."));
         acesso.exigirExclusaoFuncionario(existente);
         acesso.exigirExclusaoDeOutro(existente);
-        funcionarioRepository.deleteById(id);
+        exigirSemRegistrosVinculados(existente, MENSAGEM_REGISTROS_VINCULADOS);
+        removerPermissoesIndividuais(existente);
+        excluir(existente, MENSAGEM_REGISTROS_VINCULADOS);
+    }
+
+    public FuncionarioResponseDto alterarStatus(Long id, boolean ativo) {
+        Funcionario existente = funcionarioRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Usuário não encontrado."));
+        acesso.exigirExclusaoFuncionario(existente);
+        acesso.exigirInativacaoDeOutro(existente);
+        existente.setAtivo(ativo);
+        return new FuncionarioResponseDto(funcionarioRepository.save(existente));
+    }
+
+    private void exigirSemRegistrosVinculados(Funcionario funcionario, String mensagem) {
+        Long id = funcionario.getId();
+        if (alocacaoObraRepository.existsByFuncionarioId(id)
+                || presencaRepository.existsByFuncionarioId(id)
+                || gastoRepository.existsByFuncionarioId(id)
+                || relatorioRepository.existsByFuncionarioResponsavelId(id)) {
+            throw new Conflict(mensagem);
+        }
+    }
+
+    private void removerPermissoesIndividuais(Funcionario funcionario) {
+        funcionarioPermissaoRepository.deleteByFuncionarioId(funcionario.getId());
+    }
+
+    private void excluir(Funcionario funcionario, String mensagemConflito) {
+        try {
+            funcionarioRepository.deleteById(funcionario.getId());
+            funcionarioRepository.flush();
+        } catch (DataIntegrityViolationException e) {
+            throw new Conflict(mensagemConflito);
+        }
     }
 
     public FuncionarioResponseDto atualizarCargo(Long id, String novoCargo) {
@@ -191,6 +250,7 @@ public class FuncionarioService {
         Funcionario existente = funcionarioRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Usuário não encontrado."));
         acesso.exigirGestaoDeAcessoDeOutro(existente);
+        acesso.exigirAlteracaoDeCargo(existente);
 
         com.jaf.application.enums.Cargo cargo;
         try {

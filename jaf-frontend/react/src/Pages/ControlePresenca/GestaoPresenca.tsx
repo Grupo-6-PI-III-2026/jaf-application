@@ -231,9 +231,8 @@ export default function GestaoPresenca() {
     <section className={styles.pagina} aria-label="Gestão de presença">
       <header className={styles.header}>
         <div>
-          <span className={styles.eyebrow}>OPERAÇÃO</span>
           <h1>Gestão de Presença</h1>
-          <p>Registro manual por usuário autenticado: REGISTRAR_PRESENCA permite criar, EDITAR_PRESENCA alterar e DELETAR_PRESENCA excluir. O colaborador não precisa de login; deve estar alocado na obra na data informada.</p>
+          <p>A gestão de presença permite registrar, editar e excluir a presença de colaboradores nas obras. O colaborador deve estar alocado na obra na data informada para que o registro seja possível.</p>
         </div>
       </header>
 

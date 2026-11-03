@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class AcessoObraService {
+    private static final String MENSAGEM_ADMIN_CARGO_FIXO = "O cargo de um administrador não pode ser alterado.";
+
     private final FuncionarioRepository funcionarios;
     private final AlocacaoObraRepository alocacoes;
 
@@ -44,7 +46,18 @@ public class AcessoObraService {
         if (funcionario.getCargoGlobal() == Cargo.ADMIN || alteraCargo) {
             exigirAdmin();
         }
-        if (alteraCargo) exigirGestaoDeAcessoDeOutro(funcionario);
+        if (alteraCargo) {
+            exigirGestaoDeAcessoDeOutro(funcionario);
+            exigirAlteracaoDeCargo(funcionario);
+        }
+    }
+
+    public void exigirAlteracaoDeCargo(Funcionario alvo) {
+        if (alvo.getCargoGlobal() == Cargo.ADMIN) throw new Forbidden(MENSAGEM_ADMIN_CARGO_FIXO);
+    }
+
+    public void exigirInativacaoDeOutro(Funcionario alvo) {
+        exigirOutroFuncionario(alvo, "Não é permitido inativar ou reativar a própria conta.");
     }
 
     public void exigirExclusaoFuncionario(Funcionario funcionario) {

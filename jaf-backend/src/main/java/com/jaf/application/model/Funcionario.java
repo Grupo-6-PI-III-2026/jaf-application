@@ -24,6 +24,17 @@ public class Funcionario {
     @Column(name = "created_at")
     private LocalDate createdAt;
 
+    @Column(nullable = false)
+    private boolean ativo = true;
+
+    public boolean isAtivo() {
+        return ativo;
+    }
+
+    public void setAtivo(boolean ativo) {
+        this.ativo = ativo;
+    }
+
     public Long getId() {
         return id;
     }

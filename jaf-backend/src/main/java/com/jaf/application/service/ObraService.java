@@ -14,6 +14,7 @@ import com.jaf.application.repository.FuncionarioRepository;
 import com.jaf.application.repository.ObraRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -156,7 +157,17 @@ public class ObraService {
             throw new NotFoundException("Obra nao encontrada");
         }
 
-        obraRepository.deleteById(id);
+        if (alocacaoObraRepository.existsByObraId(id)) {
+            logger.warn("Tentativa de deletar obra com alocações vinculadas: ID={}", id);
+            throw new Conflict("Não é possível excluir esta obra pois existem alocações vinculadas a ela. Remova as alocações antes de excluir a obra.");
+        }
+
+        try {
+            obraRepository.deleteById(id);
+        } catch (DataIntegrityViolationException e) {
+            logger.warn("Tentativa de deletar obra com registros vinculados: ID={}", id);
+            throw new Conflict("Não é possível excluir esta obra pois existem registros vinculados a ela.");
+        }
         logger.info("Obra deletada com sucesso: ID={}", id);
     }
 }

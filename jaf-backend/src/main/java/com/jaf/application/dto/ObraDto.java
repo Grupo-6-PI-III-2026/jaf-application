@@ -8,8 +8,9 @@ import java.time.LocalDate;
 public class ObraDto {
 
     @NotBlank(message = "O título da obra é obrigatório")
-    @Size(min = 5, max = 150, message = "O título deve ter entre 5 e 150 caracteres")
-    @Pattern(regexp = "^[a-zA-Z0-9À-ÿ\\s\\-]+$", message = "O título deve conter apenas letras, números, espaços e hífens")
+    @Size(min = 5, message = "O título da obra deve ter no mínimo 5 caracteres")
+    @Size(max = 150, message = "O título da obra deve ter no máximo 150 caracteres")
+    @Pattern(regexp = "^[a-zA-Z0-9À-ÿ\\s\\-]+$", message = "O título da obra contém caracteres inválidos. Use apenas letras, números, espaços e hífens")
     private String titulo;
 
     @NotBlank(message = "O orçamento é obrigatório")

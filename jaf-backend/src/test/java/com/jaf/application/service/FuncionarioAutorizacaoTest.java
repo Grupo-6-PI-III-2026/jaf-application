@@ -37,6 +37,9 @@ class FuncionarioAutorizacaoTest {
     @Mock PasswordEncoder encoder;
     @Mock GerenciadorTokenJwt jwt;
     @Mock AuthenticationManager authenticationManager;
+    @Mock com.jaf.application.repository.PresencaRepository presencas;
+    @Mock com.jaf.application.repository.GastoRepository gastos;
+    @Mock com.jaf.application.repository.RelatorioRepository relatorios;
 
     AcessoObraService acesso;
     FuncionarioService service;
@@ -47,7 +50,8 @@ class FuncionarioAutorizacaoTest {
     @BeforeEach
     void preparar() {
         acesso = new AcessoObraService(funcionarios, alocacoes);
-        service = new FuncionarioService(encoder, funcionarios, jwt, authenticationManager, acesso);
+        service = new FuncionarioService(encoder, funcionarios, jwt, authenticationManager, acesso,
+                alocacoes, presencas, gastos, relatorios, individuais);
         cargoService = new CargoPermissaoService(cargos, acesso);
         permissaoService = new FuncionarioPermissaoService(individuais, funcionarios, cargoService, acesso);
         ator = new Funcionario();
@@ -169,5 +173,63 @@ class FuncionarioAutorizacaoTest {
         assertThrows(Forbidden.class, acesso::exigirAdmin);
         SecurityContextHolder.clearContext();
         assertThrows(Forbidden.class, acesso::exigirAdmin);
+    }
+
+    @Test
+    void cargoDeAdministradorNaoPodeSerAlteradoPorOutroAdmin() {
+        Funcionario outroAdmin = new Funcionario();
+        outroAdmin.setId(3L);
+        outroAdmin.setCargoGlobal(Cargo.ADMIN);
+        ator.setCargoGlobal(Cargo.ADMIN);
+        persistirAtor();
+        when(funcionarios.findById(3L)).thenReturn(Optional.of(outroAdmin));
+        FuncionarioDto dto = new FuncionarioDto();
+        dto.setCargo(Cargo.ENGENHEIRO);
+        assertAll(
+                () -> assertThrows(Forbidden.class, () -> service.atualizarCargo(3L, "ENGENHEIRO")),
+                () -> assertThrows(Forbidden.class, () -> service.atualizar(3L, dto)));
+        assertEquals(Cargo.ADMIN, outroAdmin.getCargoGlobal());
+        verify(funcionarios, never()).save(any());
+    }
+
+    @Test
+    void exclusaoComRegistrosVinculadosRetornaConflitoSemExcluir() {
+        ator.setCargoGlobal(Cargo.ADMIN);
+        persistirAtor();
+        Funcionario alvo = new Funcionario();
+        alvo.setId(4L);
+        alvo.setCargoGlobal(Cargo.ENGENHEIRO);
+        when(funcionarios.findById(4L)).thenReturn(Optional.of(alvo));
+        when(presencas.existsByFuncionarioId(4L)).thenReturn(true);
+        assertThrows(com.jaf.application.exceptions.Conflict.class, () -> service.deletar(4L));
+        verify(funcionarios, never()).deleteById(any());
+        verifyNoInteractions(individuais);
+    }
+
+    @Test
+    void exclusaoSemRegistrosVinculadosContinuaFuncionando() {
+        ator.setCargoGlobal(Cargo.ADMIN);
+        persistirAtor();
+        Funcionario alvo = new Funcionario();
+        alvo.setId(4L);
+        alvo.setCargoGlobal(Cargo.ENGENHEIRO);
+        when(funcionarios.findById(4L)).thenReturn(Optional.of(alvo));
+        service.deletar(4L);
+        verify(funcionarios).deleteById(4L);
+    }
+
+    @Test
+    void inativarPreservaRegistroEBloqueiaAutoInativacao() {
+        ator.setCargoGlobal(Cargo.ADMIN);
+        persistirAtor();
+        Funcionario alvo = new Funcionario();
+        alvo.setId(4L);
+        alvo.setCargoGlobal(Cargo.ENGENHEIRO);
+        when(funcionarios.findById(4L)).thenReturn(Optional.of(alvo));
+        when(funcionarios.findById(ator.getId())).thenReturn(Optional.of(ator));
+        when(funcionarios.save(alvo)).thenReturn(alvo);
+        assertFalse(service.alterarStatus(4L, false).isAtivo());
+        assertThrows(Forbidden.class, () -> service.alterarStatus(ator.getId(), false));
+        verify(funcionarios, never()).deleteById(any());
     }
 }

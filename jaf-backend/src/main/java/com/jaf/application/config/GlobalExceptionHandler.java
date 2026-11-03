@@ -19,7 +19,7 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 @RestControllerAdvice
@@ -113,6 +113,19 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(error, HttpStatus.UNAUTHORIZED);
     }
 
+    @ExceptionHandler(org.springframework.security.authentication.DisabledException.class)
+    public ResponseEntity<ErrorResponse> handleDisabled(org.springframework.security.authentication.DisabledException ex, WebRequest request) {
+        logger.warn("DisabledException: {} - Path: {}", ex.getMessage(), request.getDescription(false));
+        ErrorResponse error = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.UNAUTHORIZED.value(),
+                "Unauthorized",
+                "Usuário inativo. Entre em contato com o administrador.",
+                request.getDescription(false).replace("uri=", "")
+        );
+        return new ResponseEntity<>(error, HttpStatus.UNAUTHORIZED);
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex, WebRequest request) {
         logger.warn("AccessDeniedException: {} - Path: {}", ex.getMessage(), request.getDescription(false));
@@ -143,18 +156,19 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ValidationError> handleValidationExceptions(MethodArgumentNotValidException ex, WebRequest request) {
         logger.warn("Validation error: {} - Path: {}", ex.getMessage(), request.getDescription(false));
-        Map<String, String> errors = new HashMap<>();
+        Map<String, String> errors = new LinkedHashMap<>();
         ex.getBindingResult().getAllErrors().forEach((error) -> {
-            String fieldName = ((FieldError) error).getField();
-            String errorMessage = error.getDefaultMessage();
-            errors.put(fieldName, errorMessage);
+            String fieldName = error instanceof FieldError fieldError ? fieldError.getField() : error.getObjectName();
+            errors.putIfAbsent(fieldName, error.getDefaultMessage());
         });
+
+        String mensagem = errors.isEmpty() ? "Erro de validação nos campos" : String.join(". ", errors.values());
 
         ValidationError validationError = new ValidationError(
                 LocalDateTime.now(),
                 HttpStatus.BAD_REQUEST.value(),
                 "Validation Failed",
-                "Erro de validação nos campos",
+                mensagem,
                 request.getDescription(false).replace("uri=", ""),
                 errors
         );

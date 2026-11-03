@@ -13,6 +13,7 @@ public interface GastoRepository extends JpaRepository<Gasto, Long>, org.springf
     @org.springframework.data.jpa.repository.Query("select g from Gasto g where g.id = :id")
     java.util.Optional<Gasto> buscarParaAtualizar(Long id);
     List<Gasto> findByObraId(Long obraId);
+    boolean existsByFuncionarioId(Long funcionarioId);
     List<Gasto> findByObraIdIn(Collection<Long> obraIds);
     List<Gasto> findByObraIdAndEtapa(Long obraId, String etapa);
     List<Gasto> findByObraIdAndMetodoPagamento(Long obraId, String metodoPagamento);

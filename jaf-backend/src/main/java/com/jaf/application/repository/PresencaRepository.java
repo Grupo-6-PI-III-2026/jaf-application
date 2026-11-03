@@ -10,6 +10,7 @@ import java.util.Optional;
 public interface PresencaRepository extends JpaRepository<Presenca, Long> {
     List<Presenca> findByObraId(Long obraId);
     List<Presenca> findByFuncionarioId(Long funcionarioId);
+    boolean existsByFuncionarioId(Long funcionarioId);
     Optional<Presenca> findByFuncionarioIdAndObraIdAndData(Long funcionarioId, Long obraId, LocalDate data);
     List<Presenca> findByObraIdAndData(Long obraId, LocalDate data);
     List<Presenca> findByObraIdAndDataBetween(Long obraId, LocalDate from, LocalDate to);

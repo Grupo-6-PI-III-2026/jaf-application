@@ -1,4 +1,5 @@
 import { useCallback, useState, useEffect, type FormEvent } from "react";
+import { isAxiosError } from "axios";
 import {
   Calendar,
   Search,
@@ -534,7 +535,12 @@ export default function DetalhamentoObras() {
       navegar("/home");
     } catch (error) {
       console.error("Erro ao deletar obra:", error);
-      toast.error("Não foi possível excluir a obra");
+      if (isAxiosError(error) && error.response?.status === 409) {
+        setModalDeleteAberto(false);
+        toast.error("Não é possível excluir esta obra pois existem alocações vinculadas a ela. Remova as alocações antes de excluir a obra.");
+      } else {
+        toast.error("Não foi possível excluir a obra");
+      }
     } finally {
       setDeletandoObra(false);
     }

@@ -3,7 +3,6 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import Login from "./Login";
 import { authService } from "../../../Service/Auth/Login/authService";
-import { toast } from "sonner";
 
 const contexto = vi.hoisted(() => ({ user: null as null | { id: number }, sessao: false }));
 vi.mock("../../../Context/useUser", () => ({
@@ -23,10 +22,9 @@ describe("login", () => {
     expect(screen.getByText("Obras autorizadas")).toBeInTheDocument();
     expect(screen.queryByLabelText("Senha")).not.toBeInTheDocument();
   });
-  it("orienta recuperação sem inventar endpoint e remove link sem destino", () => {
+  it("não exibe o botão de recuperação de senha", () => {
     render(<MemoryRouter><Login /></MemoryRouter>);
-    fireEvent.click(screen.getByRole("button", { name: "Esqueceu a senha?" }));
-    expect(toast.info).toHaveBeenCalledWith(expect.stringContaining("não está disponível"));
+    expect(screen.queryByRole("button", { name: "Esqueceu a senha?" })).not.toBeInTheDocument();
     expect(screen.getByText("Solicite seu cadastro ao administrador da sua empresa.")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Solicite aqui" })).not.toBeInTheDocument();
   });

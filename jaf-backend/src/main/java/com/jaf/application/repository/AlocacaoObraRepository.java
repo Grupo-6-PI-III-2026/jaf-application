@@ -7,6 +7,8 @@ import java.util.List;
 
 public interface AlocacaoObraRepository extends JpaRepository<AlocacaoObra, Long> {
     boolean existsByFuncionarioIdAndObraId(Long funcionarioId, Long obraId);
+    boolean existsByObraId(Long obraId);
+    boolean existsByFuncionarioId(Long funcionarioId);
     List<AlocacaoObra> findByFuncionarioId(Long funcionarioId);
     List<AlocacaoObra> findByObraId(Long obraId);
     List<AlocacaoObra> findByFuncionarioIdAndObraId(Long funcionarioId, Long obraId);

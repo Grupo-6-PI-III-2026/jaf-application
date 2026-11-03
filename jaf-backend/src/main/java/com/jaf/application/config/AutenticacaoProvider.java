@@ -3,6 +3,7 @@ package com.jaf.application.config;
 import com.jaf.application.service.AutenticacaoService;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -29,6 +30,9 @@ public class AutenticacaoProvider implements AuthenticationProvider {
         UserDetails userDetails = this.funcionarioAutorizacaoService.loadUserByUsername(username);
 
         if (this.passwordEncoder.matches(password, userDetails.getPassword())) {
+            if (!userDetails.isEnabled()) {
+                throw new DisabledException("Usuário inativo");
+            }
             return new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
         } else {
             throw new BadCredentialsException("Usuário ou Senha inválidos");

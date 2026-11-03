@@ -42,6 +42,9 @@ export const authService = {
         throw new Error("Informe e-mail e senha para acessar.");
       }
       if (axios.isAxiosError(error) && error.response?.status === 401) {
+        if (/inativo/i.test(String(error.response.data?.message ?? ""))) {
+          throw new Error("Usuário inativo. Entre em contato com o administrador.");
+        }
         throw new Error("Email ou senha inválidos");
       }
       throw new Error("Erro ao fazer login");
