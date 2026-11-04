@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { FileText, Trash2 } from "lucide-react";
 import { notaFiscalService, type NotaFiscal } from "../../Service/NotasFiscais/notaFiscalService";
 import { tratarErroApi } from "../../Utils/erro";
+import { useDialogs } from "../Feedback/DialogContext";
 import styles from "./NotasFiscaisGasto.module.css";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
@@ -14,6 +15,7 @@ interface NotasFiscaisGastoProps {
 export default function NotasFiscaisGasto({ gastoId, podeExcluir }: NotasFiscaisGastoProps) {
   const [notas, setNotas] = useState<NotaFiscal[]>([]);
   const [erro, setErro] = useState("");
+  const { confirm } = useDialogs();
 
   useEffect(() => {
     let ativo = true;
@@ -24,7 +26,7 @@ export default function NotasFiscaisGasto({ gastoId, podeExcluir }: NotasFiscais
   }, [gastoId]);
 
   async function excluir(nota: NotaFiscal) {
-    if (!window.confirm(`Excluir a nota fiscal "${nota.nomeArquivo}"?`)) return;
+    if (!await confirm(`Excluir a nota fiscal "${nota.nomeArquivo}"?`)) return;
     try {
       await notaFiscalService.deletar(nota.id);
       setNotas((atuais) => atuais.filter((atual) => atual.id !== nota.id));

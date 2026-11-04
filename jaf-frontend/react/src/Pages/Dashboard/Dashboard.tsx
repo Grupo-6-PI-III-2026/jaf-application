@@ -10,8 +10,9 @@ import {
   type PeriodoFiltroValue,
 } from "../../Components/PeriodoFiltro/periodUtils";
 import { dashboardService, type DashboardStats } from "../../Service/Dashboard/dashboardService";
-import { authService } from "../../Service/Auth/Login/authService";
 import styles from "./Dashboard.module.css";
+import { useAuthz } from "../../Hooks/useAuthz";
+import { useDialogs } from "../../Components/Feedback/DialogContext";
 
 const PIE_COLORS = ["#5A6B7B", "#F5C518"];
 
@@ -42,8 +43,10 @@ export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
-  const podeCriarGasto = authService.hasAuthority("CRIAR_GASTO");
-  const podeGerarRelatorio = authService.hasAuthority("GERAR_RELATORIO");
+  const { can } = useAuthz();
+  const { alert } = useDialogs();
+  const podeCriarGasto = can("CRIAR_GASTO");
+  const podeGerarRelatorio = can("GERAR_RELATORIO");
 
   useEffect(() => {
     const carregarStats = async () => {
@@ -137,7 +140,7 @@ export default function Dashboard() {
     const janelaRelatorio = window.open("", "_blank", "width=960,height=720");
 
     if (!janelaRelatorio) {
-      window.alert("Não foi possível abrir o relatório. Verifique se o navegador bloqueou pop-ups.");
+      void alert("Não foi possível abrir o relatório. Verifique se o navegador bloqueou pop-ups.");
       return;
     }
 

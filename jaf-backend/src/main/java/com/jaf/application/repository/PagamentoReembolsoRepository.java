@@ -24,4 +24,18 @@ public interface PagamentoReembolsoRepository extends JpaRepository<PagamentoRee
     }
     @Query("select p.gasto.id as gastoId, sum(p.valor) as totalPago from PagamentoReembolso p where p.gasto.id in :ids and p.canceladoEm is null group by p.gasto.id")
     List<TotalPorGasto> totaisPorGasto(Collection<Long> ids);
+
+    @Query("""
+            select coalesce(sum(p.valor), 0) from PagamentoReembolso p
+            where p.canceladoEm is null and p.gasto.id in (
+                select g.id from Gasto g
+                where g.obra.id = :obraId and g.dtGasto >= :de and g.dtGasto <= :ate
+                  and (:todas = true or g.etapa = :etapa)
+                  and (g.reembolsavel = true or upper(trim(g.metodoPagamento)) = 'REEMBOLSO'))
+            """)
+    BigDecimal totalPagoDosReembolsaveis(@org.springframework.data.repository.query.Param("obraId") Long obraId,
+                                         @org.springframework.data.repository.query.Param("de") LocalDate de,
+                                         @org.springframework.data.repository.query.Param("ate") LocalDate ate,
+                                         @org.springframework.data.repository.query.Param("todas") boolean todas,
+                                         @org.springframework.data.repository.query.Param("etapa") String etapa);
 }

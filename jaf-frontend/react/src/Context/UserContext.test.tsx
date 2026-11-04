@@ -1,40 +1,56 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { UserProvider } from "./UserContext";
 import { useUser } from "./useUser";
+import { useAuthz } from "../Hooks/useAuthz";
 import PrivateRoute from "../Components/PrivateRoute/PrivateRoute";
 import { authService } from "../Service/Auth/Login/authService";
 import api from "../Service/Auth/Login/Api/Api";
 import type { FuncionarioResponseDto } from "../Types/user";
 import { validarSessao } from "../test/authorization";
 
-vi.mock("../Service/Auth/Login/Api/Api", () => ({ default: { get: vi.fn(), post: vi.fn() } }));
+vi.mock("../Service/Auth/Login/Api/Api", () => ({
+  default: { get: vi.fn(), post: vi.fn() },
+  EVENTO_SESSAO_EXPIRADA: "auth:expirou",
+  EVENTO_SESSAO_ALTERADA: "auth:alterada",
+}));
 
 const perfil: FuncionarioResponseDto = { id: 42, email: "engenheiro@exemplo.com", nome: "Engenheiro", cargo: "ENGENHEIRO", fotoUrl: null };
 const acesso = { funcionarioId: perfil.id, cargo: perfil.cargo, permissoes: ["VISUALIZAR_PRESENCAS", "DELETAR_OBRA"] };
 
-function Controle() {
+function Painel() {
   const { refreshUser, clearUser, user } = useUser();
   return <>
     <button onClick={() => void refreshUser()}>Revalidar</button>
     <button onClick={clearUser}>Limpar</button>
     <span aria-label="Usuário validado">{user?.nome ?? "nenhum"}</span>
-    <PrivateRoute>
-      <div>Conteúdo protegido</div>
-      {authService.hasAuthority("DELETAR_OBRA") && <button>Excluir obra customizado</button>}
-      {authService.hasAuthority("REGISTRAR_PRESENCA") && <button>Criar presença</button>}
-    </PrivateRoute>
   </>;
 }
-const montar = () => render(<MemoryRouter><UserProvider><Controle /></UserProvider></MemoryRouter>);
+function Protegido() {
+  const { can } = useAuthz();
+  return <>
+    <div>Conteúdo protegido</div>
+    {can("DELETAR_OBRA") && <button>Excluir obra customizado</button>}
+    {can("REGISTRAR_PRESENCA") && <button>Criar presença</button>}
+  </>;
+}
+const montar = () => render(
+  <MemoryRouter initialEntries={["/privado"]}>
+    <UserProvider>
+      <Painel />
+      <Routes>
+        <Route path="/" element={<div>Tela de login</div>} />
+        <Route path="/privado" element={<PrivateRoute><Protegido /></PrivateRoute>} />
+      </Routes>
+    </UserProvider>
+  </MemoryRouter>,
+);
 
 beforeEach(() => {
   vi.resetAllMocks();
   localStorage.clear();
   authService.clearAuthorization();
-  localStorage.setItem("userEmail", perfil.email);
-  localStorage.setItem("userId", String(perfil.id));
   // Um cargo forjado no armazenamento não deve liberar ADMIN.
   localStorage.setItem("userCargo", "ADMIN");
   vi.mocked(api.get).mockResolvedValueOnce({ data: perfil }).mockResolvedValueOnce({ data: acesso });
@@ -65,7 +81,8 @@ describe("validação de perfil e permissões antes das rotas", () => {
   it("sessão expirada (401) encerra a sessão local em vez de oferecer nova tentativa", async () => {
     vi.mocked(api.get).mockReset().mockRejectedValueOnce({ response: { status: 401 } });
     montar();
-    await waitFor(() => expect(localStorage.getItem("userEmail")).toBeNull());
+    await waitFor(() => expect(localStorage.getItem("userCargo")).toBeNull());
+    expect(await screen.findByText("Tela de login")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Tentar novamente" })).not.toBeInTheDocument();
     expect(screen.queryByText("Conteúdo protegido")).not.toBeInTheDocument();
     expect(authService.isAuthenticated()).toBe(false);

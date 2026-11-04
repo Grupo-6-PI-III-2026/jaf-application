@@ -65,7 +65,8 @@ public class SecurityConfiguracao {
     };
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, AutenticacaoFilter autenticacaoFilter) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, AutenticacaoFilter autenticacaoFilter,
+                                           com.jaf.application.service.IdempotencyService idempotencyService) throws Exception {
         http.headers(headers -> headers
                         .frameOptions(HeadersConfigurer.FrameOptionsConfig::deny)
                         .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'none'; frame-ancestors 'none'"))
@@ -81,6 +82,7 @@ public class SecurityConfiguracao {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(URLS_PERMITIDAS).permitAll()  // rotas públicas
                         .requestMatchers(HttpMethod.POST, "/funcionarios/login").permitAll()  // login público
+                        .requestMatchers("/actuator/prometheus").hasRole("ADMIN")  // métricas só para ADMIN
                         // CORREÇÃO DE SEGURANÇA A01: Removido acesso público ao cadastro de funcionários
                         // Antes: .requestMatchers(HttpMethod.POST, "/funcionarios").permitAll()
                         // Agora: exige autenticação e permissão específica (ver @PreAuthorize no controller)
@@ -102,6 +104,7 @@ public class SecurityConfiguracao {
 
         http.addFilterBefore(autenticacaoFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterAfter(new CsrfCookieFilter(), UsernamePasswordAuthenticationFilter.class);
+        http.addFilterAfter(new IdempotencyFilter(idempotencyService), CsrfCookieFilter.class);
 
         return http.build();
     }
@@ -148,10 +151,10 @@ public class SecurityConfiguracao {
         ));
 
         // Permite todos os headers de requisição (Content-Type, Authorization etc.)
-        configuracao.setAllowedHeaders(List.of("Content-Type", "Accept", "X-XSRF-TOKEN", "Authorization"));
+        configuracao.setAllowedHeaders(List.of("Content-Type", "Accept", "X-XSRF-TOKEN", "Authorization", "Idempotency-Key"));
 
         // Expõe o header Content-Disposition para download de arquivos
-        configuracao.setExposedHeaders(List.of(HttpHeaders.CONTENT_DISPOSITION));
+        configuracao.setExposedHeaders(List.of(HttpHeaders.CONTENT_DISPOSITION, "X-Truncated", "X-Request-Id", AccessDeniedJsonHandler.CSRF_HEADER));
 
         UrlBasedCorsConfigurationSource origem = new UrlBasedCorsConfigurationSource();
         origem.registerCorsConfiguration("/**", configuracao);

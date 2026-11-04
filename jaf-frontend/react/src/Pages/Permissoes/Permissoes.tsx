@@ -20,12 +20,14 @@ import { toast } from "sonner";
 import styles from "./Permissoes.module.css";
 import { permissaoService } from "../../Service/Permissoes/permissaoService";
 import { funcionarioService } from "../../Service/Funcionarios/funcionarioService";
-import { authService } from "../../Service/Auth/Login/authService";
 import { useUser } from "../../Context/useUser";
 import type { FuncionarioPermissoes, ModuloPermissao } from "../../Types/permissoes";
 import type { Cargo } from "../../Types/user";
 import { erroApi } from "../../Utils/financeiro";
 import { logger } from "../../Utils/logger";
+import { useAuthz } from "../../Hooks/useAuthz";
+import { PERMISSOES_SEM_TELA } from "../../Constants/permissoes";
+import { useDialogs } from "../../Components/Feedback/DialogContext";
 
 const MENSAGEM_USUARIO_COM_REGISTROS =
   "Não é possível excluir este usuário pois existem registros vinculados a ele. Caso queira desativá-lo, utilize a opção de inativar usuário.";
@@ -125,13 +127,20 @@ export default function Permissoes() {
   const [funcionarios, setFuncionarios] = useState<FuncionarioPermissoes[]>([]);
   const [selectedUser, setSelectedUser] = useState<FuncionarioPermissoes | null>(null);
   const [busca, setBusca] = useState("");
-  const [permissoesPorCargo, setPermissoesPorCargo] = useState<Record<Cargo, string[]>>(permissaoService.getMapaPadraoPermissoes());
+  // null enquanto a matriz padrão não chegou do servidor: não existe cópia local para usar no lugar.
+  const [permissoesPorCargo, setPermissoesPorCargo] = useState<Partial<Record<Cargo, string[]>> | null>(null);
+  const [erroMatriz, setErroMatriz] = useState(false);
+  const [carregandoAcesso, setCarregandoAcesso] = useState(false);
+  const [erroAcesso, setErroAcesso] = useState(false);
+  const [personalizada, setPersonalizada] = useState(false);
   const [permissoesAtivas, setPermissoesAtivas] = useState<Set<string>>(new Set());
   const [permissoesOriginais, setPermissoesOriginais] = useState<Set<string>>(new Set());
   const [cargoSelecionado, setCargoSelecionado] = useState<Cargo | null>(null);
   const [modulosAbertos, setModulosAbertos] = useState<Set<string>>(new Set(["obras"]));
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const { can } = useAuthz();
+  const { confirm } = useDialogs();
   const proprioUsuario = selectedUser !== null && selectedUser.id === usuarioAtual?.id;
   const alvoAdmin = selectedUser?.cargo === "ADMIN";
   const permissoesFixas = cargoSelecionado === "ADMIN";
@@ -146,8 +155,10 @@ export default function Permissoes() {
       ]);
       setFuncionarios(data);
       setPermissoesPorCargo(mapaPermissoes);
+      setErroMatriz(false);
     } catch {
-      toast.error("Erro ao carregar funcionários");
+      setErroMatriz(true);
+      toast.error("Erro ao carregar funcionários e permissões");
     } finally {
       setIsLoading(false);
     }
@@ -160,28 +171,37 @@ export default function Permissoes() {
   const selecionarUsuario = useCallback(async (user: FuncionarioPermissoes) => {
     setSelectedUser(user);
     setCargoSelecionado(user.cargo);
-    const fallback = user.cargo ? permissoesPorCargo[user.cargo] ?? [] : [];
-    setPermissoesAtivas(new Set(fallback));
-    setPermissoesOriginais(new Set(fallback));
+    // Sem fallback: enquanto o acesso real não chegar, nada é exibido como se fosse o do usuário.
+    setPermissoesAtivas(new Set());
+    setPermissoesOriginais(new Set());
+    setPersonalizada(false);
+    setErroAcesso(false);
+    setCarregandoAcesso(true);
 
     try {
       const acesso = await permissaoService.buscarPermissoesFuncionario(user.id);
       setPermissoesAtivas(new Set(acesso.permissoes));
       setPermissoesOriginais(new Set(acesso.permissoes));
+      setPersonalizada(Boolean(acesso.personalizada));
     } catch (error) {
       logger.erro("Erro ao carregar permissões do usuário", error);
-      toast.error("Erro ao carregar permissões do usuário");
+      setErroAcesso(true);
+      toast.error("Não foi possível carregar as permissões deste usuário.");
+    } finally {
+      setCarregandoAcesso(false);
     }
-  }, [permissoesPorCargo]);
+  }, []);
 
-  const handleCargoChange = (cargo: Cargo) => {
-    if (alvoAdmin) return;
+  const handleCargoChange = async (cargo: Cargo) => {
+    if (alvoAdmin || cargo === cargoSelecionado || !permissoesPorCargo?.[cargo]) return;
+    if (cargo === "ADMIN" && !await confirm("Promover este usuário a Administrador dá acesso total ao sistema. Deseja continuar?")) return;
+    if (personalizada && !await confirm("Este usuário tem permissões personalizadas. Trocar o cargo troca essas permissões pelas padrão do novo cargo. Deseja continuar?")) return;
     setCargoSelecionado(cargo);
     const permissoes = permissoesPorCargo[cargo] ?? [];
     setPermissoesAtivas(new Set(permissoes));
     setPermissoesOriginais(new Set(permissoes));
+    setPersonalizada(false);
   };
-
   const togglePermissao = (permissao: string) => {
     setPermissoesAtivas((prev) => {
       const next = new Set(prev);
@@ -208,6 +228,7 @@ export default function Permissoes() {
 
   const hasChanges = (): boolean => {
     if (!selectedUser || !cargoSelecionado || proprioUsuario || alvoAdmin) return false;
+    if (erroAcesso || carregandoAcesso || !permissoesPorCargo) return false;
     if (cargoSelecionado !== selectedUser.cargo) return true;
 
     if (permissoesAtivas.size !== permissoesOriginais.size) return true;
@@ -215,26 +236,19 @@ export default function Permissoes() {
   };
 
   const handleSalvar = async () => {
-    if (!selectedUser || !cargoSelecionado || proprioUsuario || alvoAdmin) return;
+    if (!selectedUser || !cargoSelecionado || proprioUsuario || alvoAdmin || !hasChanges()) return;
 
     try {
       setIsSaving(true);
-      const deveAtualizarCargo = cargoSelecionado !== selectedUser.cargo;
-      const deveAtualizarPermissoes = deveAtualizarCargo || (
-        permissoesAtivas.size !== permissoesOriginais.size ||
-        [...permissoesAtivas].some((permissao) => !permissoesOriginais.has(permissao))
-      );
+      const atualizado = await permissaoService.atualizarAcesso(selectedUser.id, {
+        cargo: cargoSelecionado,
+        permissoes: [...permissoesAtivas],
+      });
+      setPermissoesAtivas(new Set(atualizado.permissoes));
+      setPermissoesOriginais(new Set(atualizado.permissoes));
+      setPersonalizada(Boolean(atualizado.personalizada));
 
-      if (deveAtualizarCargo) {
-        await permissaoService.atualizarCargo(selectedUser.id, cargoSelecionado);
-      }
-
-      if (deveAtualizarPermissoes) {
-        const atualizado = await permissaoService.atualizarPermissoesFuncionario(selectedUser.id, [...permissoesAtivas]);
-        setPermissoesOriginais(new Set(atualizado.permissoes));
-      }
-
-      toast.success("Permissões atualizadas com sucesso. O novo acesso entra no próximo login.");
+      toast.success("Acesso atualizado. Vale imediatamente no servidor; a pessoa verá a mudança na tela ao recarregar a página.");
 
       setFuncionarios((prev) =>
         prev.map((funcionario) =>
@@ -243,13 +257,14 @@ export default function Permissoes() {
       );
       setSelectedUser({ ...selectedUser, cargo: cargoSelecionado });
     } catch (error) {
-      logger.erro("Erro ao salvar cargo", error);
-      toast.error(erroApi(error, "Erro ao salvar cargo"));
+      logger.erro("Erro ao salvar acesso", error);
+      toast.error(erroApi(error, "Não foi possível salvar o acesso."));
+      // Em qualquer falha, recarrega o que está de fato salvo para a tela não ficar incoerente.
+      void selecionarUsuario(selectedUser);
     } finally {
       setIsSaving(false);
     }
   };
-
   const handleCancelar = () => {
     if (selectedUser) {
       selecionarUsuario(selectedUser);
@@ -268,7 +283,7 @@ export default function Permissoes() {
   const handleAlterarStatus = async (ativar: boolean) => {
     if (!selectedUser || isProcessandoUsuario) return;
     const acao = ativar ? "reativar" : "inativar";
-    if (!window.confirm(`Deseja ${acao} o usuário “${selectedUser.nome}”?`)) return;
+    if (!await confirm(`Deseja ${acao} o usuário “${selectedUser.nome}”?`)) return;
     try {
       setIsProcessandoUsuario(true);
       const atualizado = ativar
@@ -287,7 +302,7 @@ export default function Permissoes() {
 
   const handleExcluirUsuario = async () => {
     if (!selectedUser || isProcessandoUsuario) return;
-    if (!window.confirm(`Excluir o usuário “${selectedUser.nome}”? Esta ação é irreversível.`)) return;
+    if (!await confirm(`Excluir o usuário “${selectedUser.nome}”? Esta ação é irreversível.`)) return;
     try {
       setIsProcessandoUsuario(true);
       await funcionarioService.deletar(selectedUser.id);
@@ -390,13 +405,27 @@ export default function Permissoes() {
               </p>
             )}
 
+            {erroMatriz && (
+              <p role="alert" className={styles.avisoBloqueio}>
+                Não foi possível carregar as permissões padrão dos cargos.{" "}
+                <button type="button" onClick={() => void carregarFuncionarios()}>Tentar novamente</button>
+              </p>
+            )}
+            {carregandoAcesso && <p role="status">Carregando permissões do usuário...</p>}
+            {erroAcesso && !carregandoAcesso && (
+              <p role="alert" className={styles.avisoBloqueio}>
+                Não foi possível carregar as permissões deste usuário, então nada é exibido nem pode ser salvo.{" "}
+                <button type="button" onClick={() => void selecionarUsuario(selectedUser)}>Tentar novamente</button>
+              </p>
+            )}
+
             <div className={styles.seletorCargo}>
               {CARGOS.map((cargo) => (
                 <button
                   key={cargo}
                   className={cargoSelecionado === cargo ? styles.seletorCargoAtivo : ""}
                   onClick={() => handleCargoChange(cargo)}
-                  disabled={proprioUsuario || alvoAdmin}
+                  disabled={proprioUsuario || alvoAdmin || !permissoesPorCargo || carregandoAcesso || erroAcesso}
                   aria-pressed={cargoSelecionado === cargo}
                 >
                   <UserCog size={14} style={{ marginRight: 6, verticalAlign: "middle" }} />
@@ -431,6 +460,9 @@ export default function Permissoes() {
                               {permissao.label}
                               {permissao.nivel === "restrito" && <span className={styles.badgeRestrito}>RESTRITO</span>}
                               {permissao.nivel === "critico" && <span className={styles.badgeCritico}>CRÍTICO</span>}
+                              {PERMISSOES_SEM_TELA.includes(permissao.chave) && (
+                                <span className={styles.badgeSemTela} title="O servidor reconhece esta permissão, mas ainda não existe tela para usá-la.">SEM TELA</span>
+                              )}
                             </h4>
                             <p>{permissao.descricao}</p>
                           </div>
@@ -440,7 +472,7 @@ export default function Permissoes() {
                               aria-label={permissao.label}
                               checked={permissoesAtivas.has(permissao.chave)}
                               onChange={() => togglePermissao(permissao.chave)}
-                              disabled={proprioUsuario || permissoesFixas}
+                              disabled={proprioUsuario || permissoesFixas || carregandoAcesso || erroAcesso}
                             />
                             <span className={styles.toggleSlider}></span>
                           </label>
@@ -462,9 +494,9 @@ export default function Permissoes() {
               </button>
             </div>
 
-            {!proprioUsuario && (authService.hasAuthority("EDITAR_FUNCIONARIO") || authService.hasAuthority("DELETAR_FUNCIONARIO")) && (
+            {!proprioUsuario && (can("EDITAR_FUNCIONARIO") || can("DELETAR_FUNCIONARIO")) && (
               <div className={styles.acoesUsuario}>
-                {authService.hasAuthority("EDITAR_FUNCIONARIO") && (
+                {can("EDITAR_FUNCIONARIO") && (
                   <button
                     type="button"
                     className={styles.btnCancelar}
@@ -475,34 +507,7 @@ export default function Permissoes() {
                     {selectedUser.ativo === false ? "Reativar usuário" : "Inativar usuário"}
                   </button>
                 )}
-                {authService.hasAuthority("DELETAR_FUNCIONARIO") && (
-                  <button
-                    type="button"
-                    className={styles.btnExcluirUsuario}
-                    onClick={handleExcluirUsuario}
-                    disabled={isProcessandoUsuario}
-                  >
-                    <Trash2 size={16} />
-                    Excluir usuário
-                  </button>
-                )}
-              </div>
-            )}
-
-            {!proprioUsuario && (authService.hasAuthority("EDITAR_FUNCIONARIO") || authService.hasAuthority("DELETAR_FUNCIONARIO")) && (
-              <div className={styles.acoesUsuario}>
-                {authService.hasAuthority("EDITAR_FUNCIONARIO") && (
-                  <button
-                    type="button"
-                    className={styles.btnCancelar}
-                    onClick={() => handleAlterarStatus(selectedUser.ativo === false)}
-                    disabled={isProcessandoUsuario}
-                  >
-                    {selectedUser.ativo === false ? <UserCheck size={16} /> : <UserX size={16} />}
-                    {selectedUser.ativo === false ? "Reativar usuário" : "Inativar usuário"}
-                  </button>
-                )}
-                {authService.hasAuthority("DELETAR_FUNCIONARIO") && (
+                {can("DELETAR_FUNCIONARIO") && (
                   <button
                     type="button"
                     className={styles.btnExcluirUsuario}

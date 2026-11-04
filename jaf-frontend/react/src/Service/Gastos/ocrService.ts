@@ -1,4 +1,5 @@
 import api from "../Auth/Login/Api/Api";
+import { comprimirImagem } from "../../Utils/arquivo";
 
 export type OcrStatus = "PROCESSANDO" | "CONCLUIDO" | "ERRO";
 
@@ -16,18 +17,39 @@ export interface OcrNotaFiscalResponse {
   etapa?: string | null;
 }
 
-const INTERVALO_CONSULTA_MS = 2000;
+// Intervalos entre consultas: começa rápido e vai espaçando para não sobrecarregar um OCR lento.
+const INTERVALOS_CONSULTA_MS = [2000, 3000, 5000, 10000];
 const TEMPO_MAXIMO_ESPERA_MS = 2 * 60 * 1000;
+// Foto de celular em rede móvel pode levar bem mais que os 10 s das demais chamadas.
+const TIMEOUT_ENVIO_MS = 120_000;
 
-const aguardar = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+function aguardar(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException("Cancelado", "AbortError"));
+      return;
+    }
+    const aoCancelar = () => {
+      clearTimeout(espera);
+      reject(new DOMException("Cancelado", "AbortError"));
+    };
+    const espera = setTimeout(() => {
+      signal?.removeEventListener("abort", aoCancelar);
+      resolve();
+    }, ms);
+    signal?.addEventListener("abort", aoCancelar, { once: true });
+  });
+}
 
 export const ocrService = {
-  processarNotaFiscal: async (arquivo: File): Promise<OcrNotaFiscalResponse> => {
+  processarNotaFiscal: async (arquivo: File, signal?: AbortSignal): Promise<OcrNotaFiscalResponse> => {
     const formData = new FormData();
-    formData.append("arquivo", arquivo);
+    formData.append("arquivo", await comprimirImagem(arquivo));
 
     const { data: solicitacao } = await api.post<OcrNotaFiscalResponse>("/ocr/nota-fiscal", formData, {
       headers: { "Content-Type": "multipart/form-data" },
+      timeout: TIMEOUT_ENVIO_MS,
+      signal,
     });
 
     if (solicitacao.status !== "PROCESSANDO" || !solicitacao.jobId) {
@@ -35,10 +57,12 @@ export const ocrService = {
     }
 
     const limite = Date.now() + TEMPO_MAXIMO_ESPERA_MS;
-    while (Date.now() < limite) {
-      await aguardar(INTERVALO_CONSULTA_MS);
+    for (let tentativa = 0; Date.now() < limite; tentativa += 1) {
+      const intervalo = INTERVALOS_CONSULTA_MS[Math.min(tentativa, INTERVALOS_CONSULTA_MS.length - 1)];
+      await aguardar(Math.min(intervalo, Math.max(0, limite - Date.now())), signal);
       const { data } = await api.get<OcrNotaFiscalResponse>(
         `/ocr/nota-fiscal/${encodeURIComponent(solicitacao.jobId)}`,
+        { signal },
       );
       if (data.status !== "PROCESSANDO") {
         return data;

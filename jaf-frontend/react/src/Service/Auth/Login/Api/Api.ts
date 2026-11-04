@@ -3,6 +3,9 @@ import { authorizationSession } from "../authorizationSession";
 
 // const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
+export const EVENTO_SESSAO_EXPIRADA = "auth:expirou";
+export const EVENTO_SESSAO_ALTERADA = "auth:alterada";
+
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "/api",
   timeout: 10000,
@@ -13,11 +16,6 @@ const api = axios.create({
 
 api.interceptors.request.use(
     (config) => {
-    // CORREÇÃO DE SEGURANÇA A07: Removida leitura de token do localStorage
-    // Antes: const token = localStorage.getItem('token') ?? localStorage.getItem('auth_token')
-    //        if (token) { config.headers.Authorization = `Bearer ${token}` }
-    // Agora: Token é enviado automaticamente via cookie HttpOnly pelo browser
-    // withCredentials: true deve ser configurado para enviar cookies
     config.withCredentials = true
     
         return config;
@@ -30,20 +28,22 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-   
+    const config = error.config;
+    // Falha de CSRF: o servidor já reemitiu o cookie XSRF-TOKEN; repete a requisição uma única vez.
+    if (error.response?.status === 403 && error.response.headers?.["x-csrf-retry"] === "true"
+        && config && !config.csrfRetried) {
+      config.csrfRetried = true;
+      return api(config);
+    }
     if (error.response?.status === 401) {
       // Login e validação inicial tratam a própria falha (mensagem ou retry no Provider).
       if (["/funcionarios/login", "/funcionarios/me", "/funcionarios/me/permissoes"].includes(error.config?.url)) {
         return Promise.reject(error);
       }
       authorizationSession.clear();
-      // CORREÇÃO DE SEGURANÇA A07: Limpa dados do usuário do localStorage
       // Token é gerenciado via cookie HttpOnly pelo backend
-      localStorage.removeItem('userEmail');
-      localStorage.removeItem('userName');
-      localStorage.removeItem('userId');
-      localStorage.removeItem('userCargo');
-      if (window.location.pathname !== '/') window.location.replace('/');
+      // O roteador trata o evento: avisa o usuário e volta para a tela de login sem recarregar a página.
+      window.dispatchEvent(new Event(EVENTO_SESSAO_EXPIRADA));
     }
     return Promise.reject(error);
   }

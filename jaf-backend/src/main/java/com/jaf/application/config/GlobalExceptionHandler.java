@@ -5,6 +5,7 @@ import com.jaf.application.exceptions.Conflict;
 import com.jaf.application.exceptions.Forbidden;
 import com.jaf.application.exceptions.NoContent;
 import com.jaf.application.exceptions.NotFoundException;
+import com.jaf.application.exceptions.StaleVersion;
 import com.jaf.application.exceptions.TooManyRequests;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,6 +69,20 @@ public class GlobalExceptionHandler {
                 request.getDescription(false).replace("uri=", "")
         );
         return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler({StaleVersion.class, org.springframework.dao.OptimisticLockingFailureException.class})
+    public ResponseEntity<ErrorResponseComCodigo> handleStaleVersion(Exception ex, WebRequest request) {
+        logger.warn("Versão desatualizada - Path: {}", request.getDescription(false));
+        ErrorResponseComCodigo error = new ErrorResponseComCodigo(
+                LocalDateTime.now(),
+                HttpStatus.CONFLICT.value(),
+                "Conflict",
+                StaleVersion.MENSAGEM,
+                request.getDescription(false).replace("uri=", ""),
+                StaleVersion.CODIGO
+        );
+        return new ResponseEntity<>(error, HttpStatus.CONFLICT);
     }
 
     @ExceptionHandler(Conflict.class)
@@ -202,8 +217,27 @@ public class GlobalExceptionHandler {
             int status,
             String error,
             String message,
-            String path
-    ) {}
+            String path,
+            String requestId
+    ) {
+        ErrorResponse(LocalDateTime timestamp, int status, String error, String message, String path) {
+            this(timestamp, status, error, message, path, org.slf4j.MDC.get("requestId"));
+        }
+    }
+
+    record ErrorResponseComCodigo(
+            LocalDateTime timestamp,
+            int status,
+            String error,
+            String message,
+            String path,
+            String code,
+            String requestId
+    ) {
+        ErrorResponseComCodigo(LocalDateTime timestamp, int status, String error, String message, String path, String code) {
+            this(timestamp, status, error, message, path, code, org.slf4j.MDC.get("requestId"));
+        }
+    }
 
     record ValidationError(
             LocalDateTime timestamp,
@@ -211,6 +245,11 @@ public class GlobalExceptionHandler {
             String error,
             String message,
             String path,
-            Map<String, String> fields
-    ) {}
+            Map<String, String> fields,
+            String requestId
+    ) {
+        ValidationError(LocalDateTime timestamp, int status, String error, String message, String path, Map<String, String> fields) {
+            this(timestamp, status, error, message, path, fields, org.slf4j.MDC.get("requestId"));
+        }
+    }
 }

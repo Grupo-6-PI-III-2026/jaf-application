@@ -1,0 +1,59 @@
+.dialog {
+  width: min(460px, calc(100% - 32px));
+  max-height: min(80dvh, 560px);
+  margin: auto;
+  padding: 24px;
+  border: 0;
+  border-radius: 12px;
+  color: #1f2a33;
+  background: #fff;
+  box-shadow: 0 24px 60px rgba(31, 42, 51, .28);
+}
+
+.dialog::backdrop {
+  background: rgba(15, 23, 42, .55);
+}
+
+.title {
+  margin: 0 0 12px;
+  font-size: 1.15rem;
+}
+
+.message {
+  margin: 0;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.actions button {
+  min-height: 40px;
+  padding: 8px 16px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.cancel {
+  color: #344054;
+  background: #fff;
+  border-color: #d0d5dd !important;
+}
+
+.accept {
+  color: #fff;
+  background: #243038;
+}
+
+.actions button:focus-visible {
+  outline: 3px solid #f5c518;
+  outline-offset: 2px;
+}

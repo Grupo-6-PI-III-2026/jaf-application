@@ -22,10 +22,10 @@ describe("rota real e link de configuração ADMIN-only", () => {
     expect(screen.getByRole("link", { name: "Novo Usuário" })).toBeInTheDocument();
   });
 
-  it("permite rota e link a ADMIN validado sem depender de EDITAR_FUNCIONARIO", () => {
+  it("permite rota e link a ADMIN validado sem depender de EDITAR_FUNCIONARIO", async () => {
     validarSessao("ADMIN", []);
     render(<AppRoutes />);
-    expect(screen.getByText("Escolha gerencial de cargos")).toBeInTheDocument();
+    expect(await screen.findByText("Escolha gerencial de cargos")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Perfis de Acesso" })).toBeInTheDocument();
   });
 });

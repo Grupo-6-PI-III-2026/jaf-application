@@ -28,13 +28,6 @@ export interface FuncionarioResponseDto {
   createdAt?: string | null;
 }
 
-export interface JwtPayload {
-  sub: string;
-  exp: number;
-  id?: number;
-  cargo?: Cargo;
-  authorities?: string;
-}
 
 export interface PerfilUpdateDto {
   nome: string;

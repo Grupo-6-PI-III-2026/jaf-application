@@ -38,6 +38,15 @@ public class GastoDto {
 
     private Boolean reembolsoConcluido;
 
+    private Long versao;
+
+    public Long getVersao() {
+        return versao;
+    }
+
+    public void setVersao(Long versao) {
+        this.versao = versao;
+    }
     public String getDescricao() {
         return descricao;
     }

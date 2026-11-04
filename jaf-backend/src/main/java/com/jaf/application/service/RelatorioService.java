@@ -44,9 +44,7 @@ public class RelatorioService {
 
     public List<Relatorio> listar() {
         if (acesso.isAdmin()) return relatorioRepository.findAll();
-        return relatorioRepository.findAll().stream()
-                .filter(r -> r.getFuncionarioResponsavel().getId().equals(acesso.atual().getId()))
-                .toList();
+        return relatorioRepository.findByFuncionarioResponsavelId(acesso.atual().getId());
     }
 
     public Relatorio buscarPorId(Long id) {

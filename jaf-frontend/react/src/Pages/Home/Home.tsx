@@ -7,13 +7,15 @@ import {
 } from "lucide-react";
 import styles from "./Home.module.css";
 
-import CardObra from "../../Components/CardObra/cardObra";
-import { obraService, type Obra } from "../../Service/Obras/obraService";
-import { gastoService, type Gasto } from "../../Service/Gastos/gastoService";
-import { alocacaoService, type AlocacaoObra } from "../../Service/Alocacoes/alocacaoService";
-import { authService } from "../../Service/Auth/Login/authService";
+import { somarCentavos } from "../../Utils/dinheiro";
+import CardObra from "../../Components/CardObra/CardObra";
+import { obraService, type ObraResumo } from "../../Service/Obras/obraService";
 import { toast } from "sonner";
 import { logger } from "../../Utils/logger";
+import { useAuthz } from "../../Hooks/useAuthz";
+
+// Uma página basta para a Home; acima disso o aviso abaixo informa que a lista está parcial.
+const OBRAS_POR_PAGINA = 100;
 
 const formatarMoeda = (valor: number) =>
   valor.toLocaleString("pt-BR", {
@@ -34,48 +36,40 @@ const imagensObras = [
 ];
 
 export default function Home() {
-  const admin = authService.isAdmin();
-  const [obras, setObras] = useState<Obra[]>([]);
-  const [gastos, setGastos] = useState<Gasto[]>([]);
-  const [responsaveisPorObra, setResponsaveisPorObra] = useState<Map<number, AlocacaoObra>>(new Map());
+  const { isAdmin } = useAuthz();
+  const admin = isAdmin;
+  const [obras, setObras] = useState<ObraResumo[]>([]);
+  const [totalObras, setTotalObras] = useState(0);
   const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState(false);
+  const [tentativa, setTentativa] = useState(0);
   const [busca, setBusca] = useState("");
   const [status, setStatus] = useState("");
 
   useEffect(() => {
+    const controle = { ativo: true };
     const carregarDados = async () => {
       try {
         setCarregando(true);
-        const obrasData = await obraService.listar();
-        const gastosPorObra = await Promise.allSettled(
-          admin && authService.hasAuthority("VISUALIZAR_GASTOS") ? obrasData.map((obra) => gastoService.listarPorObra(obra.id)) : []
-        );
-        const alocacoesPorObra = await Promise.allSettled(
-          authService.hasAuthority("VISUALIZAR_ALOCACOES") ? obrasData.map((obra) => alocacaoService.listarPorObra(obra.id)) : []
-        );
-        const gastosData = gastosPorObra.flatMap((resultado) =>
-          resultado.status === "fulfilled" ? resultado.value : []
-        );
-        const responsaveis = new Map<number, AlocacaoObra>();
-        alocacoesPorObra.forEach((resultado, index) => {
-          if (resultado.status === "fulfilled" && resultado.value.length > 0) {
-            responsaveis.set(obrasData[index].id, resultado.value[0]);
-          }
-        });
-        setObras(obrasData);
-        setGastos(gastosData);
-        setResponsaveisPorObra(responsaveis);
+        setErro(false);
+        // Uma única chamada traz obras, responsável e (para ADMIN) o total gasto já somado no servidor.
+        const pagina = await obraService.resumo({ page: 0, size: OBRAS_POR_PAGINA, sortBy: "dtInicio", sortDir: "desc" });
+        if (!controle.ativo) return;
+        setObras(pagina.content);
+        setTotalObras(pagina.totalElements);
       } catch (error) {
+        if (!controle.ativo) return;
         logger.erro("Erro ao carregar obras", error);
+        setErro(true);
         toast.error("Não foi possível carregar as obras. Atualize a página para tentar novamente.");
       } finally {
-        setCarregando(false);
+        if (controle.ativo) setCarregando(false);
       }
     };
 
-    carregarDados();
-  }, [admin]);
-
+    void carregarDados();
+    return () => { controle.ativo = false; };
+  }, [tentativa]);
   // Calcular KPIs
   const obrasEmAndamento = obras.filter(
     (obra) => obra.status === "EM_ANDAMENTO" || obra.status === "EM ANDAMENTO"
@@ -85,16 +79,13 @@ export default function Home() {
     (obra) => obra.status === "CONCLUIDA" || obra.status === "CONCLUÍDA"
   ).length;
 
-  const totalGasto = gastos.reduce((total, gasto) => total + gasto.valor, 0);
-  const totalGastoPorObra = new Map<number, number>();
-  gastos.forEach((gasto) => {
-    totalGastoPorObra.set(gasto.obra.id, (totalGastoPorObra.get(gasto.obra.id) ?? 0) + gasto.valor);
-  });
-
+  // Nunca mostrar soma parcial: se faltar o total de alguma obra (ou a lista foi cortada), o valor fica indisponível.
+  const totalGastoDisponivel = obras.every((obra) => obra.totalGasto != null) && totalObras <= obras.length;
+  const totalGasto = totalGastoDisponivel
+    ? somarCentavos(...obras.map((obra) => obra.totalGasto)) / 100
+    : null;
   const statusDisponiveis = Array.from(new Set([...STATUS_OBRA, ...obras.map((obra) => obra.status)].map(normalizar))).sort();
   const obrasFiltradas = obras
-    .slice()
-    .sort((a, b) => new Date(b.dtInicio).getTime() - new Date(a.dtInicio).getTime())
     .filter((obra) => normalizar(obra.titulo).includes(normalizar(busca)) && (!status || normalizar(obra.status) === status));
 
   return (
@@ -134,7 +125,7 @@ export default function Home() {
               <div className={styles.valorLinha}>
                 <DollarSign size={18} />
                 <span className={styles.valorDestaque}>
-                  {formatarMoeda(totalGasto)}
+                  {totalGasto === null ? "Total indisponível" : formatarMoeda(totalGasto)}
                 </span>
               </div>
               <div className={styles.tendencia}>
@@ -159,26 +150,30 @@ export default function Home() {
               {(busca || status) && <button type="button" onClick={() => { setBusca(""); setStatus(""); }}>Limpar filtros</button>}
             </div>
             <p role="status">{obrasFiltradas.length} de {obras.length} obras</p>
+            {totalObras > obras.length && (
+              <p role="note">Exibindo as primeiras {obras.length} de {totalObras} obras.</p>
+            )}
 
             <div className={styles.lista}>
               {obrasFiltradas.length > 0 ? (
                 obrasFiltradas.map((obra, index) => {
-                  const responsavel = responsaveisPorObra.get(obra.id);
+                  const responsavel = obra.responsavel;
                   return (
                     <CardObra
                       key={obra.id}
                       id={obra.id}
                       nome={obra.titulo}
                       status={obra.status}
-                      valor={totalGastoPorObra.get(obra.id) ?? 0}
+                      valor={obra.totalGasto ?? null}
                       imagem={imagensObras[index % imagensObras.length]}
-                      responsavelNome={responsavel?.funcionario.nome}
-                      responsavelCargo={responsavel?.cargo?.replace(/_/g, " ")}
+                      responsavelNome={responsavel?.nome}
                     />
                   );
                 })
               ) : (
-                <p>{
+                erro ? (
+                  <p role="alert">Não foi possível carregar as obras. <button type="button" onClick={() => setTentativa((n) => n + 1)}>Tentar novamente</button></p>
+                ) : <p>{
                   status && !busca
                     ? "Nenhuma obra encontrada com esse status."
                     : obras.length

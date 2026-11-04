@@ -47,16 +47,7 @@ class OcrServiceTest {
 
     @BeforeEach
     void setUp() {
-        ocrService = new OcrService(rabbitTemplate, processamentoRepository, "http://ocr.invalid/api/ocr");
-    }
-
-    @Test
-    void process_arquivoVazio_lancaErroSemChamarServicoExterno() {
-        MockMultipartFile vazio = new MockMultipartFile("file", "vazio.png", "image/png", new byte[0]);
-
-        assertThrows(IllegalArgumentException.class, () -> ocrService.process(vazio));
-        assertThrows(IllegalArgumentException.class, () -> ocrService.process(null));
-        verifyNoInteractions(rabbitTemplate, processamentoRepository);
+        ocrService = new OcrService(rabbitTemplate, processamentoRepository);
     }
 
     @Test
@@ -155,5 +146,14 @@ class OcrServiceTest {
                 .thenReturn(Optional.of(new OcrProcessamento("job-4", "outro@jaf.com")));
 
         assertThrows(NotFoundException.class, () -> ocrService.consultar("job-4", SOLICITANTE));
+    }
+
+    @Test
+    void consultar_porId_continuaFuncionandoQuandoOEmailMuda() {
+        when(processamentoRepository.findById("job-5"))
+                .thenReturn(Optional.of(new OcrProcessamento("job-5", "antigo@jaf.com", 7L)));
+
+        assertEquals("job-5", ocrService.consultar("job-5", 7L, "novo@jaf.com").getJobId());
+        assertThrows(NotFoundException.class, () -> ocrService.consultar("job-5", 8L, "antigo@jaf.com"));
     }
 }

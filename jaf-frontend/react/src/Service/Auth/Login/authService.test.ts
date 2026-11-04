@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import api from "./Api/Api";
-import { authService } from "./authService";
+import { authService, limparDadosLegados } from "./authService";
 import { validarSessao } from "../../../test/authorization";
 
 vi.mock("./Api/Api", () => ({ default: { post: vi.fn(), get: vi.fn() } }));
@@ -40,12 +40,20 @@ describe("cache de autoridades da sessão", () => {
     expect(authService.hasAuthority("CRIAR_OBRA")).toBe(false);
   });
 
-  it.each(["userId", "userEmail"])("descarta cache ao trocar %s", (key) => {
+  it("alterar o armazenamento do navegador não afeta nem cria sessão", () => {
     validarSessao("ADMIN", ["CRIAR_OBRA"]);
-    localStorage.setItem(key, "outra-pessoa");
-    expect(authService.hasAuthority("CRIAR_OBRA")).toBe(false);
-    expect(authService.isAdmin()).toBe(false);
+    localStorage.setItem("userId", "outra-pessoa");
+    localStorage.setItem("userEmail", "outra@exemplo.com");
+    expect(authService.hasAuthority("CRIAR_OBRA")).toBe(true);
+    authService.clearAuthorization();
+    expect(authService.isAuthenticated()).toBe(false);
     expect(authService.getCargo()).toBeNull();
+  });
+
+  it("limparDadosLegados remove dados pessoais gravados por versões antigas", () => {
+    for (const chave of ["userEmail", "userName", "userId", "userCargo"]) localStorage.setItem(chave, "x");
+    limparDadosLegados();
+    expect(localStorage.length).toBe(0);
   });
 
   it("isAdmin e pagamento usam cargo do perfil validado, não cargo editado no armazenamento", () => {
@@ -69,7 +77,7 @@ describe("cache de autoridades da sessão", () => {
     validarSessao("ENGENHEIRO", ["DELETAR_OBRA"]);
     vi.mocked(api.post).mockResolvedValue({ data: { id: 2, email: "admin@exemplo.com", nome: "Admin", cargo: "ADMIN" } });
     await authService.login({ email: "admin@exemplo.com", senha: "senha" });
-    expect(authService.isAuthenticated()).toBe(true);
+    expect(authService.isAuthenticated()).toBe(false);
     expect(authService.isAdmin()).toBe(false);
     expect(authService.hasAuthority("DELETAR_OBRA")).toBe(false);
   });

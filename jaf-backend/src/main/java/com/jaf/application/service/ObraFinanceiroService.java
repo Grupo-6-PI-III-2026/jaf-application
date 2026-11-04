@@ -67,8 +67,7 @@ public class ObraFinanceiroService {
     }
 
     private ObraFinanceiroDto resposta(Obra obra) {
-        BigDecimal total = gastos.findByObraId(obra.getId()).stream()
-                .map(g -> g.getValor()).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal total = gastos.somarPorObra(obra.getId());
         return new ObraFinanceiroDto(obra.getTotalRecebido(), total, obra.getTotalRecebido().subtract(total));
     }
 }

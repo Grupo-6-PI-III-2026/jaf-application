@@ -1,6 +1,7 @@
 package com.jaf.application.service;
 
 import com.jaf.application.dto.AlterarSenhaDto;
+import com.jaf.application.dto.FuncionarioAlocavelDto;
 import com.jaf.application.dto.FuncionarioDto;
 import com.jaf.application.dto.FuncionarioListarDto;
 import com.jaf.application.dto.FuncionarioMapper;
@@ -105,6 +106,13 @@ public class FuncionarioService {
     public List<FuncionarioListarDto> listarTodos() {
         List<Funcionario> funcionariosEncontrados = funcionarioRepository.findAll();
         return funcionariosEncontrados.stream().map(FuncionarioMapper::of).toList();
+    }
+
+    public List<FuncionarioAlocavelDto> listarAlocaveis() {
+        return funcionarioRepository.findAll().stream()
+                .filter(Funcionario::isAtivo)
+                .map(f -> new FuncionarioAlocavelDto(f.getId(), f.getNome(), f.getCargoGlobal()))
+                .toList();
     }
 
     public FuncionarioResponseDto buscarPorId(Long id) {
@@ -214,10 +222,14 @@ public class FuncionarioService {
                 && funcionarioRepository.countByCargoGlobalAndAtivo(com.jaf.application.enums.Cargo.ADMIN, true) <= 1) {
             throw new Conflict("Não é possível remover o último administrador.");
         }
+        boolean estavaAtivo = existente.isAtivo();
         existente.setAtivo(ativo);
         existente.setDesativadoEm(ativo ? null : java.time.LocalDateTime.now());
         existente.setTokenVersion(existente.getTokenVersion() + 1);
-        return new FuncionarioResponseDto(funcionarioRepository.save(existente));
+        FuncionarioResponseDto resposta = new FuncionarioResponseDto(funcionarioRepository.save(existente));
+        AuditLog.registrar(ativo ? "FUNCIONARIO_REATIVADO" : "FUNCIONARIO_INATIVADO", "Funcionario", id,
+                "ativo=" + estavaAtivo, "ativo=" + ativo);
+        return resposta;
     }
 
     private void desativar(Funcionario funcionario) {
@@ -229,6 +241,7 @@ public class FuncionarioService {
         funcionario.setDesativadoEm(java.time.LocalDateTime.now());
         funcionario.setTokenVersion(funcionario.getTokenVersion() + 1);
         funcionarioRepository.save(funcionario);
+        AuditLog.registrar("FUNCIONARIO_DESATIVADO", "Funcionario", funcionario.getId(), "ativo=true", "ativo=false");
     }
 
     private void exigirSemRegistrosVinculados(Funcionario funcionario, String mensagem) {
@@ -268,8 +281,11 @@ public class FuncionarioService {
             throw new IllegalArgumentException("Cargo inválido: " + novoCargo);
         }
 
+        com.jaf.application.enums.Cargo cargoAnterior = existente.getCargoGlobal();
         existente.setCargoGlobal(cargo);
-        return new FuncionarioResponseDto(funcionarioRepository.save(existente));
+        FuncionarioResponseDto resposta = new FuncionarioResponseDto(funcionarioRepository.save(existente));
+        AuditLog.registrar("CARGO_ALTERADO", "Funcionario", id, "cargo=" + cargoAnterior, "cargo=" + cargo);
+        return resposta;
     }
 
   

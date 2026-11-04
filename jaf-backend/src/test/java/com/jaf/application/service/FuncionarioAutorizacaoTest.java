@@ -3,6 +3,7 @@ package com.jaf.application.service;
 import com.jaf.application.config.GerenciadorTokenJwt;
 import com.jaf.application.dto.FuncionarioDto;
 import com.jaf.application.enums.Cargo;
+import com.jaf.application.enums.Permissao;
 import com.jaf.application.exceptions.BadRequest;
 import com.jaf.application.exceptions.Forbidden;
 import com.jaf.application.model.Funcionario;
@@ -152,6 +153,17 @@ class FuncionarioAutorizacaoTest {
         when(funcionarios.findById(2L)).thenReturn(Optional.of(outro));
         when(funcionarios.save(outro)).thenReturn(outro);
         assertEquals(Cargo.RESPONSAVEL_ADMINISTRATIVO, service.atualizarCargo(2L, "RESPONSAVEL_ADMINISTRATIVO").getCargo());
+    }
+
+    @Test
+    void administradorSempreRecebePermissoesFixasMesmoComOverridesLegados() {
+        Funcionario administrador = new Funcionario();
+        administrador.setId(2L);
+        administrador.setCargoGlobal(Cargo.ADMIN);
+        administrador.setPermissoesPersonalizadas(true);
+
+        assertEquals(List.of(Permissao.values()), permissaoService.permissoesDoFuncionario(administrador));
+        verifyNoInteractions(individuais, cargos);
     }
 
     @Test

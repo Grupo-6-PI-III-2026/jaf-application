@@ -10,5 +10,4 @@ export interface LoginResponse {
   nome: string;
   email: string;
   cargo: Cargo;
-  token: string | null;
 }

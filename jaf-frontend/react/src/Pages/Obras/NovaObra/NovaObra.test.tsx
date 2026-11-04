@@ -4,14 +4,12 @@ import { toast } from "sonner";
 import NovaObra from "./NovaObra";
 import { validarSessao } from "../../../test/authorization";
 import { obraService, type Obra } from "../../../Service/Obras/obraService";
-import { alocacaoService } from "../../../Service/Alocacoes/alocacaoService";
 import { funcionarioService } from "../../../Service/Funcionarios/funcionarioService";
 
 const { navigate } = vi.hoisted(() => ({ navigate: vi.fn() }));
 vi.mock("react-router-dom", () => ({ useNavigate: () => navigate }));
 vi.mock("../../../Service/Obras/obraService", () => ({ obraService: { criar: vi.fn() } }));
-vi.mock("../../../Service/Alocacoes/alocacaoService", () => ({ alocacaoService: { criar: vi.fn() } }));
-vi.mock("../../../Service/Funcionarios/funcionarioService", () => ({ funcionarioService: { listar: vi.fn() } }));
+vi.mock("../../../Service/Funcionarios/funcionarioService", () => ({ funcionarioService: { listarAlocaveis: vi.fn() } }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn() } }));
 
 const obra: Obra = {
@@ -22,8 +20,8 @@ const obra: Obra = {
 beforeEach(() => {
   vi.resetAllMocks();
   validarSessao("ENGENHEIRO", ["CRIAR_OBRA", "CRIAR_ALOCACAO"]);
-  vi.mocked(funcionarioService.listar).mockResolvedValue([
-    { id: 7, nome: "Pessoa responsável", email: "pessoa@exemplo.com", cargo: "ENGENHEIRO" },
+  vi.mocked(funcionarioService.listarAlocaveis).mockResolvedValue([
+    { id: 7, nome: "Pessoa responsável", cargo: "ENGENHEIRO" },
   ]);
   vi.mocked(obraService.criar).mockResolvedValue(obra);
 });
@@ -54,21 +52,18 @@ describe("nova obra", () => {
     expect(container.querySelectorAll("input, select")).toHaveLength(5);
   });
 
-  it("aceita início futuro, envia somente o contrato e aloca com CRIAR_ALOCACAO sem VISUALIZAR_FUNCIONARIOS", async () => {
+  it("aceita início futuro e envia o responsável na mesma chamada de criação", async () => {
     await renderComResponsavel();
     fireEvent.submit(screen.getByRole("form", { name: "Criar obra" }));
     await waitFor(() => expect(navigate).toHaveBeenCalledWith("/home"));
-    expect(funcionarioService.listar).toHaveBeenCalledTimes(1);
+    expect(funcionarioService.listarAlocaveis).toHaveBeenCalledTimes(1);
     expect(obraService.criar).toHaveBeenCalledTimes(1);
     expect(obraService.criar).toHaveBeenCalledWith({
       titulo: obra.titulo, orcamento: "1250.5", status: obra.status,
-      dtInicio: obra.dtInicio, dtTerminoPrevisto: obra.dtTerminoPrevisto,
-    });
-    expect(alocacaoService.criar).toHaveBeenCalledTimes(1);
-    expect(alocacaoService.criar).toHaveBeenCalledWith({ funcionarioId: 7, obraId: 42, cargoNaObra: "GESTOR_OBRA" });
+      dtInicio: obra.dtInicio, dtTerminoPrevisto: obra.dtTerminoPrevisto, responsavelId: 7,
+    }, expect.any(String));
     expect(toast.error).not.toHaveBeenCalled();
   });
-
   it.each([{ permissoes: [] }, { permissoes: ["VISUALIZAR_FUNCIONARIOS"] }])("cria sem responsável quando não pode alocar ($permissoes)", async ({ permissoes }) => {
     validarSessao("ENGENHEIRO", ["CRIAR_OBRA", ...permissoes]);
     render(<NovaObra />);
@@ -78,60 +73,35 @@ describe("nova obra", () => {
     fireEvent.submit(screen.getByRole("form", { name: "Criar obra" }));
     await waitFor(() => expect(navigate).toHaveBeenCalledWith("/home"));
     expect(obraService.criar).toHaveBeenCalledTimes(1);
-    expect(funcionarioService.listar).not.toHaveBeenCalled();
-    expect(alocacaoService.criar).not.toHaveBeenCalled();
+    expect(funcionarioService.listarAlocaveis).not.toHaveBeenCalled();
+    expect(obraService.criar).toHaveBeenCalledWith(expect.not.objectContaining({ responsavelId: expect.anything() }), expect.any(String));
     expect(toast.success).toHaveBeenCalledWith(expect.stringMatching(/Solicite a um usuário com permissão de alocação/));
   });
 
-  it("avisa que a obra foi criada quando a alocação falha e nunca repete a criação", async () => {
-    vi.mocked(alocacaoService.criar).mockRejectedValue(new Error("Falha na alocação"));
-    await renderComResponsavel();
-    const form = screen.getByRole("form", { name: "Criar obra" });
-    fireEvent.submit(form);
-    await waitFor(() => expect(navigate).toHaveBeenCalledWith("/obras/42/alocacoes"));
-    expect(toast.warning).toHaveBeenCalledWith(expect.stringMatching(/criada.*Finaliz.*não é necessário criar a obra novamente/));
-    expect(toast.error).not.toHaveBeenCalled();
-    fireEvent.submit(form);
-    expect(obraService.criar).toHaveBeenCalledTimes(1);
-    expect(alocacaoService.criar).toHaveBeenCalledTimes(1);
-  });
-
-  it("bloqueia submits simultâneos durante criação e alocação", async () => {
+  it("bloqueia submits simultâneos durante a criação", async () => {
     let concluirCriacao!: (value: Obra) => void;
-    let concluirAlocacao!: () => void;
     vi.mocked(obraService.criar).mockReturnValue(new Promise((resolve) => { concluirCriacao = resolve; }));
-    vi.mocked(alocacaoService.criar).mockImplementation(() => new Promise((resolve) => {
-      concluirAlocacao = () => resolve({
-        id: 1, obra, cargo: "GESTOR_OBRA",
-        funcionario: { id: 7, nome: "Pessoa responsável", email: "pessoa@exemplo.com", fotoUrl: null, cargoGlobal: "ENGENHEIRO" },
-      });
-    }));
     await renderComResponsavel();
     const form = screen.getByRole("form", { name: "Criar obra" });
     act(() => { fireEvent.submit(form); fireEvent.submit(form); });
     expect(obraService.criar).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("button", { name: "Criando..." })).toBeDisabled();
     await act(async () => { concluirCriacao(obra); });
-    fireEvent.submit(form);
-    expect(obraService.criar).toHaveBeenCalledTimes(1);
-    expect(alocacaoService.criar).toHaveBeenCalledTimes(1);
-    await act(async () => { concluirAlocacao(); });
-    fireEvent.submit(form);
     expect(obraService.criar).toHaveBeenCalledTimes(1);
   });
 
-  it("não silencia erro de criação e permite tentar novamente quando não houve criação confirmada", async () => {
+  it("não silencia erro de criação e reutiliza a chave de idempotência na nova tentativa", async () => {
     vi.mocked(obraService.criar).mockRejectedValueOnce({ isAxiosError: true, response: { status: 400, data: { message: "Título inválido" } } });
     await renderComResponsavel();
     fireEvent.submit(screen.getByRole("form", { name: "Criar obra" }));
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Título inválido"));
-    expect(alocacaoService.criar).not.toHaveBeenCalled();
     expect(navigate).not.toHaveBeenCalled();
     fireEvent.submit(screen.getByRole("form", { name: "Criar obra" }));
     await waitFor(() => expect(navigate).toHaveBeenCalledWith("/home"));
     expect(obraService.criar).toHaveBeenCalledTimes(2);
+    const chaves = vi.mocked(obraService.criar).mock.calls.map((chamada) => chamada[1]);
+    expect(chaves[0]).toBe(chaves[1]);
   });
-
   it.each(["", "2099-02-29", "2099-13-01"])("rejeita início inválido %j sem chamar a API", async (inicio) => {
     await renderComResponsavel();
     // Alterar o tipo permite exercitar valores ISO impossíveis que um date input pode sanitizar.

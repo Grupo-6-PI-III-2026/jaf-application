@@ -1,14 +1,15 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ReembolsoModal from "./ReembolsoModal";
 import { financeiroService, type Reembolso } from "../../Service/Financeiro/financeiroService";
 import type { Gasto } from "../../Service/Gastos/gastoService";
 import { hojeIso } from "../PeriodoFiltro/periodUtils";
 import { validarSessao } from "../../test/authorization";
+import { DialogProvider } from "../Feedback/DialogProvider";
 
 vi.mock("../../Service/Financeiro/financeiroService", () => ({ financeiroService: { historico: vi.fn(), registrar: vi.fn() } }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
-const gasto: Gasto = { id: 8, descricao: "Nota fiscal", categoria: "MATERIAL", metodoPagamento: "REEMBOLSO", etapa: "ETAPA 1", valor: 100, dtGasto: "2020-01-01", funcionario: { id: 2, nome: "Pessoa A", email: "", cargoGlobal: "ENGENHEIRO" }, obra: { id: 1, titulo: "Obra" }, reembolsoConcluido: false };
+const gasto: Gasto = { id: 8, descricao: "Nota fiscal", categoria: "MATERIAL", metodoPagamento: "REEMBOLSO", etapa: "ETAPA 1", valor: 100, dtGasto: "2020-01-01", funcionario: { id: 2, nome: "Pessoa A", email: "", cargoGlobal: "ENGENHEIRO" }, obra: { id: 1, titulo: "Obra" }, statusReembolso: "PARCIAL" };
 const parcial: Reembolso = { gastoId: 8, valorTotal: 100, totalPago: 30, saldoPendente: 70, status: "PARCIAL", pagamentos: [{ id: 1, valor: 30, dataPagamento: "2020-01-02", observacao: "Primeira parcela" }] };
 beforeEach(() => {
   vi.resetAllMocks(); localStorage.clear(); validarSessao("ADMIN");
@@ -18,7 +19,9 @@ beforeEach(() => {
   vi.mocked(financeiroService.historico).mockResolvedValue(parcial);
   vi.mocked(financeiroService.registrar).mockResolvedValue({ ...parcial, totalPago: 100, saldoPendente: 0, status: "PAGO" });
 });
-const abrir = (onAtualizado = vi.fn()) => render(<ReembolsoModal gasto={gasto} onFechar={vi.fn()} onAtualizado={onAtualizado} />);
+const abrir = (onAtualizado = vi.fn()) => render(
+  <DialogProvider><ReembolsoModal gasto={gasto} onFechar={vi.fn()} onAtualizado={onAtualizado} /></DialogProvider>,
+);
 describe("parcelas de reembolso", () => {
   it("consulta histórico sem oferecer pagamento ao engenheiro", async () => {
     validarSessao("ENGENHEIRO"); abrir();
@@ -32,7 +35,8 @@ describe("parcelas de reembolso", () => {
     fireEvent.change(await screen.findByLabelText("Valor da parcela"), { target: { value: "70,00" } });
     fireEvent.change(screen.getByLabelText("Observação (opcional)"), { target: { value: "Última parcela" } });
     fireEvent.click(screen.getByRole("button", { name: "Confirmar pagamento" }));
-    await waitFor(() => expect(financeiroService.registrar).toHaveBeenCalledWith(8, { valor: 70, dataPagamento: hojeIso(), observacao: "Última parcela" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Confirmar" }));
+    await waitFor(() => expect(financeiroService.registrar).toHaveBeenCalledWith(8, { valor: 70, dataPagamento: hojeIso(), observacao: "Última parcela" }, expect.any(String)));
     expect(await screen.findByText("PAGO")).toBeInTheDocument();
     expect(atualizado).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("button", { name: "Confirmar pagamento" })).not.toBeInTheDocument();
@@ -56,12 +60,21 @@ describe("parcelas de reembolso", () => {
     abrir(); const input = await screen.findByLabelText("Valor da parcela");
     fireEvent.change(input, { target: { value: "10" } });
     fireEvent.submit(input.closest("form")!); fireEvent.submit(input.closest("form")!);
-    expect(financeiroService.registrar).toHaveBeenCalledTimes(1);
+    fireEvent.click(await within(screen.getByRole("dialog", { name: "Confirmação" })).findByRole("button", { name: "Confirmar" }));
+    await waitFor(() => expect(financeiroService.registrar).toHaveBeenCalledTimes(1));
+  });
+  it("não registra o pagamento se a confirmação final for recusada", async () => {
+    abrir(); fireEvent.change(await screen.findByLabelText("Valor da parcela"), { target: { value: "10" } });
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar pagamento" }));
+    expect(await screen.findByText(/Pagar/)).toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Confirmação" })).getByRole("button", { name: "Cancelar" }));
+    expect(financeiroService.registrar).not.toHaveBeenCalled();
   });
   it("exige consultar histórico após resultado desconhecido e não reenvia", async () => {
     vi.mocked(financeiroService.registrar).mockRejectedValue(new Error("Timeout"));
     abrir(); fireEvent.change(await screen.findByLabelText("Valor da parcela"), { target: { value: "10" } });
     fireEvent.click(screen.getByRole("button", { name: "Confirmar pagamento" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Confirmar" }));
     await waitFor(() => expect(screen.getByRole("button", { name: "Confirmar pagamento" })).toBeDisabled());
     expect(screen.getByRole("alert")).toHaveTextContent("Confira".toLowerCase());
     fireEvent.click(screen.getByRole("button", { name: "Consultar histórico atualizado" }));

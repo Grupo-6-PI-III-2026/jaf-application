@@ -1,5 +1,5 @@
-import { useCallback, useState, useEffect, type FormEvent } from "react";
-import { isAxiosError } from "axios";
+import { useCallback, useRef, useState, useEffect, type FormEvent } from "react";
+import { useChaveIdempotencia } from "../../Utils/idempotencia";
 import {
   Calendar,
   Search,
@@ -15,15 +15,13 @@ import {
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import styles from "./DetalhamentoObras.module.css";
 import ControlePresenca from "../ControlePresenca/ControlePresenca";
-import { obraService, type Obra } from "../../Service/Obras/obraService";
+import { obraService, type Obra, type PessoaDaObra } from "../../Service/Obras/obraService";
 import { gastoService, type Gasto, type StatusReembolso } from "../../Service/Gastos/gastoService";
 import { ocrService } from "../../Service/Gastos/ocrService";
 import { notaFiscalService } from "../../Service/NotasFiscais/notaFiscalService";
 import { alocacaoService, type AlocacaoObra } from "../../Service/Alocacoes/alocacaoService";
-import { authService } from "../../Service/Auth/Login/authService";
 import PeriodoFiltro from "../../Components/PeriodoFiltro/PeriodoFiltro";
 import {
-  dataNoPeriodo,
   periodoFiltroInicial,
   resolverPeriodo,
   type PeriodoFiltroValue,
@@ -36,14 +34,20 @@ import NotasFiscaisGasto from "../../Components/NotasFiscais/NotasFiscaisGasto";
 import ResumoReembolsos from "../../Components/Financeiro/ResumoReembolsos";
 import ExportarGastosModal from "../../Components/ExportarGastos/ExportarGastosModal";
 import { dataValida, erroApi, valorDecimal } from "../../Utils/financeiro";
+import { tratarErroApi } from "../../Utils/erro";
+import { validarNotaFiscal } from "../../Utils/arquivo";
+import { diasEntreIso, formatarDataIso, hojeSaoPaulo } from "../../Utils/data";
+import { useHoje } from "../../Hooks/useHoje";
 import { logger } from "../../Utils/logger";
+import { useAuthz } from "../../Hooks/useAuthz";
+import { useDialogs } from "../../Components/Feedback/DialogContext";
+
+const ITENS_POR_PAGINA = 5;
 
 const formatarMoeda = (valor: number) =>
   valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-const formatarData = (data: string) => {
-  return new Date(`${data}T00:00:00`).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
-};
+const formatarData = formatarDataIso;
 
 const getIniciais = (nome: string) => {
   const palavras = nome.split(" ");
@@ -62,16 +66,7 @@ const STATUS_REEMBOLSO: Record<StatusReembolso, { rotulo: string; classe: string
   PAGO: { rotulo: "Pago", classe: styles.statusPago },
 };
 
-const dataHoje = () => {
-  const partes = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Sao_Paulo",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date());
-  const getParte = (tipo: string) => partes.find((parte) => parte.type === tipo)?.value ?? "";
-  return `${getParte("year")}-${getParte("month")}-${getParte("day")}`;
-};
+const dataHoje = hojeSaoPaulo;
 
 const METODOS_PAGAMENTO = [
   { value: "PIX", label: "Pix" },
@@ -133,6 +128,9 @@ export default function DetalhamentoObras() {
   const [modalDeleteAberto, setModalDeleteAberto] = useState(false);
   const [modalExportacaoAberto, setModalExportacaoAberto] = useState(false);
   const [salvandoGasto, setSalvandoGasto] = useState(false);
+  const envioGastoEmCurso = useRef(false);
+  const ocrEmCurso = useRef<AbortController | null>(null);
+  const chaveGasto = useChaveIdempotencia();
   const [salvandoObra, setSalvandoObra] = useState(false);
   const [deletandoObra, setDeletandoObra] = useState(false);
   const [gastoReembolso, setGastoReembolso] = useState<Gasto | null>(null);
@@ -172,24 +170,31 @@ export default function DetalhamentoObras() {
   });
   const [obra, setObra] = useState<Obra | null>(null);
   const [gastos, setGastos] = useState<Gasto[]>([]);
-  const [pessoasHistoricas, setPessoasHistoricas] = useState<Gasto["funcionario"][]>([]);
+  const [pessoasObra, setPessoasObra] = useState<PessoaDaObra[]>([]);
+  const [totalGastos, setTotalGastos] = useState(0);
+  const [totalPaginasServidor, setTotalPaginasServidor] = useState(0);
+  const [buscaAplicada, setBuscaAplicada] = useState("");
   const [alocacoes, setAlocacoes] = useState<AlocacaoObra[]>([]);
   const [carregando, setCarregando] = useState(true);
   
   const { id } = useParams<{ id: string }>();
+  const hoje = useHoje();
+  const hojeAnterior = useRef(hoje);
   const navegar = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const admin = authService.isAdmin();
+  const { can, isAdmin, podeRegistrarPagamento } = useAuthz();
+  const { confirm } = useDialogs();
+  const admin = isAdmin;
   // O PUT legado exige orçamento: não reenviar valor oculto ou inventar zero.
-  const podeEditarObra = admin && authService.hasAuthority("EDITAR_OBRA");
-  const podeDeletarObra = authService.hasAuthority("DELETAR_OBRA");
-  const podeCriarGasto = authService.hasAuthority("CRIAR_GASTO");
-  const podeEditarGasto = authService.hasAuthority("EDITAR_GASTO");
-  const podeDeletarGasto = authService.hasAuthority("DELETAR_GASTO");
-  const podeVisualizarGastos = authService.hasAuthority("VISUALIZAR_GASTOS");
-  const podeVisualizarAlocacoes = authService.hasAuthority("VISUALIZAR_ALOCACOES");
-  const podeRegistrarPresenca = authService.hasAuthority("VISUALIZAR_PRESENCAS");
-  const podeGerarRelatorio = authService.hasAuthority("GERAR_RELATORIO");
+  const podeEditarObra = can("EDITAR_OBRA");
+  const podeDeletarObra = can("DELETAR_OBRA");
+  const podeCriarGasto = can("CRIAR_GASTO");
+  const podeEditarGasto = can("EDITAR_GASTO");
+  const podeDeletarGasto = can("DELETAR_GASTO");
+  const podeVisualizarGastos = can("VISUALIZAR_GASTOS");
+  const podeVisualizarAlocacoes = can("VISUALIZAR_ALOCACOES");
+  const podeRegistrarPresenca = can("VISUALIZAR_PRESENCAS");
+  const podeGerarRelatorio = can("GERAR_RELATORIO");
 
   const carregarDados = useCallback(async () => {
       try {
@@ -240,28 +245,83 @@ export default function DetalhamentoObras() {
     setFiltroPessoa("");
     setFiltroStatus("");
     setGastoReembolso(null);
-    setPessoasHistoricas([]);
+    setPessoasObra([]);
+    setTotalGastos(0);
   }, [obraId]);
 
+  // Quem aparece no filtro de pessoa: alocados na obra e autores de gastos que já saíram dela.
   useEffect(() => {
-    if (!obraId || !podeVisualizarGastos) { setGastos([]); return; }
+    if (!obraId || !podeVisualizarGastos) { setPessoasObra([]); return; }
     let ativo = true;
+    obraService.listarPessoas(obraId)
+      .then((pessoas) => { if (ativo) setPessoasObra(pessoas); })
+      .catch(() => { if (ativo) setPessoasObra([]); });
+    return () => { ativo = false; };
+  }, [obraId, podeVisualizarGastos, revisaoFinanceira]);
+
+  useEffect(() => () => ocrEmCurso.current?.abort(), []);
+
+  // Tela aberta de um dia para o outro: a data padrão do gasto acompanha o dia, mas só se a pessoa não a alterou.
+  useEffect(() => {
+    if (hojeAnterior.current === hoje) return;
+    const anterior = hojeAnterior.current;
+    hojeAnterior.current = hoje;
+    setNovoGasto((gasto) => (gasto.dtGasto === anterior ? { ...gasto, dtGasto: hoje } : gasto));
+  }, [hoje]);
+
+  // Evita uma requisição a cada tecla na busca.
+  useEffect(() => {
+    const espera = setTimeout(() => setBuscaAplicada(buscaFinanceira.trim()), 300);
+    return () => clearTimeout(espera);
+  }, [buscaFinanceira]);
+
+  const { from: periodoDe, to: periodoAte } = resolverPeriodo(periodoFinanceiro);
+
+  useEffect(() => {
+    if (!obraId || !podeVisualizarGastos) { setGastos([]); setTotalGastos(0); setTotalPaginasServidor(0); return; }
+    if (periodoDe && periodoAte && periodoDe > periodoAte) {
+      setGastos([]); setTotalGastos(0); setTotalPaginasServidor(0);
+      setErroGastos("A data inicial não pode ser posterior à data final.");
+      return;
+    }
+    const controle = new AbortController();
     setCarregandoGastos(true);
     setErroGastos("");
-    // As opções não podem depender da resposta filtrada (nem das alocações atuais).
-    const historico = filtroPessoa || filtroStatus ? gastoService.listarPorObra(obraId) : null;
-    const consulta = gastoService.listarPorObra(obraId, {
+    const ordenacao = ordemFinanceira === "valor"
+      ? { sortBy: "valor" as const, sortDir: "desc" as const }
+      : ordemFinanceira === "alfabetica"
+        ? { sortBy: "descricao" as const, sortDir: "asc" as const }
+        : { sortBy: "dtGasto" as const, sortDir: "desc" as const };
+    gastoService.listarPaginado({
+      obraId,
+      page: paginaAtual - 1,
+      size: ITENS_POR_PAGINA,
+      ...ordenacao,
       funcionarioId: filtroPessoa ? Number(filtroPessoa) : undefined,
       statusReembolso: filtroStatus || undefined,
-    });
-    Promise.all([historico ?? consulta, consulta]).then(([todos, dados]) => {
-      if (ativo) { setGastos(dados); setPessoasHistoricas(todos.map((gasto) => gasto.funcionario)); }
-    })
-      .catch((e: unknown) => { if (ativo) { setGastos([]); setErroGastos(erroApi(e, "Não foi possível carregar os gastos. Atualize para tentar novamente.")); } })
-      .finally(() => { if (ativo) setCarregandoGastos(false); });
-    return () => { ativo = false; };
-  }, [obraId, podeVisualizarGastos, filtroPessoa, filtroStatus, revisaoFinanceira]);
-
+      metodoPagamento: filtroMetodoPagamento === "TODOS" ? undefined : filtroMetodoPagamento,
+      from: periodoDe ?? undefined,
+      to: periodoAte ?? undefined,
+      busca: buscaAplicada || undefined,
+    }, controle.signal)
+      .then((pagina) => {
+        setGastos(pagina.content);
+        setTotalGastos(pagina.totalElements);
+        setTotalPaginasServidor(pagina.totalPages);
+        // Excluir o último item da última página deixa a página atual vazia: volta para a última existente.
+        if (pagina.content.length === 0 && pagina.totalPages > 0 && paginaAtual > pagina.totalPages) {
+          setPaginaAtual(pagina.totalPages);
+        }
+      })
+      .catch((e: unknown) => {
+        if (controle.signal.aborted) return;
+        setGastos([]); setTotalGastos(0); setTotalPaginasServidor(0);
+        setErroGastos(erroApi(e, "Não foi possível carregar os gastos. Atualize para tentar novamente."));
+      })
+      .finally(() => { if (!controle.signal.aborted) setCarregandoGastos(false); });
+    return () => controle.abort();
+  }, [obraId, podeVisualizarGastos, paginaAtual, ordemFinanceira, filtroPessoa, filtroStatus, filtroMetodoPagamento,
+    periodoDe, periodoAte, buscaAplicada, revisaoFinanceira]);
   useEffect(() => {
     carregarDados();
   }, [carregarDados, id]);
@@ -274,57 +334,28 @@ export default function DetalhamentoObras() {
 
   useEffect(() => {
     setPaginaAtual(1);
-  }, [buscaFinanceira, ordemFinanceira, filtroMetodoPagamento, periodoFinanceiro, filtroPessoa, filtroStatus]);
+  }, [buscaAplicada, ordemFinanceira, filtroMetodoPagamento, periodoFinanceiro, filtroPessoa, filtroStatus]);
 
   // Calcular dias restantes
   const calcularDiasRestantes = () => {
     if (!obra?.dtTerminoPrevisto) return 0;
-    const hoje = new Date(`${dataHoje()}T00:00:00`);
-    const dataTermino = new Date(`${obra.dtTerminoPrevisto}T00:00:00`);
-    const diffTime = dataTermino.getTime() - hoje.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffDays = diasEntreIso(hoje, obra.dtTerminoPrevisto);
     return diffDays > 0 ? diffDays : 0;
   };
 
-  const intervaloFinanceiro = resolverPeriodo(periodoFinanceiro);
-
-  const gastosFiltrados = gastos
-    .filter((gasto) => {
-      const termo = buscaFinanceira.trim().toLowerCase();
-      const correspondeBusca = !termo || [
-        gasto.descricao,
-        gasto.categoria,
-        gasto.metodoPagamento,
-        gasto.etapa,
-        gasto.funcionario.nome,
-      ]
-        .filter(Boolean)
-        .some((campo) => campo.toLowerCase().includes(termo));
-
-      const correspondeMetodo =
-        filtroMetodoPagamento === "TODOS" ||
-        normalizarMetodoPagamento(gasto.metodoPagamento) === filtroMetodoPagamento;
-
-      const correspondePeriodo = dataNoPeriodo(gasto.dtGasto, intervaloFinanceiro);
-
-      return correspondeBusca && correspondeMetodo && correspondePeriodo;
-    })
-    .sort((a, b) => {
-      if (ordemFinanceira === "valor") {
-        return b.valor - a.valor;
-      }
-      if (ordemFinanceira === "alfabetica") {
-        return a.descricao.localeCompare(b.descricao);
-      }
-      return new Date(b.dtGasto).getTime() - new Date(a.dtGasto).getTime();
-    });
-
-  const totalPaginas = Math.ceil(gastosFiltrados.length / 5);
+  const totalPaginas = totalPaginasServidor;
   const paginaVisivel = Math.min(paginaAtual, Math.max(1, totalPaginas));
-  const gastosExibidos = gastosFiltrados.slice((paginaVisivel - 1) * 5, paginaVisivel * 5);
+  // A página já chega filtrada, ordenada e fatiada pelo servidor.
+  const gastosExibidos = gastos;
+  // O rascunho evita perder o que foi digitado se a sessão expirar; só vive na aba e não guarda dados pessoais.
+  const chaveRascunho = obra ? `rascunho-gasto-${obra.id}` : null;
 
   function atualizarNovoGasto(campo: keyof typeof novoGasto, valor: string | boolean) {
-    setNovoGasto((gastoAtual) => ({ ...gastoAtual, [campo]: valor }));
+    setNovoGasto((gastoAtual) => {
+      const proximo = { ...gastoAtual, [campo]: valor };
+      if (chaveRascunho && !gastoEditando) sessionStorage.setItem(chaveRascunho, JSON.stringify(proximo));
+      return proximo;
+    });
   }
 
   function limparNotaFiscal() {
@@ -339,13 +370,9 @@ export default function DetalhamentoObras() {
       setNotaFiscalArquivo(null);
       return;
     }
-    const tiposAceitos = ["application/pdf", "image/jpeg", "image/png", "image/gif", "image/bmp", "image/tiff", "image/webp"];
-    if (arquivo.size > 10 * 1024 * 1024) {
-      toast.error("A nota fiscal deve ter no máximo 10 MB.");
-      return;
-    }
-    if (!tiposAceitos.includes(arquivo.type)) {
-      toast.error("Envie uma nota fiscal em PDF, JPG ou PNG.");
+    const erroArquivo = validarNotaFiscal(arquivo);
+    if (erroArquivo) {
+      toast.error(erroArquivo);
       return;
     }
     setNotaFiscalArquivo(arquivo);
@@ -375,30 +402,37 @@ export default function DetalhamentoObras() {
 
     if (!obra) return;
 
-    const orcamento = valorDecimal(edicaoObra.orcamento);
-    if (orcamento === null) {
+    const orcamento = admin ? valorDecimal(edicaoObra.orcamento) : null;
+    if (admin && orcamento === null) {
       toast.error("Informe um orçamento positivo com até duas casas decimais");
       return;
     }
-    if (!admin || edicaoObra.titulo.trim().length < 5 || edicaoObra.dtTerminoPrevisto < edicaoObra.dtInicio) {
+    if (!podeEditarObra || edicaoObra.titulo.trim().length < 5 || edicaoObra.dtTerminoPrevisto < edicaoObra.dtInicio) {
       toast.error("Verifique o título e o intervalo de datas da obra"); return;
     }
 
     try {
       setSalvandoObra(true);
-      const obraAtualizada = await obraService.atualizar(obra.id, {
+      const dadosObra = {
         titulo: edicaoObra.titulo.trim(),
-        orcamento: String(orcamento),
         status: edicaoObra.status,
         dtInicio: edicaoObra.dtInicio,
         dtTerminoPrevisto: edicaoObra.dtTerminoPrevisto,
-      });
+        versao: obra.versao,
+      };
+      const obraAtualizada = admin && orcamento !== null
+        ? await obraService.atualizar(obra.id, { ...dadosObra, orcamento: String(orcamento) })
+        : await obraService.atualizarParcial(obra.id, dadosObra);
       setObra(obraAtualizada);
       fecharModalEdicao();
       toast.success("Obra atualizada com sucesso");
     } catch (error) {
       logger.erro("Erro ao atualizar obra", error);
       toast.error(erroApi(error, "Não foi possível atualizar a obra"));
+      if (tratarErroApi(error).code === "STALE_VERSION") {
+        fecharModalEdicao();
+        void carregarDados();
+      }
     } finally {
       setSalvandoObra(false);
     }
@@ -422,6 +456,8 @@ export default function DetalhamentoObras() {
       return;
     }
 
+    if (envioGastoEmCurso.current) return;
+    envioGastoEmCurso.current = true;
     try {
       setSalvandoGasto(true);
       const payload = {
@@ -435,8 +471,9 @@ export default function DetalhamentoObras() {
         obraId: obra.id,
       };
       const gastoSalvo = gastoEditando
-        ? await gastoService.atualizar(gastoEditando.id, payload)
-        : await gastoService.criar(payload);
+        ? await gastoService.atualizar(gastoEditando.id, { ...payload, versao: gastoEditando.versao })
+        : await gastoService.criar(payload, chaveGasto.atual());
+      if (!gastoEditando) chaveGasto.renovar();
       if (notaFiscalArquivo) {
         try {
           await notaFiscalService.anexar(gastoSalvo.id, notaFiscalArquivo, {
@@ -450,6 +487,7 @@ export default function DetalhamentoObras() {
           return;
         }
       }
+      if (chaveRascunho) sessionStorage.removeItem(chaveRascunho);
       setRevisaoFinanceira((r) => r + 1);
       setModalGastoAberto(false);
       setGastoEditando(null);
@@ -468,7 +506,13 @@ export default function DetalhamentoObras() {
     } catch (error) {
       logger.erro("Erro ao cadastrar gasto", error);
       toast.error(erroApi(error, "Não foi possível salvar o gasto"));
+      if (tratarErroApi(error).code === "STALE_VERSION") {
+        setModalGastoAberto(false);
+        setGastoEditando(null);
+        setRevisaoFinanceira((r) => r + 1);
+      }
     } finally {
+      envioGastoEmCurso.current = false;
       setSalvandoGasto(false);
     }
   }
@@ -479,10 +523,14 @@ export default function DetalhamentoObras() {
       return;
     }
 
+    // Sair da tela cancela a consulta em andamento (ver efeito de limpeza abaixo).
+    ocrEmCurso.current?.abort();
+    const controle = new AbortController();
+    ocrEmCurso.current = controle;
     try {
       setProcessandoNotaFiscal(true);
       setMensagemNotaFiscal(null);
-      const resultado = await ocrService.processarNotaFiscal(notaFiscalArquivo);
+      const resultado = await ocrService.processarNotaFiscal(notaFiscalArquivo, controle.signal);
 
       if (!resultado.sucesso) {
         setMensagemNotaFiscal(resultado.mensagem);
@@ -507,10 +555,11 @@ export default function DetalhamentoObras() {
       setMensagemNotaFiscal(resultado.mensagem);
       toast.success("Campos preenchidos a partir da nota fiscal");
     } catch (error) {
+      if (controle.signal.aborted) return;
       logger.erro("Erro ao processar nota fiscal", error);
-      toast.error("Não foi possível processar a nota fiscal");
+      toast.error(tratarErroApi(error, "Não foi possível processar a nota fiscal").mensagem);
     } finally {
-      setProcessandoNotaFiscal(false);
+      if (!controle.signal.aborted) setProcessandoNotaFiscal(false);
     }
   }
 
@@ -524,7 +573,7 @@ export default function DetalhamentoObras() {
   }
 
   async function excluirGasto(gasto: Gasto) {
-    if (!podeDeletarGasto || excluindoGastoId || !window.confirm(`Excluir o gasto “${gasto.descricao}”? Gastos com pagamentos não podem ser excluídos.`)) return;
+    if (!podeDeletarGasto || excluindoGastoId || !await confirm(`Excluir o gasto “${gasto.descricao}”? Gastos com pagamentos não podem ser excluídos.`)) return;
     setExcluindoGastoId(gasto.id);
     try { await gastoService.deletar(gasto.id); setRevisaoFinanceira((r) => r + 1); toast.success("Gasto excluído"); }
     catch (e) { toast.error(erroApi(e, "Não foi possível excluir o gasto")); }
@@ -577,12 +626,11 @@ export default function DetalhamentoObras() {
       navegar("/home");
     } catch (error) {
       logger.erro("Erro ao deletar obra", error);
-      if (isAxiosError(error) && error.response?.status === 409) {
+      const erroTratado = tratarErroApi(error, "Não foi possível excluir a obra");
+      if (erroTratado.status === 409) {
         setModalDeleteAberto(false);
-        toast.error("Não é possível excluir esta obra pois existem alocações vinculadas a ela. Remova as alocações antes de excluir a obra.");
-      } else {
-        toast.error("Não foi possível excluir a obra");
       }
+      toast.error(erroTratado.mensagem);
     } finally {
       setDeletandoObra(false);
     }
@@ -598,18 +646,18 @@ export default function DetalhamentoObras() {
       );
     }
 
-    // O gasto não traz status próprio; só é confiável quando filtrado no servidor.
-    const status = filtroStatus ? STATUS_REEMBOLSO[filtroStatus] : null;
+    const status = gasto.statusReembolso ? STATUS_REEMBOLSO[gasto.statusReembolso] : null;
     return (
       <div className={styles.celulaReembolso}>
         {status && <span className={`${styles.statusBadge} ${status.classe}`}>{status.rotulo}</span>}
+        {!!gasto.saldoPendente && gasto.saldoPendente > 0 && <small>Falta {formatarMoeda(gasto.saldoPendente)}</small>}
         <button
           type="button"
           className={`${styles.botaoSecundario} ${styles.botaoCompacto}`}
           onClick={() => setGastoReembolso(gasto)}
           title="Consultar parcelas e saldo do reembolso"
         >
-          {authService.podeRegistrarPagamento() ? "Pagamentos / Registrar" : "Ver pagamentos"}
+          {podeRegistrarPagamento ? "Pagamentos / Registrar" : "Ver pagamentos"}
         </button>
       </div>
     );
@@ -660,10 +708,12 @@ export default function DetalhamentoObras() {
                 Título
                 <input value={edicaoObra.titulo} onChange={(evento) => atualizarEdicaoObra("titulo", evento.target.value)} required minLength={5} maxLength={150} />
               </label>
-              <label>
-                Orçamento
-                <input value={edicaoObra.orcamento} onChange={(evento) => atualizarEdicaoObra("orcamento", evento.target.value)} required inputMode="decimal" />
-              </label>
+              {admin && (
+                <label>
+                  Orçamento
+                  <input value={edicaoObra.orcamento} onChange={(evento) => atualizarEdicaoObra("orcamento", evento.target.value)} required inputMode="decimal" />
+                </label>
+              )}
               <label>
                 Status
                 <select value={edicaoObra.status} onChange={(evento) => atualizarEdicaoObra("status", evento.target.value)}>
@@ -799,7 +849,7 @@ export default function DetalhamentoObras() {
               </label>
               <label>
                 Data
-                <input type="date" value={novoGasto.dtGasto} max={dataHoje()} onChange={(evento) => atualizarNovoGasto("dtGasto", evento.target.value)} required />
+                <input type="date" value={novoGasto.dtGasto} max={hoje} onChange={(evento) => atualizarNovoGasto("dtGasto", evento.target.value)} required />
               </label>
             </div>
 
@@ -849,7 +899,7 @@ export default function DetalhamentoObras() {
               <input
                 type="date"
                 className={styles.inputDataPresenca}
-                max={dataHoje()}
+                max={hoje}
                 value={dataSelecionada}
                 onChange={(e) => setDataSelecionada(e.target.value)}
                 aria-label="Data do controle de presença"
@@ -866,7 +916,10 @@ export default function DetalhamentoObras() {
           {podeCriarGasto && (
             <button type="button" className={styles.botaoPrimario} onClick={() => {
               setGastoEditando(null);
-              setNovoGasto({ descricao: "", categoria: "MATERIAL", metodoPagamento: "PIX", etapa: "ETAPA 1", valor: "", dtGasto: dataHoje(), funcionarioId: String(alocacoes[0]?.funcionario.id ?? ""), reembolsoFuncionario: false });
+              const padrao = { descricao: "", categoria: "MATERIAL", metodoPagamento: "PIX", etapa: "ETAPA 1", valor: "", dtGasto: dataHoje(), funcionarioId: String(alocacoes[0]?.funcionario.id ?? ""), reembolsoFuncionario: false };
+              let salvo: Partial<typeof padrao> = {};
+              try { salvo = chaveRascunho ? JSON.parse(sessionStorage.getItem(chaveRascunho) ?? "{}") : {}; } catch { salvo = {}; }
+              setNovoGasto({ ...padrao, ...salvo });
               setModalGastoAberto(true);
             }}>
               <Plus size={16} />
@@ -969,7 +1022,7 @@ export default function DetalhamentoObras() {
               <h2 className={styles.financeiroTitulo}>Gastos</h2>
               {!carregandoGastos && !erroGastos && (
                 <span className={styles.financeiroContador}>
-                  {gastosFiltrados.length} {gastosFiltrados.length === 1 ? "lançamento" : "lançamentos"}
+                  {totalGastos} {totalGastos === 1 ? "lançamento" : "lançamentos"}
                 </span>
               )}
             </div>
@@ -1032,7 +1085,7 @@ export default function DetalhamentoObras() {
               <span className={styles.rotuloFiltro}>Pessoa</span>
               <select className={styles.inputFiltro} aria-label="Pessoa" value={filtroPessoa} onChange={(e) => setFiltroPessoa(e.target.value)}>
                 <option value="">Todas as pessoas</option>
-                {Array.from(new Map([...alocacoes.map((a) => [a.funcionario.id, a.funcionario.nome] as const), ...pessoasHistoricas.map((pessoa) => [pessoa.id, pessoa.nome] as const)]).entries()).map(([pessoaId, nome]) => <option key={pessoaId} value={pessoaId}>{nome}</option>)}
+                {pessoasObra.map((pessoa) => <option key={pessoa.id} value={pessoa.id}>{pessoa.nome}</option>)}
               </select>
             </label>
             <label className={styles.campoFiltro}>
@@ -1172,7 +1225,7 @@ export default function DetalhamentoObras() {
           {/* Paginação */}
           <div className={styles.paginacao}>
             <span className={styles.paginacaoInfo}>
-              Mostrando {gastosExibidos.length} de {gastosFiltrados.length} lançamentos
+              Mostrando {gastosExibidos.length} de {totalGastos} lançamentos
             </span>
             <div className={styles.paginacaoBotoes}>
               <button

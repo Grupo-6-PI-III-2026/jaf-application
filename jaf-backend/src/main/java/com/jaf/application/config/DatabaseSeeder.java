@@ -90,7 +90,7 @@ public class DatabaseSeeder implements ApplicationRunner {
                 INSERT INTO obra (titulo, orcamento, status, dt_inicio, dt_termino_previsto)
                 SELECT ?, ?, ?, ?, ?
                 WHERE NOT EXISTS (SELECT 1 FROM obra WHERE titulo = ?)
-                """, titulo, orcamento, status, dataInicio, dataTermino, titulo);
+                """, titulo, new java.math.BigDecimal(orcamento), status, dataInicio, dataTermino, titulo);
     }
 
     private void seedAlocacoes() {
@@ -100,10 +100,10 @@ public class DatabaseSeeder implements ApplicationRunner {
         inserirAlocacao("rafael.pereira@jaf.com", "Obra Osasco", "ENGENHEIRO");
         inserirAlocacao("isac.newton@jaf.com", "Obra Osasco", "PEDREIRO");
         inserirAlocacao("carlos.silva@jaf.com", "Residencial Morumbi", "ENGENHEIRO");
-        inserirAlocacao("marina.costa@jaf.com", "Residencial Morumbi", "RESPONSAVEL_ADMINISTRATIVO");
+        inserirAlocacao("marina.costa@jaf.com", "Residencial Morumbi", "GESTOR_OBRA");
         inserirAlocacao("pedro.santos@jaf.com", "Comercial Pinheiros", "ENGENHEIRO");
         inserirAlocacao("lucia.ferreira@jaf.com", "Comercial Pinheiros", "ARQUITETO");
-        inserirAlocacao("roberto.almeida@jaf.com", "Galeria Shopping", "RESPONSAVEL_ADMINISTRATIVO");
+        inserirAlocacao("roberto.almeida@jaf.com", "Galeria Shopping", "GESTOR_OBRA");
         inserirAlocacao("gabriel.junior@jaf.com", "Galeria Shopping", "ENGENHEIRO");
         inserirAlocacao("ana.souza@jaf.com", "Residencial Morumbi", "ENGENHEIRO");
     }

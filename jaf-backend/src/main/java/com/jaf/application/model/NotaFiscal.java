@@ -36,6 +36,8 @@ public class NotaFiscal {
     @Column(name = "tamanho_bytes", nullable = false)
     @JsonIgnore
     private long tamanhoBytes;
+    // A coluna é CHAR(64) (V21); sem isso a validação do schema no PostgreSQL espera VARCHAR.
+    @org.hibernate.annotations.JdbcTypeCode(java.sql.Types.CHAR)
     @Column(nullable = false, length = 64)
     @JsonIgnore
     private String sha256;

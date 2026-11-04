@@ -1,6 +1,5 @@
 package com.jaf.application.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.jaf.application.config.RabbitMQConfig;
 import com.jaf.application.dto.OcrResponseDto;
 import com.jaf.application.dto.OcrResultadoMensagem;
@@ -16,22 +15,13 @@ import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -60,67 +50,29 @@ public class OcrService {
 
     private final RabbitTemplate rabbitTemplate;
     private final OcrProcessamentoRepository processamentoRepository;
-    private final RestTemplate restTemplate;
-    private final String ocrServiceUrl;
     private final Clock businessClock;
+    private final Duration ocrTimeout;
 
     @Autowired
     public OcrService(RabbitTemplate rabbitTemplate,
                       OcrProcessamentoRepository processamentoRepository,
-                      @Value("${ocr.service.url:http://localhost:8000/api/ocr}") String ocrServiceUrl,
                       Clock businessClock,
                       @Value("${app.ocr.timeout:PT3M}") Duration ocrTimeout) {
         this.rabbitTemplate = rabbitTemplate;
         this.processamentoRepository = processamentoRepository;
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(Duration.ofSeconds(3));
-        factory.setReadTimeout(Duration.ofSeconds(30));
-        this.restTemplate = new RestTemplate(factory);
-        this.ocrServiceUrl = ocrServiceUrl;
         this.businessClock = businessClock;
         this.ocrTimeout = ocrTimeout;
     }
-    private final Duration ocrTimeout;
 
-    public OcrService(RabbitTemplate rabbitTemplate, OcrProcessamentoRepository processamentoRepository,
-                      String ocrServiceUrl) {
-        this(rabbitTemplate, processamentoRepository, ocrServiceUrl,
+    public OcrService(RabbitTemplate rabbitTemplate, OcrProcessamentoRepository processamentoRepository) {
+        this(rabbitTemplate, processamentoRepository,
                 Clock.system(java.time.ZoneId.of("America/Sao_Paulo")), Duration.ofMinutes(3));
     }
-
-    public JsonNode process(MultipartFile file) throws IOException {
-        if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("Arquivo invalido.");
-        }
-
-        ByteArrayResource resource = new ByteArrayResource(file.getBytes()) {
-            @Override
-            public String getFilename() {
-                return file.getOriginalFilename();
-            }
-        };
-
-        HttpHeaders fileHeaders = new HttpHeaders();
-        fileHeaders.setContentType(
-                MediaType.parseMediaType(file.getContentType() != null
-                        ? file.getContentType()
-                        : MediaType.APPLICATION_OCTET_STREAM_VALUE));
-
-        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-        body.add("file", new HttpEntity<>(resource, fileHeaders));
-
-        HttpHeaders requestHeaders = new HttpHeaders();
-        requestHeaders.setContentType(MediaType.MULTIPART_FORM_DATA);
-
-        try {
-            return restTemplate.postForEntity(ocrServiceUrl, new HttpEntity<>(body, requestHeaders), JsonNode.class)
-                    .getBody();
-        } catch (RestClientException | org.springframework.http.InvalidMediaTypeException exception) {
-            throw new IllegalStateException("Falha ao comunicar com o servico de OCR.", exception);
-        }
+    public OcrResponseDto processarNota(MultipartFile arquivo, String solicitante) {
+        return processarNota(arquivo, null, solicitante);
     }
 
-    public OcrResponseDto processarNota(MultipartFile arquivo, String solicitante) {
+    public OcrResponseDto processarNota(MultipartFile arquivo, Long solicitanteId, String solicitante) {
         String erroValidacao = validarArquivo(arquivo);
         if (erroValidacao != null) {
             OcrResponseDto resposta = new OcrResponseDto();
@@ -132,7 +84,7 @@ public class OcrService {
 
         // Salvo antes de publicar: o resultado pode voltar antes deste método terminar.
         OcrProcessamento processamento = processamentoRepository.save(
-                new OcrProcessamento(UUID.randomUUID().toString(), solicitante));
+                new OcrProcessamento(UUID.randomUUID().toString(), solicitante, solicitanteId));
 
         try {
             OcrSolicitacaoMensagem mensagem = new OcrSolicitacaoMensagem(
@@ -151,13 +103,18 @@ public class OcrService {
     }
 
     public OcrResponseDto consultar(String jobId, String solicitante) {
+        return consultar(jobId, null, solicitante);
+    }
+
+    public OcrResponseDto consultar(String jobId, Long solicitanteId, String solicitante) {
         return processamentoRepository.findById(jobId)
-                .filter(processamento -> processamento.getSolicitante().equals(solicitante))
+                .filter(processamento -> processamento.pertenceA(solicitanteId, solicitante))
                 .map(this::paraResposta)
                 .orElseThrow(() -> new NotFoundException("Processamento de nota fiscal não encontrado."));
     }
 
-    @RabbitListener(queues = RabbitMQConfig.FILA_RESULTADOS)
+    // A fila legada fica no listener até esvaziar o que foi publicado antes da troca para a v2.
+    @RabbitListener(queues = {RabbitMQConfig.FILA_RESULTADOS, RabbitMQConfig.FILA_RESULTADOS_LEGADA})
     public void receberResultado(OcrResultadoMensagem resultado) {
         if (resultado.jobId() == null) {
             LOGGER.warn("Resultado de OCR descartado: mensagem sem jobId");

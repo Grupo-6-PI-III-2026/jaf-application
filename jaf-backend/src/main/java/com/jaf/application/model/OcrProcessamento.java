@@ -19,6 +19,10 @@ public class OcrProcessamento {
     @Column(nullable = false)
     private String solicitante;
 
+    // O e-mail pode mudar; o id identifica o dono do job. Registros antigos podem não ter o id.
+    @Column(name = "solicitante_id")
+    private Long solicitanteId;
+
     // Sem @Lob: no PostgreSQL o Hibernate mapearia String @Lob para oid (large object), não TEXT.
     @Column(name = "texto_bruto", columnDefinition = "TEXT")
     private String textoBruto;
@@ -36,8 +40,13 @@ public class OcrProcessamento {
     }
 
     public OcrProcessamento(String id, String solicitante) {
+        this(id, solicitante, null);
+    }
+
+    public OcrProcessamento(String id, String solicitante, Long solicitanteId) {
         this.id = id;
         this.solicitante = solicitante;
+        this.solicitanteId = solicitanteId;
         this.status = StatusOcr.PROCESSANDO;
         this.criadoEm = LocalDateTime.now();
         this.atualizadoEm = this.criadoEm;
@@ -68,6 +77,15 @@ public class OcrProcessamento {
 
     public String getSolicitante() {
         return solicitante;
+    }
+
+    public Long getSolicitanteId() {
+        return solicitanteId;
+    }
+
+    public boolean pertenceA(Long idSolicitante, String emailSolicitante) {
+        if (solicitanteId != null && idSolicitante != null) return solicitanteId.equals(idSolicitante);
+        return solicitante != null && solicitante.equalsIgnoreCase(emailSolicitante);
     }
 
     public String getTextoBruto() {

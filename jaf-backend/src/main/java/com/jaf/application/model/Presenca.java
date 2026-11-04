@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
+@EntityListeners(org.springframework.data.jpa.domain.support.AuditingEntityListener.class)
 @Entity
 public class Presenca {
     @Id
@@ -36,9 +37,11 @@ public class Presenca {
     private java.time.LocalDateTime updatedAt;
     @Column(name = "created_by")
     @JsonIgnore
+    @org.springframework.data.annotation.CreatedBy
     private Long createdBy;
     @Column(name = "updated_by")
     @JsonIgnore
+    @org.springframework.data.annotation.LastModifiedBy
     private Long updatedBy;
 
     public Long getId() {

@@ -7,8 +7,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.math.BigDecimal;
 
+@EntityListeners(org.springframework.data.jpa.domain.support.AuditingEntityListener.class)
 @Entity
-@com.fasterxml.jackson.databind.annotation.JsonSerialize(using = com.jaf.application.config.ObraSerializer.class)
 public class Obra {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -43,10 +43,11 @@ public class Obra {
 
     @Column(name = "created_by")
     @JsonIgnore
+    @org.springframework.data.annotation.CreatedBy
     private Long createdBy;
-
     @Column(name = "updated_by")
     @JsonIgnore
+    @org.springframework.data.annotation.LastModifiedBy
     private Long updatedBy;
 
     public Long getId() {

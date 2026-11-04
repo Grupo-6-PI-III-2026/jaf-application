@@ -1,4 +1,6 @@
 import api from "../Auth/Login/Api/Api";
+import { opcoesIdempotencia } from "../../Utils/idempotencia";
+import { comprimirImagem } from "../../Utils/arquivo";
 
 import { type NovoFuncionarioPayload } from "../../Types/Register";
 import type {
@@ -9,14 +11,21 @@ import type {
 import type { FuncionarioPermissoes } from "../../Types/permissoes";
 import type { FuncionarioPermissoesAcesso } from "../Permissoes/permissaoService";
 
+export type FuncionarioAlocavel = Pick<FuncionarioPermissoes, "id" | "nome" | "cargo">;
+
 export const funcionarioService = {
-  cadastrar: async (payload: NovoFuncionarioPayload) => {
-    const response = await api.post("/funcionarios", payload);
+  cadastrar: async (payload: NovoFuncionarioPayload, chave?: string) => {
+    const response = await api.post("/funcionarios", payload, opcoesIdempotencia(chave));
     return response.data;
   },
 
   listar: async (): Promise<FuncionarioPermissoes[]> => {
     const response = await api.get<FuncionarioPermissoes[]>("/funcionarios");
+    return response.data;
+  },
+
+  listarAlocaveis: async (): Promise<FuncionarioAlocavel[]> => {
+    const response = await api.get<FuncionarioAlocavel[]>("/funcionarios/alocaveis");
     return response.data;
   },
 
@@ -64,11 +73,13 @@ export const funcionarioService = {
 
   uploadFoto: async (file: File): Promise<{ url: string }> => {
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("file", await comprimirImagem(file));
     const response = await api.post<{ url: string }>("/funcionarios/me/foto", formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
+      // Foto de celular em rede móvel pode passar dos 10 s padrão.
+      timeout: 120_000,
     });
     return response.data;
   },

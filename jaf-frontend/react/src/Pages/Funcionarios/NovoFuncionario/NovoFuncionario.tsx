@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { useChaveIdempotencia } from "../../../Utils/idempotencia";
 import {
   User,
   Mail,
@@ -18,10 +19,11 @@ import {
 } from "../../../Service/Funcionarios/funcionarioService";
 import { toast } from "sonner";
 import {type CargoApi } from "../../../Types/Register"
-import { authService } from "../../../Service/Auth/Login/authService";
 import { tratarErroApi } from "../../../Utils/erro";
 import { logger } from "../../../Utils/logger";
 import { validarEmail, validarNome, validarSenha } from "../../../Utils/validacao";
+import { useAuthz } from "../../../Hooks/useAuthz";
+import { authService } from "../../../Service/Auth/Login/authService";
 
 interface ErrosFormulario {
   nome?: string;
@@ -31,7 +33,9 @@ interface ErrosFormulario {
 }
 
 export default function NovoFuncionario() {
+  const { isAdmin } = useAuthz();
   const enviandoRef = useRef(false);
+  const chaveIdempotencia = useChaveIdempotencia();
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
@@ -53,12 +57,13 @@ export default function NovoFuncionario() {
     nextErrors.email = validarEmail(email);
     nextErrors.senha = validarSenha(senha);
 
+    // Releitura no envio: a sessão pode ter mudado depois da última renderização.
     if (!cargo || (cargo === "ADMIN" && !authService.isAdmin())) {
       nextErrors.cargo = "Selecione uma função para o funcionário.";
     }
 
     setErrors(nextErrors);
-    return Object.keys(nextErrors).length === 0;
+    return !Object.values(nextErrors).some(Boolean);
   };
 
  const handleCadastrar = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -78,7 +83,8 @@ export default function NovoFuncionario() {
         email,
         senha,
         cargo: cargo as CargoApi,
-      });
+      }, chaveIdempotencia.atual());
+      chaveIdempotencia.renovar();
 
       toast.success("Funcionário cadastrado com sucesso!");
       setNome("");
@@ -135,12 +141,6 @@ export default function NovoFuncionario() {
               {errors.nome && (
                 <span
                   className={styles.errorText}
-                  style={{
-                    color: "red",
-                    fontSize: "12px",
-                    marginTop: "4px",
-                    display: "block",
-                  }}
                 >
                   {errors.nome}
                 </span>
@@ -168,12 +168,6 @@ export default function NovoFuncionario() {
               {errors.email && (
                 <span
                   className={styles.errorText}
-                  style={{
-                    color: "red",
-                    fontSize: "12px",
-                    marginTop: "4px",
-                    display: "block",
-                  }}
                 >
                   {errors.email}
                 </span>
@@ -210,12 +204,6 @@ export default function NovoFuncionario() {
               {errors.senha ? (
                 <span
                   className={styles.errorText}
-                  style={{
-                    color: "red",
-                    fontSize: "12px",
-                    marginTop: "4px",
-                    display: "block",
-                  }}
                 >
                   {errors.senha}
                 </span>
@@ -244,7 +232,7 @@ export default function NovoFuncionario() {
                   disabled={isLoading}
                 >
                   <option value="">Selecione uma função</option>
-                  {opcoesCargo.filter((opcao) => opcao.value !== "ADMIN" || authService.isAdmin()).map((opcao) => (
+                  {opcoesCargo.filter((opcao) => opcao.value !== "ADMIN" || isAdmin).map((opcao) => (
                     <option key={opcao.value} value={opcao.value}>
                       {opcao.label}
                     </option>
@@ -255,12 +243,6 @@ export default function NovoFuncionario() {
               {errors.cargo && (
                 <span
                   className={styles.errorText}
-                  style={{
-                    color: "red",
-                    fontSize: "12px",
-                    marginTop: "4px",
-                    display: "block",
-                  }}
                 >
                   {errors.cargo}
                 </span>

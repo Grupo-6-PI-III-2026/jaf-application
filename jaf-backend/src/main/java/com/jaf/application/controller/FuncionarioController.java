@@ -2,6 +2,7 @@ package com.jaf.application.controller;
 
 import com.jaf.application.config.GerenciadorTokenJwt;
 import com.jaf.application.config.CookieProperties;
+import com.jaf.application.dto.FuncionarioAlocavelDto;
 import com.jaf.application.dto.FuncionarioDto;
 import com.jaf.application.dto.FuncionarioUpdateRequest;
 import com.jaf.application.dto.FuncionarioListarDto;
@@ -134,6 +135,12 @@ public class FuncionarioController {
         return ResponseEntity.ok(funcionarioService.listarTodos());
     }
 
+    @GetMapping("/alocaveis")
+    @PreAuthorize("hasAuthority('CRIAR_ALOCACAO')")
+    public ResponseEntity<List<FuncionarioAlocavelDto>> listarAlocaveis() {
+        return ResponseEntity.ok(funcionarioService.listarAlocaveis());
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('VISUALIZAR_FUNCIONARIOS')")
     public ResponseEntity<FuncionarioResponseDto> buscarPorId(@PathVariable Long id) {
@@ -186,6 +193,14 @@ public class FuncionarioController {
             @PathVariable Long id,
             @Valid @RequestBody AtualizarCargoPermissoesDto dto) {
         return ResponseEntity.ok(funcionarioPermissaoService.atualizar(id, dto.getPermissoes()));
+    }
+
+    @PutMapping("/{id}/acesso")
+    @PreAuthorize("@acessoObraService.isAdmin()")
+    public ResponseEntity<FuncionarioPermissoesAcessoDto> atualizarAcesso(
+            @PathVariable Long id,
+            @Valid @RequestBody com.jaf.application.dto.AtualizarAcessoDto dto) {
+        return ResponseEntity.ok(funcionarioPermissaoService.atualizarAcesso(id, dto));
     }
 
     @GetMapping("/me/permissoes")

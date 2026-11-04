@@ -1,0 +1,3 @@
+UPDATE alocacao_obra
+SET cargo = 'GESTOR_OBRA'
+WHERE cargo = 'RESPONSAVEL_ADMINISTRATIVO';

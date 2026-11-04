@@ -12,7 +12,7 @@ import { NavLink } from "react-router-dom";
 import styles from "./Sidebar.module.css";
 import { useUser } from "../../../Context/useUser";
 import { CargoLabel, DEFAULT_AVATAR_URL } from "../../../Types/user";
-import { authService } from "../../../Service/Auth/Login/authService";
+import { useAuthz } from "../../../Hooks/useAuthz";
 
 interface MenuItem {
   icon: LucideIcon;
@@ -48,13 +48,14 @@ interface SidebarProps {
 
 export function Sidebar({ recolhivel = false, aberta = false, onNavegar }: SidebarProps) {
   const { user } = useUser();
+  const { can, isAdmin } = useAuthz();
   const avatarUrl = user?.fotoUrl || DEFAULT_AVATAR_URL;
   const visibleMenuSections = menuSections
     .map((section) => ({
       ...section,
       items: section.items.filter((item) =>
-        (!item.adminOnly || authService.isAdmin()) &&
-        (!item.permissao || authService.hasAuthority(item.permissao))),
+        (!item.adminOnly || isAdmin) &&
+        (!item.permissao || can(item.permissao))),
     }))
     .filter((section) => section.items.length > 0);
 

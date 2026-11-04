@@ -1,4 +1,5 @@
 import api from "../Auth/Login/Api/Api";
+import { opcoesIdempotencia } from "../../Utils/idempotencia";
 
 export interface AlocacaoObra {
   id: number;
@@ -40,9 +41,13 @@ export const alocacaoService = {
     return response.data;
   },
 
-  criar: async (dto: AlocacaoCriarDto): Promise<AlocacaoObra> => {
-    const response = await api.post("/alocacoes", dto);
+  criar: async (dto: AlocacaoCriarDto, chave?: string): Promise<AlocacaoObra> => {
+    const response = await api.post("/alocacoes", dto, opcoesIdempotencia(chave));
     return response.data;
+  },
+
+  deletar: async (id: number): Promise<void> => {
+    await api.delete(`/alocacoes/${id}`);
   },
 
   buscarPorId: async (id: number): Promise<AlocacaoObra> => {

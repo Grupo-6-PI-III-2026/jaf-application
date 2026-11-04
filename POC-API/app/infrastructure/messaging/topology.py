@@ -5,10 +5,14 @@
 EXCHANGE = "ocr.exchange"
 DLX = "ocr.dlx"
 FILA_SOLICITACOES = "ocr.solicitacao"
-FILA_RESULTADOS = "ocr.resultado"
+# Fila v2: a original nao aceita argumentos novos (PRECONDITION_FAILED), entao o DLQ exigiu uma fila nova.
+# Os argumentos precisam ser iguais aos de RabbitMQConfig.java no backend.
+FILA_RESULTADOS = "ocr.resultado.v2"
+FILA_RESULTADOS_DLQ = "ocr.resultado.dlq"
 FILA_DLQ = "ocr.solicitacao.dlq"
 RK_SOLICITAR = "ocr.solicitar"
-RK_RESULTADO = "ocr.resultado"
+RK_RESULTADO = "ocr.resultado.v2"
+RK_RESULTADO_MORTO = "ocr.resultado.dead"
 
 def declarar_topologia(canal) -> None:
     # Onde entregamos as notas ficais
@@ -33,6 +37,14 @@ def declarar_topologia(canal) -> None:
     )
     canal.queue_declare(
         queue=FILA_RESULTADOS,
+        durable=True,
+        arguments={
+            "x-dead-letter-exchange": DLX,
+            "x-dead-letter-routing-key": RK_RESULTADO_MORTO
+        }
+    )
+    canal.queue_declare(
+        queue=FILA_RESULTADOS_DLQ,
         durable=True
     )
     canal.queue_declare(
@@ -56,6 +68,11 @@ def declarar_topologia(canal) -> None:
         exchange=DLX,
         queue=FILA_DLQ,
         routing_key=RK_SOLICITAR
+    )
+    canal.queue_bind(
+        exchange=DLX,
+        queue=FILA_RESULTADOS_DLQ,
+        routing_key=RK_RESULTADO_MORTO
     )
 
     

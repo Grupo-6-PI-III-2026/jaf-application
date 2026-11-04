@@ -5,6 +5,7 @@ import com.jaf.application.enums.Cargo;
 import com.jaf.application.exceptions.Conflict;
 import com.jaf.application.exceptions.Forbidden;
 import com.jaf.application.exceptions.NotFoundException;
+import com.jaf.application.exceptions.StaleVersion;
 import com.jaf.application.model.AlocacaoObra;
 import com.jaf.application.model.Funcionario;
 import com.jaf.application.model.Obra;
@@ -18,6 +19,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
@@ -77,6 +79,26 @@ class ObraServiceTest {
         funcionarioEngenheiro.setNome("Engenheiro");
         funcionarioEngenheiro.setEmail("engenheiro@teste.com");
         funcionarioEngenheiro.setCargoGlobal(Cargo.ENGENHEIRO);
+    }
+
+    @Test
+    void criarObra_ComResponsavelAlocaNaMesmaOperacao() {
+        obraDto.setResponsavelId(2L);
+        when(obraRepository.existsByTitulo(anyString())).thenReturn(false);
+        when(obraRepository.save(any(Obra.class))).thenReturn(obra);
+        when(funcionarioRepository.findById(2L)).thenReturn(Optional.of(funcionarioEngenheiro));
+
+        obraService.criar(obraDto, funcionarioAdmin, true);
+
+        verify(alocacaoObraRepository, times(1)).save(any(AlocacaoObra.class));
+    }
+
+    @Test
+    void criarObra_ResponsavelSemPermissaoDeAlocar_Forbidden() {
+        obraDto.setResponsavelId(2L);
+
+        assertThrows(Forbidden.class, () -> obraService.criar(obraDto, funcionarioAdmin, false));
+        verify(obraRepository, never()).save(any(Obra.class));
     }
 
     @Test
@@ -188,17 +210,36 @@ class ObraServiceTest {
         when(obraRepository.findById(1L)).thenReturn(Optional.of(obra));
         when(obraRepository.save(any(Obra.class))).thenReturn(obra);
 
-        var resultado = obraService.atualizar(1L, obraDto);
+        var resultado = obraService.atualizar(1L, obraDto, true);
 
         assertNotNull(resultado);
         verify(obraRepository, times(1)).save(any(Obra.class));
     }
 
     @Test
+    void atualizarObra_NaoAdminNaoAlteraOrcamento() {
+        obraDto.setOrcamento(obra.getOrcamento().add(BigDecimal.ONE).toPlainString());
+        when(obraRepository.findById(1L)).thenReturn(Optional.of(obra));
+
+        assertThrows(Forbidden.class, () -> obraService.atualizar(1L, obraDto, false));
+        verify(obraRepository, never()).save(any(Obra.class));
+    }
+
+    @Test
+    void atualizarObra_VersaoDivergenteGeraConflito() {
+        obraDto.setVersao(99L);
+        obra.setVersao(1L);
+        when(obraRepository.findById(1L)).thenReturn(Optional.of(obra));
+
+        assertThrows(StaleVersion.class, () -> obraService.atualizar(1L, obraDto, true));
+        verify(obraRepository, never()).save(any(Obra.class));
+    }
+
+    @Test
     void atualizarObra_Inexistente_NotFoundException() {
         when(obraRepository.findById(999L)).thenReturn(Optional.empty());
 
-        assertThrows(NotFoundException.class, () -> obraService.atualizar(999L, obraDto));
+        assertThrows(NotFoundException.class, () -> obraService.atualizar(999L, obraDto, true));
         verify(obraRepository, never()).save(any(Obra.class));
     }
 

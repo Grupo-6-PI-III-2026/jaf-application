@@ -1,11 +1,13 @@
 package com.jaf.application.service;
 
 import com.jaf.application.dto.ObraDto;
+import com.jaf.application.dto.ObraUpdateDto;
 import com.jaf.application.enums.Cargo;
 import com.jaf.application.exceptions.BadRequest;
 import com.jaf.application.exceptions.Conflict;
 import com.jaf.application.exceptions.Forbidden;
 import com.jaf.application.exceptions.NotFoundException;
+import com.jaf.application.exceptions.StaleVersion;
 import com.jaf.application.model.AlocacaoObra;
 import com.jaf.application.model.Funcionario;
 import com.jaf.application.model.Obra;
@@ -46,7 +48,23 @@ public class ObraService {
     }
 
     public Obra criar(ObraDto dto) {
+        return criar(dto, null, false);
+    }
+
+    public Obra criar(ObraDto dto, Funcionario criador, boolean podeAlocar) {
         logger.info("Tentando criar nova obra: {}", dto.getTitulo());
+
+        Funcionario responsavel = null;
+        if (dto.getResponsavelId() != null) {
+            if (!podeAlocar) {
+                throw new Forbidden("Você não tem permissão para alocar o responsável da obra.");
+            }
+            responsavel = funcionarioRepository.findById(dto.getResponsavelId())
+                    .orElseThrow(() -> new NotFoundException("Usuario nao encontrado."));
+            if (!responsavel.isAtivo()) {
+                throw new Conflict("O responsável selecionado está inativo.");
+            }
+        }
 
         if (obraRepository.existsByTitulo(dto.getTitulo())) {
             logger.warn("Tentativa de criar obra com título duplicado: {}", dto.getTitulo());
@@ -65,8 +83,29 @@ public class ObraService {
         obra.setDtInicio(dto.getDtInicio());
         obra.setDtTerminoPrevisto(dto.getDtTerminoPrevisto());
         Obra salva = obraRepository.save(obra);
+        if (responsavel != null) {
+            alocar(salva, responsavel);
+        }
+        if (criador != null && criador.getCargoGlobal() != Cargo.ADMIN
+                && (responsavel == null || !responsavel.getId().equals(criador.getId()))) {
+            alocar(salva, criador);
+        }
         logger.info("Obra criada com sucesso: ID={}, Titulo={}", salva.getId(), salva.getTitulo());
         return salva;
+    }
+
+    private void alocar(Obra obra, Funcionario funcionario) {
+        AlocacaoObra alocacao = new AlocacaoObra();
+        alocacao.setFuncionario(funcionario);
+        alocacao.setObra(obra);
+        alocacao.setCargo(com.jaf.application.enums.FuncaoObra.GESTOR_OBRA);
+        alocacao.setDtInicio(java.time.LocalDate.now());
+        alocacaoObraRepository.save(alocacao);
+    }
+
+    public Funcionario buscarFuncionario(String email) {
+        return funcionarioRepository.findByEmailIgnoreCase(email)
+                .orElseThrow(() -> new NotFoundException("Usuario nao encontrado."));
     }
 
     public List<Obra> listarPorUsuario(String email) {
@@ -136,20 +175,48 @@ public class ObraService {
                 .orElseThrow(() -> new NotFoundException("Obra nao encontrada."));
     }
 
-    public Obra atualizar(Long id, ObraDto dto) {
+    public Obra atualizar(Long id, ObraDto dto, boolean admin) {
         Obra existente = obraRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Obra nao encontrada."));
+        validarVersao(dto.getVersao(), existente);
+
+        if (dto.getDtTerminoPrevisto().isBefore(dto.getDtInicio())) {
+            throw new BadRequest("Data de término prevista deve ser posterior à data de início.");
+        }
+
+        BigDecimal novoOrcamento = new BigDecimal(dto.getOrcamento());
+        if (!admin && existente.getOrcamento().compareTo(novoOrcamento) != 0) {
+            throw new Forbidden("Somente administradores podem alterar o orçamento da obra.");
+        }
+
+        existente.setTitulo(dto.getTitulo());
+        existente.setOrcamento(novoOrcamento);
+        existente.setStatus(dto.getStatus());
+        existente.setDtInicio(dto.getDtInicio());
+        existente.setDtTerminoPrevisto(dto.getDtTerminoPrevisto());
+        return obraRepository.save(existente);
+    }
+
+    public Obra atualizarParcial(Long id, ObraUpdateDto dto) {
+        Obra existente = obraRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Obra nao encontrada."));
+        validarVersao(dto.getVersao(), existente);
 
         if (dto.getDtTerminoPrevisto().isBefore(dto.getDtInicio())) {
             throw new BadRequest("Data de término prevista deve ser posterior à data de início.");
         }
 
         existente.setTitulo(dto.getTitulo());
-        existente.setOrcamento(new BigDecimal(dto.getOrcamento()));
         existente.setStatus(dto.getStatus());
         existente.setDtInicio(dto.getDtInicio());
         existente.setDtTerminoPrevisto(dto.getDtTerminoPrevisto());
         return obraRepository.save(existente);
+    }
+
+    private void validarVersao(Long versao, Obra existente) {
+        if (versao != null && !versao.equals(existente.getVersao())) {
+            throw new StaleVersion();
+        }
     }
 
     public void deletar(Long id) {

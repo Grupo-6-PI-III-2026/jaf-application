@@ -45,10 +45,17 @@ export function tratarErroApi(
     429: "Muitas tentativas. Aguarde alguns minutos.",
   };
 
+  const mensagemPorCodigo: Record<string, string> = {
+    STALE_VERSION: "Registro alterado por outra pessoa. Os dados foram recarregados; confira e tente de novo.",
+    IDEMPOTENCY_IN_PROGRESS: "A operação ainda está sendo processada. Aguarde um instante e confira a lista antes de tentar de novo.",
+    IDEMPOTENCY_KEY_REUSED: "Esta operação já foi enviada com outros dados. Recarregue a tela e tente de novo.",
+  };
+
   return {
     status,
     code: dados?.code,
     mensagem:
+      (dados?.code && mensagemPorCodigo[dados.code]) ||
       mensagens[status] ||
       (status >= 500 ? "Erro no servidor. Tente novamente em instantes." : mensagemServidor || fallback),
     campos: dados?.fields || {},

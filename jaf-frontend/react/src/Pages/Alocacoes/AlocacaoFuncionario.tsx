@@ -1,4 +1,6 @@
-import { useState, useEffect, type FormEvent } from "react";
+import { useState, useEffect, useRef, type FormEvent } from "react";
+import { useChaveIdempotencia } from "../../Utils/idempotencia";
+import { formatarDataIso } from "../../Utils/data";
 import {
   Calendar,
   ChevronLeft,
@@ -6,13 +8,13 @@ import {
   UserCheck,
   Search,
   X,
+  Trash2,
 } from "lucide-react";
 import { useParams } from "react-router-dom";
 import styles from "./AlocacaoFuncionario.module.css";
 import { obraService, type Obra } from "../../Service/Obras/obraService";
 import { alocacaoService, type AlocacaoObra } from "../../Service/Alocacoes/alocacaoService";
-import { funcionarioService } from "../../Service/Funcionarios/funcionarioService";
-import type { FuncionarioPermissoes } from "../../Types/permissoes";
+import { funcionarioService, type FuncionarioAlocavel } from "../../Service/Funcionarios/funcionarioService";
 import PeriodoFiltro from "../../Components/PeriodoFiltro/PeriodoFiltro";
 import {
   dataNoPeriodo,
@@ -22,17 +24,17 @@ import {
 } from "../../Components/PeriodoFiltro/periodUtils";
 import { toast } from "sonner";
 import { Responsive } from "../../Components/Responsive/Responsive";
-import { authService } from "../../Service/Auth/Login/authService";
 import { tratarErroApi } from "../../Utils/erro";
 import { logger } from "../../Utils/logger";
+import { useAuthz } from "../../Hooks/useAuthz";
+import { useDialogs } from "../../Components/Feedback/DialogContext";
 
 const IMAGEM_PLACEHOLDER =
   "https://s2.glbimg.com/YgImWrcpJX6FAHRJOlZtEnTaHYc=/e.glbimg.com/og/ed/f/original/2020/12/23/apartamento-sao-paulo-260-m2-atemporal3.jpg";
 
 const ITENS_POR_PAGINA = 8;
 
-const formatarData = (data: string) =>
-  new Date(`${data}T00:00:00`).toLocaleDateString("pt-BR");
+const formatarData = formatarDataIso;
 
 const getIniciais = (nome: string) => {
   const palavras = nome.split(" ");
@@ -79,14 +81,20 @@ export default function AlocacaoFuncionario() {
   const [periodo, setPeriodo] = useState<PeriodoFiltroValue>(periodoFiltroInicial);
   const [modalAberto, setModalAberto] = useState(false);
   const [salvando, setSalvando] = useState(false);
-  const [funcionarios, setFuncionarios] = useState<FuncionarioPermissoes[]>([]);
+  const [removendoAlocacaoId, setRemovendoAlocacaoId] = useState<number | null>(null);
+  const enviandoRef = useRef(false);
+  const chaveIdempotencia = useChaveIdempotencia();
+  const [funcionarios, setFuncionarios] = useState<FuncionarioAlocavel[]>([]);
   const [novaAlocacao, setNovaAlocacao] = useState({ funcionarioId: "", cargoNaObra: "PEDREIRO" });
   const [obra, setObra] = useState<Obra | null>(null);
   const [alocacoes, setAlocacoes] = useState<AlocacaoObra[]>([]);
   const [carregando, setCarregando] = useState(true);
 
   const { id } = useParams<{ id: string }>();
-  const podeCriar = authService.hasAuthority("CRIAR_ALOCACAO");
+  const { can } = useAuthz();
+  const { confirm } = useDialogs();
+  const podeCriar = can("CRIAR_ALOCACAO");
+  const podeRemover = can("DELETAR_ALOCACAO");
 
   useEffect(() => {
     const carregarDados = async () => {
@@ -100,7 +108,7 @@ export default function AlocacaoFuncionario() {
         const [obraData, alocacoesData, funcionariosData] = await Promise.all([
           obraService.buscarPorId(parseInt(id)),
           alocacaoService.listarPorObra(parseInt(id)),
-          podeCriar && authService.hasAuthority("VISUALIZAR_FUNCIONARIOS") ? funcionarioService.listar() : Promise.resolve([]),
+          podeCriar ? funcionarioService.listarAlocaveis() : Promise.resolve([]),
         ]);
         setObra(obraData);
         setAlocacoes(alocacoesData);
@@ -164,6 +172,27 @@ export default function AlocacaoFuncionario() {
     setAlocacoes(alocacoesAtualizadas);
   }
 
+  async function removerAlocacao(alocacao: AlocacaoObra) {
+    if (!podeRemover || removendoAlocacaoId !== null) return;
+    if (!await confirm(`Remover ${alocacao.funcionario.nome} da equipe desta obra?`)) return;
+
+    try {
+      setRemovendoAlocacaoId(alocacao.id);
+      await alocacaoService.deletar(alocacao.id);
+      setAlocacoes((atuais) => atuais.filter((atual) => atual.id !== alocacao.id));
+      setPaginaAtual((atual) => {
+        const paginasRestantes = Math.max(1, Math.ceil((alocacoesFiltradas.length - 1) / ITENS_POR_PAGINA));
+        return Math.min(atual, paginasRestantes);
+      });
+      toast.success("Funcionário removido da equipe da obra.");
+    } catch (error) {
+      logger.erro("Erro ao remover alocação", error);
+      toast.error(tratarErroApi(error, "Não foi possível remover o funcionário da obra.").mensagem);
+    } finally {
+      setRemovendoAlocacaoId(null);
+    }
+  }
+
   async function criarAlocacao(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     if (!id || !novaAlocacao.funcionarioId) {
@@ -171,13 +200,16 @@ export default function AlocacaoFuncionario() {
       return;
     }
 
+    if (enviandoRef.current) return;
+    enviandoRef.current = true;
     try {
       setSalvando(true);
       await alocacaoService.criar({
         funcionarioId: Number(novaAlocacao.funcionarioId),
         obraId: Number(id),
         cargoNaObra: novaAlocacao.cargoNaObra,
-      });
+      }, chaveIdempotencia.atual());
+      chaveIdempotencia.renovar();
       await carregarAlocacoes();
       setNovaAlocacao({ funcionarioId: "", cargoNaObra: "PEDREIRO" });
       setModalAberto(false);
@@ -186,6 +218,7 @@ export default function AlocacaoFuncionario() {
       logger.erro("Erro ao alocar funcionário", error);
       toast.error(tratarErroApi(error, "Não foi possível alocar o funcionário.").mensagem);
     } finally {
+      enviandoRef.current = false;
       setSalvando(false);
     }
   }
@@ -371,6 +404,23 @@ export default function AlocacaoFuncionario() {
                         <dt>Função na obra</dt>
                         <dd>{cargoLabel(alocacao.cargo)}</dd>
                       </div>
+                      {podeRemover && (
+                        <div>
+                          <dt>Ações</dt>
+                          <dd>
+                            <button
+                              type="button"
+                              className={styles.botaoRemover}
+                              onClick={() => void removerAlocacao(alocacao)}
+                              disabled={removendoAlocacaoId !== null}
+                              aria-label={`Remover alocação de ${alocacao.funcionario.nome}`}
+                            >
+                              <Trash2 size={14} />
+                              {removendoAlocacaoId === alocacao.id ? "Removendo..." : "Remover da obra"}
+                            </button>
+                          </dd>
+                        </div>
+                      )}
                     </dl>
                   </li>
                 ))
@@ -387,6 +437,7 @@ export default function AlocacaoFuncionario() {
                 <th>NOME</th>
                 <th>PERFIL NO SISTEMA</th>
                 <th>FUNÇÃO NA OBRA</th>
+                {podeRemover && <th>AÇÕES</th>}
               </tr>
             </thead>
             <tbody>
@@ -408,12 +459,26 @@ export default function AlocacaoFuncionario() {
                     </td>
                     <td>{cargoLabel(alocacao.funcionario.cargoGlobal)}</td>
                     <td>{cargoLabel(alocacao.cargo)}</td>
+                    {podeRemover && (
+                      <td>
+                        <button
+                          type="button"
+                          className={styles.botaoRemover}
+                          onClick={() => void removerAlocacao(alocacao)}
+                          disabled={removendoAlocacaoId !== null}
+                          aria-label={`Remover alocação de ${alocacao.funcionario.nome}`}
+                        >
+                          <Trash2 size={14} />
+                          {removendoAlocacaoId === alocacao.id ? "Removendo..." : "Remover"}
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))
               ) : (
                 <tr>
                   <td
-                    colSpan={3}
+                    colSpan={podeRemover ? 4 : 3}
                     style={{ textAlign: "center", padding: "2rem" }}
                   >
                     {mensagemSemAlocacoes}

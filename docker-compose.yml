@@ -60,7 +60,6 @@ services:
       SPRING_DATASOURCE_URL: "jdbc:postgresql://jaf-db:5432/${DB_NAME:-jaf_db}"
       SPRING_DATASOURCE_USERNAME: "${DB_USER:-postgres}"
       SPRING_DATASOURCE_PASSWORD: "${DB_PASSWORD}"
-      OCR_SERVICE_URL: "http://ocr-service:8000/api/ocr"
       RABBITMQ_HOST: rabbitmq
       SPRING_PROFILES_ACTIVE: dev
       APP_SEED_ENABLED: "true"

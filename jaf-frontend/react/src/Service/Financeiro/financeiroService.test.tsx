@@ -21,8 +21,8 @@ describe("clientes do contrato financeiro", () => {
     await financeiroService.historico(7);
     expect(api.get).toHaveBeenCalledWith("/gastos/7/reembolsos");
     const parcela = { valor: 25.50, dataPagamento: "2026-10-27", observacao: "Parcela" };
-    await financeiroService.registrar(7, parcela);
-    expect(api.post).toHaveBeenCalledWith("/gastos/7/reembolsos", parcela);
+    await financeiroService.registrar(7, parcela, "chave-1");
+    expect(api.post).toHaveBeenCalledWith("/gastos/7/reembolsos", parcela, { headers: { "Idempotency-Key": "chave-1" } });
   });
   it("usa endpoint resumo e combina filtros por AND no endpoint gastos", async () => {
     await financeiroService.resumo(3);

@@ -20,7 +20,7 @@ function ResumoDaObra({ obraId }: { obraId: number }) {
     return () => { ativo = false; };
   }, [obraId]);
   return <section className={styles.painel}>
-    <h2>Reembolsos por pessoa</h2><p>Todos os gastos de reembolso da obra, independentemente dos filtros da lista.</p>
+    <h2>Reembolsos por pessoa</h2><p>Mostra todos os reembolsos da obra, mesmo com filtros na lista.</p>
     {carregando ? <p role="status">Carregando resumo...</p> : erro ? <p role="alert">{erro}</p> : dados.length === 0 ? <p>Nenhum reembolso nesta obra.</p> :
       <div className={styles.scroll}><table className={styles.tabela}>
         <thead><tr><th>Pessoa</th><th>Total</th><th>Pago</th><th>Pendente</th></tr></thead>

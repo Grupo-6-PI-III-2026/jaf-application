@@ -24,7 +24,6 @@
   padding: 28px 32px;
   background-color: var(--cor-fundo);
   color: var(--cor-texto);
-  min-height: 100vh;
   min-width: 0;
   display: flex;
   flex-direction: column;

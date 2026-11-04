@@ -112,6 +112,35 @@ class GastoServiceTest {
         assertThrows(Forbidden.class, () -> service.atualizar(3L, dto));
         verifyNoInteractions(pagamentos);
     }
+    private void obraComStatus(String status) {
+        gasto.getObra().setStatus(status);
+        when(funcionarioRepository.findById(2L)).thenReturn(Optional.of(gasto.getFuncionario()));
+        when(obraRepository.findById(1L)).thenReturn(Optional.of(gasto.getObra()));
+    }
+
+    @Test void obraCanceladaNaoAceitaGasto() {
+        obraComStatus("CANCELADA");
+        assertThrows(Conflict.class, () -> service.criar(dto));
+        verify(gastoRepository, never()).save(any());
+    }
+    @Test void obraConcluidaSoAceitaGastoDeAdmin() {
+        obraComStatus("CONCLUIDA");
+        assertThrows(Forbidden.class, () -> service.criar(dto));
+        verify(gastoRepository, never()).save(any());
+    }
+    @Test void comRestricaoDeAutorNaoLancaEmNomeDeOutraPessoa() {
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "restringirAutor", true);
+        var atual = new Funcionario(); atual.setId(5L); atual.setCargoGlobal(com.jaf.application.enums.Cargo.ENGENHEIRO);
+        when(acesso.atual()).thenReturn(atual);
+        assertThrows(Forbidden.class, () -> service.criar(dto));
+        verify(gastoRepository, never()).save(any());
+    }
+    @Test void versaoDivergenteNoGastoGeraConflito() {
+        when(gastoRepository.buscarParaAtualizar(3L)).thenReturn(Optional.of(gasto));
+        gasto.setVersao(1L); dto.setVersao(0L);
+        assertThrows(StaleVersion.class, () -> service.atualizar(3L, dto));
+        verify(gastoRepository, never()).save(any());
+    }
     @Test void paginacaoInvalidaRetornaErroDeCliente() {
         assertThrows(BadRequest.class, () -> service.listarPaginadoFiltrado(null, null, null, null, null, -1, 20, "id", "asc"));
         assertThrows(BadRequest.class, () -> service.listarPaginadoFiltrado(null, null, null, null, null, 0, 201, "id", "asc"));

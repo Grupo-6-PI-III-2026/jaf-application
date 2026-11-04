@@ -2,32 +2,6 @@ import api from "../Auth/Login/Api/Api";
 import type { FuncionarioPermissoes } from "../../Types/permissoes";
 import type { Cargo } from "../../Types/user";
 
-export const PERMISSOES_POR_CARGO: Record<Cargo, string[]> = {
-  ADMIN: [
-    "CRIAR_OBRA", "EDITAR_OBRA", "DELETAR_OBRA", "VISUALIZAR_OBRA",
-    "CRIAR_FUNCIONARIO", "EDITAR_FUNCIONARIO", "DELETAR_FUNCIONARIO", "VISUALIZAR_FUNCIONARIOS",
-    "CRIAR_GASTO", "EDITAR_GASTO", "DELETAR_GASTO", "VISUALIZAR_GASTOS",
-    "CRIAR_ALOCACAO", "EDITAR_ALOCACAO", "DELETAR_ALOCACAO", "VISUALIZAR_ALOCACOES",
-    "GERAR_RELATORIO", "VISUALIZAR_RELATORIO",
-    "REGISTRAR_PRESENCA", "EDITAR_PRESENCA", "DELETAR_PRESENCA", "VISUALIZAR_PRESENCAS",
-  ],
-  RESPONSAVEL_ADMINISTRATIVO: [
-    "CRIAR_OBRA", "EDITAR_OBRA", "VISUALIZAR_OBRA",
-    "CRIAR_FUNCIONARIO", "EDITAR_FUNCIONARIO", "VISUALIZAR_FUNCIONARIOS",
-    "CRIAR_GASTO", "EDITAR_GASTO", "VISUALIZAR_GASTOS",
-    "CRIAR_ALOCACAO", "EDITAR_ALOCACAO", "DELETAR_ALOCACAO", "VISUALIZAR_ALOCACOES",
-    "GERAR_RELATORIO", "VISUALIZAR_RELATORIO",
-    "REGISTRAR_PRESENCA", "EDITAR_PRESENCA", "DELETAR_PRESENCA", "VISUALIZAR_PRESENCAS",
-  ],
-  ENGENHEIRO: [
-    "VISUALIZAR_OBRA",
-    "CRIAR_GASTO", "EDITAR_GASTO", "VISUALIZAR_GASTOS",
-    "VISUALIZAR_ALOCACOES",
-    "VISUALIZAR_RELATORIO",
-    "VISUALIZAR_PRESENCAS", "REGISTRAR_PRESENCA", "EDITAR_PRESENCA",
-  ],
-};
-
 export interface CargoPermissoes {
   cargo: Cargo;
   permissoes: string[];
@@ -36,6 +10,12 @@ export interface CargoPermissoes {
 export interface FuncionarioPermissoesAcesso {
   funcionarioId: number;
   cargo: Cargo | null;
+  permissoes: string[];
+  personalizada?: boolean;
+}
+
+export interface AtualizarAcessoPayload {
+  cargo: Cargo;
   permissoes: string[];
 }
 
@@ -49,14 +29,13 @@ export const permissaoService = {
     await api.patch(`/funcionarios/${funcionarioId}/cargo`, { cargo: novoCargo });
   },
 
-  getMapaPadraoPermissoes: (): Record<Cargo, string[]> => ({ ...PERMISSOES_POR_CARGO }),
-
-  listarPermissoesPorCargo: async (): Promise<Record<Cargo, string[]>> => {
+  // A matriz padrão vem só do servidor: não há cópia local para usar como se fosse a real.
+  listarPermissoesPorCargo: async (): Promise<Partial<Record<Cargo, string[]>>> => {
     const response = await api.get<CargoPermissoes[]>("/permissoes/cargos");
-    return response.data.reduce((acc, item) => {
+    return response.data.reduce<Partial<Record<Cargo, string[]>>>((acc, item) => {
       acc[item.cargo] = item.permissoes;
       return acc;
-    }, { ...PERMISSOES_POR_CARGO });
+    }, {});
   },
 
   atualizarPermissoesCargo: async (cargo: Cargo, permissoes: string[]): Promise<CargoPermissoes> => {
@@ -74,8 +53,10 @@ export const permissaoService = {
     return response.data;
   },
 
-  getPermissoesPorCargo: (cargo: Cargo | string): string[] => {
-    return PERMISSOES_POR_CARGO[cargo as Cargo] || [];
+  // Cargo e permissões na mesma transação: se falhar, nada muda.
+  atualizarAcesso: async (funcionarioId: number, payload: AtualizarAcessoPayload): Promise<FuncionarioPermissoesAcesso> => {
+    const response = await api.put<FuncionarioPermissoesAcesso>(`/funcionarios/${funcionarioId}/acesso`, payload);
+    return response.data;
   },
 
 };

@@ -1,6 +1,6 @@
 package com.jaf.application.controller;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.jaf.application.dto.FuncionarioDetalhesDto;
 import com.jaf.application.dto.OcrResponseDto;
 import com.jaf.application.enums.StatusOcr;
 import com.jaf.application.service.OcrService;
@@ -28,18 +28,11 @@ public class OcrController {
         this.ocrService = ocrService;
     }
 
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAuthority('CRIAR_OBRA')")
-    public ResponseEntity<JsonNode> processar(@RequestParam("file") MultipartFile file)
-            throws java.io.IOException {
-        return ResponseEntity.ok(ocrService.process(file));
-    }
-
     @PostMapping(value = "/nota-fiscal", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAuthority('CRIAR_GASTO')")
     public ResponseEntity<OcrResponseDto> processarNota(@RequestParam("arquivo") MultipartFile arquivo,
                                                         Authentication authentication) {
-        OcrResponseDto resposta = ocrService.processarNota(arquivo, authentication.getName());
+        OcrResponseDto resposta = ocrService.processarNota(arquivo, idDe(authentication), authentication.getName());
         HttpStatus status = resposta.getStatus() == StatusOcr.PROCESSANDO
                 ? HttpStatus.ACCEPTED
                 : HttpStatus.OK;
@@ -50,6 +43,10 @@ public class OcrController {
     @PreAuthorize("hasAuthority('CRIAR_GASTO')")
     public ResponseEntity<OcrResponseDto> consultarProcessamento(@PathVariable String jobId,
                                                                   Authentication authentication) {
-        return ResponseEntity.ok(ocrService.consultar(jobId, authentication.getName()));
+        return ResponseEntity.ok(ocrService.consultar(jobId, idDe(authentication), authentication.getName()));
+    }
+
+    private Long idDe(Authentication authentication) {
+        return authentication.getPrincipal() instanceof FuncionarioDetalhesDto detalhes ? detalhes.getId() : null;
     }
 }

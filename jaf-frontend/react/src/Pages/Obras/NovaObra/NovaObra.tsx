@@ -3,14 +3,13 @@ import { FileText, Calendar, User, DollarSign, ChevronDown } from "lucide-react"
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import styles from "./NovaObra.module.css";
-import { obraService, type Obra } from "../../../Service/Obras/obraService";
-import { alocacaoService } from "../../../Service/Alocacoes/alocacaoService";
-import { funcionarioService } from "../../../Service/Funcionarios/funcionarioService";
-import { authService } from "../../../Service/Auth/Login/authService";
-import type { FuncionarioPermissoes } from "../../../Types/permissoes";
+import { obraService } from "../../../Service/Obras/obraService";
+import { funcionarioService, type FuncionarioAlocavel } from "../../../Service/Funcionarios/funcionarioService";
 import { dataValida, valorDecimal } from "../../../Utils/financeiro";
 import { tratarErroApi } from "../../../Utils/erro";
 import { validarTituloObra } from "../../../Utils/validacao";
+import { useChaveIdempotencia } from "../../../Utils/idempotencia";
+import { useAuthz } from "../../../Hooks/useAuthz";
 
 interface ErrosFormulario {
   nomeObra?: string;
@@ -31,13 +30,14 @@ export default function NovaObra() {
   const navigate = useNavigate();
   // Trava síncrona: não depender de um novo render para impedir envios duplicados.
   const enviandoRef = useRef(false);
-  const obraCriadaRef = useRef<Obra | null>(null);
-  const podeAlocar = authService.hasAuthority("CRIAR_ALOCACAO");
-  const podeListarFuncionarios = podeAlocar || authService.hasAuthority("VISUALIZAR_FUNCIONARIOS");
+  const chaveIdempotencia = useChaveIdempotencia();
+  const { can } = useAuthz();
+  const podeAlocar = can("CRIAR_ALOCACAO");
+  const podeListarFuncionarios = podeAlocar || can("VISUALIZAR_FUNCIONARIOS");
   const [isLoading, setIsLoading] = useState(false);
   const [carregandoFuncionarios, setCarregandoFuncionarios] = useState(false);
   const [errors, setErrors] = useState<ErrosFormulario>({});
-  const [funcionarios, setFuncionarios] = useState<FuncionarioPermissoes[]>([]);
+  const [funcionarios, setFuncionarios] = useState<FuncionarioAlocavel[]>([]);
   const [nomeObra, setNomeObra] = useState("");
   const [status, setStatus] = useState("PLANEJADA");
   const [responsavelId, setResponsavelId] = useState("");
@@ -50,7 +50,7 @@ export default function NovaObra() {
     if (!podeAlocar || !podeListarFuncionarios) return;
     let ativo = true;
     setCarregandoFuncionarios(true);
-    funcionarioService.listar().then((data) => {
+    funcionarioService.listarAlocaveis().then((data) => {
       if (!ativo) return;
       setFuncionarios(data);
       setResponsavelId((atual) => atual || String(data[0]?.id ?? ""));
@@ -80,66 +80,45 @@ export default function NovaObra() {
       nextErrors.responsavel = "Selecione um usuário responsável pela obra.";
     }
     setErrors(nextErrors);
-    return Object.keys(nextErrors).length === 0;
+    return !Object.values(nextErrors).some(Boolean);
   };
 
   const handleCriarObra = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (enviandoRef.current) return;
-    if (obraCriadaRef.current) {
-      navigate(podeAlocar ? `/obras/${obraCriadaRef.current.id}/alocacoes` : "/home");
-      return;
-    }
     if (!validateInputs()) return;
     enviandoRef.current = true;
     setIsLoading(true);
 
     try {
-      let obraCriada: Obra;
-      try {
-        obraCriada = await obraService.criar({
-          titulo: nomeObra.trim(),
-          orcamento: String(valorDecimal(orcamento)),
-          status,
-          dtInicio: dataInicio,
-          dtTerminoPrevisto: dataFim,
-        });
-        // Nunca repetir o POST após uma criação confirmada, mesmo se a alocação falhar.
-        obraCriadaRef.current = obraCriada;
-      } catch (error: unknown) {
-        const resultado = tratarErroApi(error, "Falha ao criar obra. Tente novamente.");
-        if (resultado.status === 401) {
-          toast.error("Sessão expirada. Faça login novamente.");
-          navigate("/");
-        } else {
-          toast.error(resultado.mensagem);
-        }
-        return;
-      }
-
+      const obraCriada = await obraService.criar({
+        titulo: nomeObra.trim(),
+        orcamento: String(valorDecimal(orcamento)),
+        status,
+        dtInicio: dataInicio,
+        dtTerminoPrevisto: dataFim,
+        responsavelId: podeAlocar ? Number(responsavelId) : undefined,
+      }, chaveIdempotencia.atual());
+      chaveIdempotencia.renovar();
       if (podeAlocar) {
-        try {
-          await alocacaoService.criar({
-            funcionarioId: Number(responsavelId),
-            obraId: obraCriada.id,
-            cargoNaObra: "GESTOR_OBRA",
-          });
-        } catch {
-          toast.warning(`Obra "${obraCriada.titulo}" criada, mas não foi possível alocar o responsável. Finalize a alocação na próxima tela; não é necessário criar a obra novamente.`);
-          navigate(`/obras/${obraCriada.id}/alocacoes`);
-          return;
-        }
         toast.success(`Obra "${obraCriada.titulo}" criada com sucesso!`);
       } else {
         toast.success(`Obra "${obraCriada.titulo}" criada. Solicite a um usuário com permissão de alocação que vincule o responsável.`);
       }
       navigate("/home");
+    } catch (error: unknown) {
+      const resultado = tratarErroApi(error, "Falha ao criar obra. Tente novamente.");
+      if (resultado.status === 401) {
+        toast.error("Sessão expirada. Faça login novamente.");
+        navigate("/");
+      } else {
+        toast.error(resultado.mensagem);
+      }
     } finally {
       enviandoRef.current = false;
       setIsLoading(false);
     }
   };
-
   return (
     <div className={styles.pagina}>
       <div className={styles.navegacao}>
@@ -184,7 +163,7 @@ export default function NovaObra() {
                         className={styles.selectComIcone} disabled={isLoading || carregandoFuncionarios || !funcionarios.length}
                         aria-invalid={!!errors.responsavel} aria-describedby={errors.responsavel ? "erro-responsavel-obra" : undefined}>
                         <option value="">{carregandoFuncionarios ? "Carregando usuários..." : "Selecione um responsável"}</option>
-                        {funcionarios.map((funcionario) => <option key={funcionario.id} value={funcionario.id}>{funcionario.nome} - {funcionario.email}</option>)}
+                        {funcionarios.map((funcionario) => <option key={funcionario.id} value={funcionario.id}>{funcionario.nome}{funcionario.cargo ? ` - ${funcionario.cargo}` : ""}</option>)}
                       </select>
                       <ChevronDown size={20} className={styles.iconSelect} aria-hidden="true" />
                     </div>

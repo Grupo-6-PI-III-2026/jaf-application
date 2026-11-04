@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import styles from "./Login.module.css";
 import { authService } from "../../../Service/Auth/Login/authService";
 import { useUser } from "../../../Context/useUser";
@@ -9,21 +9,22 @@ import { logger } from "../../../Utils/logger";
 
 function Login() {
   const navigate = useNavigate();
-  const { user, error, refreshUser, clearUser } = useUser();
+  const location = useLocation();
+  const { user, isLoading, error, refreshUser } = useUser();
+  const destino = (location.state as { de?: { pathname?: string; search?: string } } | null)?.de;
+  const rotaDestino = destino?.pathname && destino.pathname !== "/" ? `${destino.pathname}${destino.search ?? ""}` : "/home";
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const sessaoLocal = authService.isAuthenticated();
 
   useEffect(() => {
-    // Sessão local inválida (ex.: cookie expirado): descartar e exibir o formulário.
+    // Queda de rede ao validar a sessão existente não é o mesmo que sessão inválida.
     if (error && !loading) {
-      authService.clearSession();
-      clearUser();
+      setErrorMessage("Sem conexão com o servidor para validar sua sessão. Verifique a internet e tente entrar.");
     }
-  }, [error, loading, clearUser]);
+  }, [error, loading]);
 
   const emailRegex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
 
@@ -47,7 +48,7 @@ function Login() {
         throw new Error("Não foi possível validar seu acesso. Tente novamente.");
       }
       toast.success("Login realizado com sucesso!");
-      navigate("/home", { replace: true });
+      navigate(rotaDestino, { replace: true });
     } catch (error: unknown) {
       logger.erro("Erro ao validar sessão no login", error);
       const message = error instanceof Error ? error.message : "Erro inesperado. Tente novamente.";
@@ -58,8 +59,8 @@ function Login() {
     }
   };
 
-  if (!loading && sessaoLocal && user) return <Navigate to="/home" replace />;
-  if (!loading && sessaoLocal && !error) {
+  if (!loading && user) return <Navigate to={rotaDestino} replace />;
+  if (!loading && isLoading) {
     return <p role="status" className={styles.loginRoot}>Verificando sessão...</p>;
   }
 

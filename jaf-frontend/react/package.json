@@ -1,5 +1,5 @@
 {
-  "name": "meu-projeto",
+  "name": "jaf-frontend",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -17,7 +17,6 @@
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.13.2",
-    "recharts": "^2.15.4",
     "sonner": "^2.0.7"
   },
   "devDependencies": {

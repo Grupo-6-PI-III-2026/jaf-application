@@ -33,7 +33,7 @@ public class GastoController {
     @PostMapping
     @PreAuthorize("hasAuthority('CRIAR_GASTO')")
     public ResponseEntity<GastoResponse> criar(@Valid @RequestBody GastoDto dto, Authentication authentication) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(GastoResponse.de(gastoService.criar(dto), isAdmin(authentication)));
+        return ResponseEntity.status(HttpStatus.CREATED).body(resposta(gastoService.criar(dto), authentication));
     }
  
     @GetMapping
@@ -46,8 +46,7 @@ public class GastoController {
                                               @RequestParam(required = false) com.jaf.application.enums.StatusReembolso statusReembolso,
                                               @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
                                               @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
-        return ResponseEntity.ok(gastoService.listarFiltrado(obraId, funcionarioId, categoria, metodoPagamento, statusReembolso, from, to)
-                .stream().map(gasto -> GastoResponse.de(gasto, isAdmin(authentication))).toList());
+        return ListaLimitada.responder(respostas(gastoService.listarFiltrado(obraId, funcionarioId, categoria, metodoPagamento, statusReembolso, from, to), authentication), "GET /gastos");
     }
 
     @GetMapping("/paginado")
@@ -64,23 +63,25 @@ public class GastoController {
             @RequestParam(required = false) Long funcionarioId,
             @RequestParam(required = false) com.jaf.application.enums.StatusReembolso statusReembolso,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
-        Page<GastoResponse> resposta = gastoService.listarPaginadoFiltrado(
-                obraId, funcionarioId, categoria, metodoPagamento, statusReembolso, from, to, page, size, sortBy, sortDir)
-                .map(gasto -> GastoResponse.de(gasto, isAdmin(authentication)));
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(required = false) String busca) {
+        Page<Gasto> pagina = gastoService.listarPaginadoFiltrado(
+                obraId, funcionarioId, categoria, metodoPagamento, statusReembolso, from, to, busca, page, size, sortBy, sortDir);
+        var totais = gastoService.totaisPagos(pagina.getContent());
+        Page<GastoResponse> resposta = pagina.map(gasto -> GastoResponse.de(gasto, isAdmin(authentication), totais));
         return ResponseEntity.ok(PageResponse.de(resposta));
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('VISUALIZAR_GASTOS')")
     public ResponseEntity<GastoResponse> buscarPorId(@PathVariable Long id, Authentication authentication) {
-        return ResponseEntity.ok(GastoResponse.de(gastoService.buscarPorIdComEscopo(id, authentication.getName()), isAdmin(authentication)));
+        return ResponseEntity.ok(resposta(gastoService.buscarPorIdComEscopo(id, authentication.getName()), authentication));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('EDITAR_GASTO')")
     public ResponseEntity<GastoResponse> atualizar(@PathVariable Long id, @Valid @RequestBody GastoDto dto, Authentication authentication) {
-        return ResponseEntity.ok(GastoResponse.de(gastoService.atualizar(id, dto), isAdmin(authentication)));
+        return ResponseEntity.ok(resposta(gastoService.atualizar(id, dto), authentication));
     }
 
     @DeleteMapping("/{id}")
@@ -88,6 +89,16 @@ public class GastoController {
     public ResponseEntity<Void> deletar(@PathVariable Long id) {
         gastoService.deletar(id);
         return ResponseEntity.noContent().build();
+    }
+
+    private GastoResponse resposta(Gasto gasto, Authentication authentication) {
+        return GastoResponse.de(gasto, isAdmin(authentication), gastoService.totaisPagos(List.of(gasto)));
+    }
+
+    private List<GastoResponse> respostas(List<Gasto> gastos, Authentication authentication) {
+        var totais = gastoService.totaisPagos(gastos);
+        boolean admin = isAdmin(authentication);
+        return gastos.stream().map(gasto -> GastoResponse.de(gasto, admin, totais)).toList();
     }
 
     private boolean isAdmin(Authentication authentication) {

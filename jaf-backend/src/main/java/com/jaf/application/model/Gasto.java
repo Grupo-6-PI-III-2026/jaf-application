@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+@EntityListeners(org.springframework.data.jpa.domain.support.AuditingEntityListener.class)
 @Entity
 public class Gasto {
     @Id
@@ -35,9 +36,11 @@ public class Gasto {
     private java.time.LocalDateTime updatedAt;
     @Column(name = "created_by")
     @JsonIgnore
+    @org.springframework.data.annotation.CreatedBy
     private Long createdBy;
     @Column(name = "updated_by")
     @JsonIgnore
+    @org.springframework.data.annotation.LastModifiedBy
     private Long updatedBy;
 
     @ManyToOne(fetch = FetchType.LAZY)

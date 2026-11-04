@@ -74,6 +74,8 @@ public class ReembolsoService {
         pagamento.setCanceladoPor(acesso.atual().getId());
         pagamento.setMotivoCancelamento(motivo);
         pagamentos.saveAndFlush(pagamento);
+        AuditLog.registrar("PAGAMENTO_ESTORNADO", "PagamentoReembolso", pagamentoId,
+                "valor=" + pagamento.getValor() + ", gastoId=" + gastoId, "motivo=" + motivo);
         return resposta(gasto);
     }
 
@@ -102,6 +104,8 @@ public class ReembolsoService {
         pagamentos.saveAndFlush(pagamento);
         gasto.setReembolsoConcluido(novoTotal.compareTo(gasto.getValor()) == 0);
         gastos.save(gasto);
+        AuditLog.registrar("PAGAMENTO_REGISTRADO", "PagamentoReembolso", pagamento.getId(), null,
+                "valor=" + valor + ", data=" + request.dataPagamento() + ", gastoId=" + id);
         return resposta(gasto);
     }
 
@@ -141,6 +145,17 @@ public class ReembolsoService {
         BigDecimal pago = lista.stream().map(PagamentoReembolso::getValor).reduce(BigDecimal.ZERO, BigDecimal::add);
         return new ReembolsoResponse(gasto.getId(), gasto.getValor(), pago, gasto.getValor().subtract(pago), status(gasto.getValor(), pago),
                 lista.stream().map(p -> new ReembolsoResponse.Pagamento(p.getId(), p.getValor(), p.getDataPagamento(), p.getObservacao())).toList(),
-                estornos.stream().map(p -> new ReembolsoResponse.Estorno(p.getId(), p.getValor(), p.getCanceladoEm(), p.getMotivoCancelamento())).toList());
+                estornos.stream().map(p -> new ReembolsoResponse.Estorno(p.getId(), p.getValor(), p.getCanceladoEm(), p.getMotivoCancelamento())).toList(),
+                podeRegistrar(gasto));
+    }
+
+    // A tela só mostra o formulário de pagamento a quem o servidor realmente aceitaria.
+    private boolean podeRegistrar(Gasto gasto) {
+        try {
+            acesso.exigirRegistroReembolso(gasto.getObra().getId());
+            return true;
+        } catch (com.jaf.application.exceptions.Forbidden e) {
+            return false;
+        }
     }
 }

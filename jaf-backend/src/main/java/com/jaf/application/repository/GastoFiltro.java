@@ -11,6 +11,23 @@ import java.util.Set;
 
 public final class GastoFiltro {
     private GastoFiltro() {}
+
+    /** Busca livre (sem diferenciar maiúsculas) em descrição, categoria, método, etapa e nome de quem lançou. */
+    public static Specification<Gasto> busca(String termo) {
+        return (root, query, cb) -> {
+            if (termo == null || termo.isBlank()) return cb.conjunction();
+            String escapado = termo.trim().toLowerCase(java.util.Locale.ROOT)
+                    .replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+            String padrao = "%" + escapado + "%";
+            var funcionario = root.join("funcionario", jakarta.persistence.criteria.JoinType.LEFT);
+            return cb.or(
+                    cb.like(cb.lower(root.<String>get("descricao")), padrao, '\\'),
+                    cb.like(cb.lower(root.<String>get("categoria")), padrao, '\\'),
+                    cb.like(cb.lower(root.<String>get("metodoPagamento")), padrao, '\\'),
+                    cb.like(cb.lower(root.<String>get("etapa")), padrao, '\\'),
+                    cb.like(cb.lower(funcionario.<String>get("nome")), padrao, '\\'));
+        };
+    }
     public static Specification<Gasto> criar(Set<Long> obrasPermitidas, Long obraId, Long funcionarioId,
             String categoria, String metodo, StatusReembolso status,
             java.time.LocalDate from, java.time.LocalDate to) {

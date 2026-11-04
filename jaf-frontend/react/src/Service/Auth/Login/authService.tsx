@@ -1,37 +1,28 @@
 import { type LoginCredentials, type LoginResponse } from "../../../Types/auth";
-import type { Cargo, JwtPayload } from "../../../Types/user";
+import type { Cargo } from "../../../Types/user";
 import api from "./Api/Api";
 import { logger } from "../../../Utils/logger";
 import axios from "axios";
 import { authorizationSession } from "./authorizationSession.ts";
+import { canalAuth } from "./canalAuth";
 
-function clearStoredUser() {
-  for (const key of ["userEmail", "userName", "userId", "userCargo"]) {
-    localStorage.removeItem(key);
-  }
+// Chaves de versões antigas que guardavam dados pessoais no navegador.
+const CHAVES_LEGADAS = ["userEmail", "userName", "userId", "userCargo"];
+
+export function limparDadosLegados() {
+  for (const key of CHAVES_LEGADAS) localStorage.removeItem(key);
 }
 
 export const authService = {
   // endpoint de login
   login: async (credentials: LoginCredentials): Promise<LoginResponse> => {
     authorizationSession.clear();
-    clearStoredUser();
+    limparDadosLegados();
     try {
       const response = await api.post<LoginResponse>(
         "/funcionarios/login",
         credentials,
       );
-
-      // CORREÇÃO DE SEGURANÇA A07: Token não vem mais no corpo da resposta
-      // Antes: const { token } = response.data;
-      // Agora: Token é enviado via cookie HttpOnly pelo backend (proteção contra XSS)
-      // Armazena informações do usuário que vieram na resposta
-      const { email, nome, id, cargo } = response.data;
-      localStorage.setItem("userEmail", email);
-      localStorage.setItem("userName", nome);
-      localStorage.setItem("userId", String(id));
-      localStorage.setItem("userCargo", cargo);
-
       return response.data;
     } catch (error: unknown) {
       logger.erro("Erro ao fazer login", error);
@@ -54,7 +45,7 @@ export const authService = {
 
   logout: async () => {
     authService.clearSession();
-    // CORREÇÃO DE SEGURANÇA A07: Chama endpoint de logout do backend para limpar o cookie
+    canalAuth.publicar({ tipo: "logout", userId: null });
     try {
       await api.post("/funcionarios/logout");
     } catch (error) {
@@ -66,46 +57,17 @@ export const authService = {
 
   clearSession: () => {
     authorizationSession.clear();
-    clearStoredUser();
+    limparDadosLegados();
   },
 
-  isAuthenticated: (): boolean => {
-    // CORREÇÃO DE SEGURANÇA A07: Validação baseada em localStorage de userEmail
-    // Antes: verificava expiração do token
-    // Agora: assume autenticado se userEmail existe (validação real feita no backend)
-    return localStorage.getItem("userEmail") !== null;
-  },
+  // Verdadeiro apenas depois que o servidor validou o perfil nesta carga da página.
+  isAuthenticated: (): boolean => authorizationSession.current() !== null,
 
-  getUserEmail: (): string | null => {
-    return localStorage.getItem("userEmail");
-  },
+  getUserEmail: (): string | null => authorizationSession.current()?.user.email ?? null,
 
-  getToken: (): string | null => {
-    // CORREÇÃO DE SEGURANÇA A07: Token não está mais disponível no localStorage
-    // Antes: lia token do localStorage
-    // Agora: Token é gerenciado via cookie HttpOnly pelo backend
-    // Esta função retorna null pois o frontend não tem mais acesso ao token
-    return null;
-  },
+  getEmail: (): string | null => authorizationSession.current()?.user.email ?? null,
 
-  decodeToken: (): JwtPayload | null => {
-    // CORREÇÃO DE SEGURANÇA A07: Token não está mais acessível no frontend
-    // Antes: decodificava token do localStorage
-    // Agora: Como o token está em cookie HttpOnly, o frontend não consegue decodificá-lo
-    // Informações do usuário devem ser obtidas via endpoint dedicado ou passadas no login
-    return null;
-  },
-
-  getEmail: (): string | null => {
-    // CORREÇÃO DE SEGURANÇA A07: Retorna email do localStorage
-    return localStorage.getItem("userEmail");
-  },
-
-  getId: (): number | null => {
-    // CORREÇÃO DE SEGURANÇA A07: Retorna ID do localStorage
-    const id = localStorage.getItem("userId");
-    return id ? parseInt(id) : null;
-  },
+  getId: (): number | null => authorizationSession.current()?.user.id ?? null,
 
   getCargo: (): Cargo | null => {
     return authorizationSession.current()?.user.cargo ?? null;

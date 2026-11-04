@@ -1,3 +1,5 @@
+import { hojeSaoPaulo } from "../../Utils/data";
+
 export type PeriodoPreset = "TODOS" | "HOJE" | "7_DIAS" | "PERSONALIZADO";
 
 export interface PeriodoIntervalo {
@@ -25,16 +27,7 @@ export const periodoFiltroInicial = (): PeriodoFiltroValue => ({
 });
 
 /** Data de hoje em yyyy-MM-dd no fuso America/Sao_Paulo. */
-export function hojeIso(): string {
-  const partes = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Sao_Paulo",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date());
-  const getParte = (tipo: string) => partes.find((parte) => parte.type === tipo)?.value ?? "";
-  return `${getParte("year")}-${getParte("month")}-${getParte("day")}`;
-}
+export const hojeIso = hojeSaoPaulo;
 
 function adicionarDiasIso(dataIso: string, dias: number): string {
   const data = new Date(`${dataIso}T12:00:00`);

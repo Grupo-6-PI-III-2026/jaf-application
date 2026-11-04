@@ -1,10 +1,12 @@
 package com.jaf.application.service;
 
+import com.jaf.application.dto.AtualizarAcessoDto;
 import com.jaf.application.dto.FuncionarioPermissoesAcessoDto;
 import com.jaf.application.enums.Cargo;
 import com.jaf.application.enums.Permissao;
 import com.jaf.application.exceptions.BadRequest;
 import com.jaf.application.exceptions.NotFoundException;
+import com.jaf.application.exceptions.StaleVersion;
 import com.jaf.application.model.Funcionario;
 import com.jaf.application.model.FuncionarioPermissao;
 import com.jaf.application.repository.FuncionarioPermissaoRepository;
@@ -34,6 +36,10 @@ public class FuncionarioPermissaoService {
     }
 
     public List<Permissao> permissoesDoFuncionario(Funcionario funcionario) {
+        if (funcionario.getCargoGlobal() == Cargo.ADMIN) {
+            return cargoPermissaoService.permissoesPorCargo(Cargo.ADMIN);
+        }
+
         List<FuncionarioPermissao> permissoesCustomizadas = permissaoRepository.findByFuncionarioId(funcionario.getId());
         if (funcionario.isPermissoesPersonalizadas()) {
             return permissoesCustomizadas.stream()
@@ -66,6 +72,29 @@ public class FuncionarioPermissaoService {
         acesso.exigirAdmin();
         Funcionario funcionario = buscarFuncionario(funcionarioId);
         acesso.exigirGestaoDeAcessoDeOutro(funcionario);
+        return aplicarPermissoes(funcionario, permissoes);
+    }
+
+    /** Muda cargo e permissões na mesma transação: ou tudo vale, ou nada muda. */
+    @Transactional
+    public FuncionarioPermissoesAcessoDto atualizarAcesso(Long funcionarioId, AtualizarAcessoDto dto) {
+        acesso.exigirAdmin();
+        Funcionario funcionario = buscarFuncionario(funcionarioId);
+        acesso.exigirGestaoDeAcessoDeOutro(funcionario);
+        if (dto.getVersao() != null && !dto.getVersao().equals(funcionario.getVersao())) {
+            throw new StaleVersion();
+        }
+        Cargo cargoAnterior = funcionario.getCargoGlobal();
+        if (dto.getCargo() != cargoAnterior) {
+            acesso.exigirAlteracaoDeCargo(funcionario);
+            funcionario.setCargoGlobal(dto.getCargo());
+            AuditLog.registrar("CARGO_ALTERADO", "Funcionario", funcionarioId, "cargo=" + cargoAnterior, "cargo=" + dto.getCargo());
+        }
+        return aplicarPermissoes(funcionario, dto.getPermissoes());
+    }
+
+    private FuncionarioPermissoesAcessoDto aplicarPermissoes(Funcionario funcionario, List<String> permissoes) {
+        Long funcionarioId = funcionario.getId();
         EnumSet<Permissao> permissoesValidadas = EnumSet.noneOf(Permissao.class);
 
         if (permissoes != null) {
@@ -78,6 +107,7 @@ public class FuncionarioPermissaoService {
             }
         }
 
+        String permissoesAntes = String.join(",", nomes(permissoesDoFuncionario(funcionario)));
         EnumSet<Permissao> padrao = EnumSet.noneOf(Permissao.class);
         padrao.addAll(cargoPermissaoService.permissoesPorCargo(funcionario.getCargoGlobal()));
         boolean igualAoPadrao = padrao.equals(permissoesValidadas);
@@ -88,6 +118,8 @@ public class FuncionarioPermissaoService {
         permissaoRepository.saveAll(permissoesValidadas.stream()
                 .map(permissao -> new FuncionarioPermissao(funcionario, permissao))
                 .toList());
+        AuditLog.registrar("PERMISSOES_ALTERADAS", "Funcionario", funcionarioId, "permissoes=" + permissoesAntes,
+                "permissoes=" + permissoesValidadas.stream().map(Enum::name).collect(java.util.stream.Collectors.joining(",")));
 
         return new FuncionarioPermissoesAcessoDto(
                 funcionario.getId(),

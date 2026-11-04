@@ -19,10 +19,16 @@ public class RabbitMQConfig {
     public static final String EXCHANGE = "ocr.exchange";
     public static final String DLX = "ocr.dlx";
     public static final String FILA_SOLICITACOES = "ocr.solicitacao";
-    public static final String FILA_RESULTADOS = "ocr.resultado";
+    // Filas de resultado v2: as originais não aceitam argumentos novos (PRECONDITION_FAILED).
+    public static final String FILA_RESULTADOS = "ocr.resultado.v2";
+    public static final String FILA_RESULTADOS_DLQ = "ocr.resultado.dlq";
+    // Fila antiga: continua sendo consumida até esvaziar as mensagens publicadas antes da troca.
+    public static final String FILA_RESULTADOS_LEGADA = "ocr.resultado";
     public static final String FILA_DLQ = "ocr.solicitacao.dlq";
     public static final String RK_SOLICITAR = "ocr.solicitar";
-    public static final String RK_RESULTADO = "ocr.resultado";
+    public static final String RK_RESULTADO = "ocr.resultado.v2";
+    public static final String RK_RESULTADO_LEGADO = "ocr.resultado";
+    public static final String RK_RESULTADO_MORTO = "ocr.resultado.dead";
 
     @Bean
     public DirectExchange ocrExchange() {
@@ -43,7 +49,20 @@ public class RabbitMQConfig {
 
     @Bean
     public Queue filaResultados() {
-        return QueueBuilder.durable(FILA_RESULTADOS).build();
+        return QueueBuilder.durable(FILA_RESULTADOS)
+                .deadLetterExchange(DLX)
+                .deadLetterRoutingKey(RK_RESULTADO_MORTO)
+                .build();
+    }
+
+    @Bean
+    public Queue filaResultadosDlq() {
+        return QueueBuilder.durable(FILA_RESULTADOS_DLQ).build();
+    }
+
+    @Bean
+    public Queue filaResultadosLegada() {
+        return QueueBuilder.durable(FILA_RESULTADOS_LEGADA).build();
     }
 
     @Bean
@@ -59,6 +78,16 @@ public class RabbitMQConfig {
     @Bean
     public Binding bindingResultados() {
         return BindingBuilder.bind(filaResultados()).to(ocrExchange()).with(RK_RESULTADO);
+    }
+
+    @Bean
+    public Binding bindingResultadosLegada() {
+        return BindingBuilder.bind(filaResultadosLegada()).to(ocrExchange()).with(RK_RESULTADO_LEGADO);
+    }
+
+    @Bean
+    public Binding bindingResultadosDlq() {
+        return BindingBuilder.bind(filaResultadosDlq()).to(ocrDlx()).with(RK_RESULTADO_MORTO);
     }
 
     // Sem x-dead-letter-routing-key, a mensagem rejeitada mantém a routing key original (ocr.solicitar).

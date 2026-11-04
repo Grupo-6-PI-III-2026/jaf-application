@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CalendarDays, CheckCircle2, CircleSlash, Search, Trash2, UsersRound } from "lucide-react";
 import { toast } from "sonner";
 import styles from "./GestaoPresenca.module.css";
-import { authService } from "../../Service/Auth/Login/authService";
 import { obraService, type Obra } from "../../Service/Obras/obraService";
 import { presencaService, type Colaborador } from "../../Service/Presencas/presencaService";
 import PeriodoFiltro from "../../Components/PeriodoFiltro/PeriodoFiltro";
@@ -15,17 +14,22 @@ import {
 import { Responsive } from "../../Components/Responsive/Responsive";
 import { dataValida, erroApi } from "../../Utils/financeiro";
 import { logger } from "../../Utils/logger";
+import { formatarDataIso } from "../../Utils/data";
+import { useHoje } from "../../Hooks/useHoje";
+import { useAuthz } from "../../Hooks/useAuthz";
+import { useDialogs } from "../../Components/Feedback/DialogContext";
 
 const formatarCargoObra = (cargo: string) =>
   cargo.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (letra) => letra.toUpperCase());
 
-const formatarData = (data: string) =>
-  new Date(`${data}T00:00:00`).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+const formatarData = formatarDataIso;
 
 export default function GestaoPresenca() {
   const [obras, setObras] = useState<Obra[]>([]);
   const [obraId, setObraId] = useState<number | null>(null);
-  const [data, setData] = useState(hojeIso());
+  const hoje = useHoje();
+  const hojeAnterior = useRef(hoje);
+  const [data, setData] = useState(hoje);
   const [periodo, setPeriodo] = useState<PeriodoFiltroValue>({
     ...periodoFiltroInicial(),
     preset: "HOJE",
@@ -38,9 +42,19 @@ export default function GestaoPresenca() {
   const [modoPeriodo, setModoPeriodo] = useState(false);
   const [erro, setErro] = useState("");
 
-  const podeRegistrar = authService.hasAuthority("REGISTRAR_PRESENCA");
-  const podeEditar = authService.hasAuthority("EDITAR_PRESENCA");
-  const podeDeletar = authService.hasAuthority("DELETAR_PRESENCA");
+  // Tela aberta de um dia para o outro: a data acompanha o dia, a menos que a pessoa já tenha escolhido outra.
+  useEffect(() => {
+    if (hojeAnterior.current === hoje) return;
+    const anterior = hojeAnterior.current;
+    hojeAnterior.current = hoje;
+    setData((atual) => (atual === anterior ? hoje : atual));
+  }, [hoje]);
+
+  const { can } = useAuthz();
+  const { confirm } = useDialogs();
+  const podeRegistrar = can("REGISTRAR_PRESENCA");
+  const podeEditar = can("EDITAR_PRESENCA");
+  const podeDeletar = can("DELETAR_PRESENCA");
 
   const obraSelecionada = obras.find((obra) => obra.id === obraId) ?? null;
   const intervalo = resolverPeriodo(periodo);
@@ -185,7 +199,7 @@ export default function GestaoPresenca() {
       return;
     }
 
-    if (!window.confirm(`Excluir registro de ${colaborador.funcionarioNome} em ${colaborador.data}?`)) return;
+    if (!await confirm(`Excluir registro de ${colaborador.funcionarioNome} em ${colaborador.data}?`)) return;
     try {
       setSalvandoId(chaveLinha(colaborador));
       await presencaService.deletarPresenca(colaborador.id);
@@ -255,7 +269,7 @@ export default function GestaoPresenca() {
             <input
               type="date"
               value={data}
-              max={hojeIso()}
+              max={hoje}
               onChange={(evento) => setData(evento.target.value)}
             />
           </label>

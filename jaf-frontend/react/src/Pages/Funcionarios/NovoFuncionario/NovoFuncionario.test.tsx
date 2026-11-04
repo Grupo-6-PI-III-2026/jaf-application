@@ -41,7 +41,7 @@ describe("cargos no cadastro", () => {
     preencher();
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "ENGENHEIRO" } });
     fireEvent.click(screen.getByRole("button", { name: "Cadastrar Funcionário" }));
-    await waitFor(() => expect(funcionarioService.cadastrar).toHaveBeenCalledWith(expect.objectContaining({ cargo: "ENGENHEIRO" })));
+    await waitFor(() => expect(funcionarioService.cadastrar).toHaveBeenCalledWith(expect.objectContaining({ cargo: "ENGENHEIRO" }), expect.any(String)));
   });
 
   it("ADMIN validado mantém todas as opções e pode cadastrar ADMIN", async () => {
@@ -51,7 +51,7 @@ describe("cargos no cadastro", () => {
     preencher();
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "ADMIN" } });
     fireEvent.click(screen.getByRole("button", { name: "Cadastrar Funcionário" }));
-    await waitFor(() => expect(funcionarioService.cadastrar).toHaveBeenCalledWith(expect.objectContaining({ cargo: "ADMIN" })));
+    await waitFor(() => expect(funcionarioService.cadastrar).toHaveBeenCalledWith(expect.objectContaining({ cargo: "ADMIN" }), expect.any(String)));
   });
 
   it("bloqueia submissão ADMIN se a sessão deixar de ser admin depois da seleção", () => {

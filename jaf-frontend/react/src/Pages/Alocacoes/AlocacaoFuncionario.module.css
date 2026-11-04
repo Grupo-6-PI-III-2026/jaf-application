@@ -380,6 +380,28 @@
   color: #e0a800;
 }
 
+.botaoRemover {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  color: #c62828;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.botaoRemover:hover:not(:disabled) {
+  color: #a31515;
+}
+
+.botaoRemover:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
 /* ---------- Paginação ---------- */
 .paginacao {
   display: flex;

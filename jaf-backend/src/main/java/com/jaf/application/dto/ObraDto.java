@@ -27,6 +27,26 @@ public class ObraDto {
     @NotNull(message = "A data de término prevista é obrigatória")
     private LocalDate dtTerminoPrevisto;
 
+    private Long responsavelId;
+
+    public Long getResponsavelId() {
+        return responsavelId;
+    }
+
+    public void setResponsavelId(Long responsavelId) {
+        this.responsavelId = responsavelId;
+    }
+
+    private Long versao;
+
+    public Long getVersao() {
+        return versao;
+    }
+
+    public void setVersao(Long versao) {
+        this.versao = versao;
+    }
+
     public String getTitulo() {
         return titulo;
     }

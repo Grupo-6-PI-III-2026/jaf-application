@@ -29,7 +29,7 @@ describe("login", () => {
     expect(screen.queryByRole("link", { name: "Solicite aqui" })).not.toBeInTheDocument();
   });
   it("aceita submit de formulário e navega sem espera artificial", async () => {
-    vi.mocked(authService.login).mockResolvedValue({ id: 1, email: "usuario@exemplo.com", nome: "Pessoa", cargo: "ADMIN", token: null });
+    vi.mocked(authService.login).mockResolvedValue({ id: 1, email: "usuario@exemplo.com", nome: "Pessoa", cargo: "ADMIN" });
     render(<MemoryRouter><Routes><Route path="/" element={<Login />} /><Route path="/home" element={<div>Obras autorizadas</div>} /></Routes></MemoryRouter>);
     fireEvent.change(screen.getByLabelText("E-mail"), { target: { value: "usuario@exemplo.com" } });
     fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "senha-ficticia-de-teste" } });

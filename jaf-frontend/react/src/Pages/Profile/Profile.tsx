@@ -242,13 +242,8 @@ export default function Profile() {
         emailNormalizado !== user.email.toLowerCase();
 
       await funcionarioService.atualizarPerfil({ nome: nomeNormalizado, email: emailNormalizado, fotoUrl });
-      if (emailChanged) {
-        clearUser();
-        authService.logout();
-        return;
-      }
-
       await refreshUser();
+      if (emailChanged) toast.success("E-mail alterado com sucesso");
 
       setSaveSuccess(true);
       setIsEditing(false);

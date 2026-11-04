@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import { Sidebar } from "./Sidebar/Sidebar";
-import Navbar from "./Navbar/Navber";
+import Navbar from "./Navbar/Navbar";
 import styles from "./Layout.module.css";
 import { useBreakpoint } from "../../Hooks/useBreakpoint";
 import { breakpointNoIntervalo } from "../../Constants/breakpoints";
@@ -33,7 +33,7 @@ export default function Layout() {
         />
 
         <main className={styles.content}>
-          <ErrorBoundary><Outlet /></ErrorBoundary>
+          <ErrorBoundary><Suspense fallback={<p role="status">Carregando...</p>}><Outlet /></Suspense></ErrorBoundary>
         </main>
       </div>
     </div>

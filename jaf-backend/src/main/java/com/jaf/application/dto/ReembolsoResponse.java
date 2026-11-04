@@ -7,7 +7,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public record ReembolsoResponse(Long gastoId, BigDecimal valorTotal, BigDecimal totalPago,
-        BigDecimal saldoPendente, StatusReembolso status, List<Pagamento> pagamentos, List<Estorno> estornos) {
+        BigDecimal saldoPendente, StatusReembolso status, List<Pagamento> pagamentos, List<Estorno> estornos,
+        boolean podeRegistrar) {
     public record Pagamento(Long id, BigDecimal valor, LocalDate dataPagamento, String observacao) {}
     public record Estorno(Long id, BigDecimal valor, LocalDateTime canceladoEm, String motivo) {}
 }

@@ -4,10 +4,11 @@ import styles from "./ControlePresenca.module.css";
 import { presencaService } from "../../Service/Presencas/presencaService";
 import type { Colaborador } from "../../Service/Presencas/presencaService";
 import { toast } from "sonner";
-import { authService } from "../../Service/Auth/Login/authService";
 import { hojeIso } from "../../Components/PeriodoFiltro/periodUtils";
+import { formatarDataIso } from "../../Utils/data";
 import { dataValida, erroApi } from "../../Utils/financeiro";
 import { logger } from "../../Utils/logger";
+import { useAuthz } from "../../Hooks/useAuthz";
 
 type ControlePresencaProps = {
   aberto: boolean;
@@ -30,8 +31,9 @@ export default function ControlePresenca({
   const [alterados, setAlterados] = useState<Set<number>>(new Set());
   const [erro, setErro] = useState("");
   const originais = useRef(new Map<number, boolean>());
-  const podeRegistrar = authService.hasAuthority("REGISTRAR_PRESENCA");
-  const podeEditar = authService.hasAuthority("EDITAR_PRESENCA");
+  const { can } = useAuthz();
+  const podeRegistrar = can("REGISTRAR_PRESENCA");
+  const podeEditar = can("EDITAR_PRESENCA");
   const dataPermitida = !!data && dataValida(data, hojeIso());
 
   const carregarColaboradores = useCallback(async () => {
@@ -94,7 +96,7 @@ export default function ControlePresenca({
       // Toda seleção (inclusive ausência explícita) é persistida só na confirmação.
       const promessas = colaboradores
         .filter(colab => alterados.has(colab.funcionarioId) &&
-          authService.hasAuthority(colab.id ? "EDITAR_PRESENCA" : "REGISTRAR_PRESENCA") &&
+          can(colab.id ? "EDITAR_PRESENCA" : "REGISTRAR_PRESENCA") &&
           (!colab.id || originais.current.get(colab.funcionarioId) !== colab.presente))
         .map(colab => 
           colab.id ? presencaService.alternarPresenca(colab.id) : presencaService.criarPresenca({
@@ -121,11 +123,7 @@ export default function ControlePresenca({
     }
   }
 
-  function formatarData(dataStr?: string): string {
-    if (!dataStr) return "Selecionar data";
-    const data = new Date(`${dataStr}T00:00:00`);
-    return data.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
-  }
+  const formatarData = (dataStr?: string): string => formatarDataIso(dataStr);
 
   if (!aberto) {
     return null;

@@ -1,4 +1,5 @@
 import api from "../Auth/Login/Api/Api";
+import { opcoesIdempotencia } from "../../Utils/idempotencia";
 import type { StatusReembolso } from "../Gastos/gastoService";
 
 export interface FinanceiroObra {
@@ -19,6 +20,7 @@ export interface Reembolso {
   saldoPendente: number;
   status: StatusReembolso;
   pagamentos: PagamentoReembolso[];
+  podeRegistrar?: boolean;
 }
 export interface PagamentoRequest {
   valor: number;
@@ -40,8 +42,8 @@ export const financeiroService = {
     (await api.put<FinanceiroObra>(`/obras/${obraId}/financeiro`, { totalRecebido })).data,
   historico: async (gastoId: number): Promise<Reembolso> =>
     (await api.get<Reembolso>(`/gastos/${gastoId}/reembolsos`)).data,
-  registrar: async (gastoId: number, pagamento: PagamentoRequest): Promise<Reembolso> =>
-    (await api.post<Reembolso>(`/gastos/${gastoId}/reembolsos`, pagamento)).data,
+  registrar: async (gastoId: number, pagamento: PagamentoRequest, chave?: string): Promise<Reembolso> =>
+    (await api.post<Reembolso>(`/gastos/${gastoId}/reembolsos`, pagamento, opcoesIdempotencia(chave))).data,
   resumo: async (obraId: number): Promise<ResumoPessoa[]> =>
     (await api.get<ResumoPessoa[]>("/gastos/reembolsos/resumo", { params: { obraId } })).data,
 };

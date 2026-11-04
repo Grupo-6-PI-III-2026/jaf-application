@@ -63,6 +63,71 @@ class ContratoRespostasTest {
         assertFalse(alocacaoJson.get("funcionario").has("senha"));
     }
 
+    @Test
+    void gastoReembolsavelExpoeStatusESaldo() {
+        Gasto gasto = new Gasto();
+        gasto.setId(7L);
+        gasto.setFuncionario(funcionario());
+        gasto.setObra(obra());
+        gasto.setMetodoPagamento("REEMBOLSO");
+        gasto.setReembolsavel(true);
+        gasto.setValor(new BigDecimal("100.00"));
+        gasto.setDtGasto(LocalDate.of(2026, 1, 1));
+
+        var pendente = GastoResponse.de(gasto, false, java.util.Map.of());
+        var parcial = GastoResponse.de(gasto, false, java.util.Map.of(7L, new BigDecimal("40.00")));
+        var pago = GastoResponse.de(gasto, false, java.util.Map.of(7L, new BigDecimal("100.00")));
+
+        assertEquals(com.jaf.application.enums.StatusReembolso.PENDENTE, pendente.statusReembolso());
+        assertEquals(com.jaf.application.enums.StatusReembolso.PARCIAL, parcial.statusReembolso());
+        assertEquals(new BigDecimal("60.00"), parcial.saldoPendente());
+        assertEquals(com.jaf.application.enums.StatusReembolso.PAGO, pago.statusReembolso());
+        assertEquals(0, pago.saldoPendente().signum());
+    }
+
+    @Test
+    void chavesDeCadaRespostaSaoExatamenteOContratoConsumidoPeloFrontend() throws Exception {
+        Funcionario funcionario = funcionario();
+        Obra obra = obra();
+        Gasto gasto = new Gasto();
+        gasto.setId(3L);
+        gasto.setFuncionario(funcionario);
+        gasto.setObra(obra);
+        gasto.setMetodoPagamento("PIX");
+        gasto.setValor(BigDecimal.TEN);
+        gasto.setDtGasto(LocalDate.of(2026, 1, 1));
+        AlocacaoObra alocacao = new AlocacaoObra();
+        alocacao.setId(4L);
+        alocacao.setFuncionario(funcionario);
+        alocacao.setObra(obra);
+        alocacao.setCargo(FuncaoObra.GESTOR_OBRA);
+
+        var resumo = mapper.readTree(mapper.writeValueAsString(FuncionarioResumo.de(funcionario)));
+        assertEquals(Set.of("id", "nome", "email", "cargoGlobal", "fotoUrl"), campos(resumo));
+
+        var gastoJson = mapper.readTree(mapper.writeValueAsString(GastoResponse.de(gasto, false)));
+        assertEquals(Set.of("id", "descricao", "categoria", "metodoPagamento", "etapa", "valor", "dtGasto",
+                "reembolsoConcluido", "reembolsavel", "statusReembolso", "totalPago", "saldoPendente", "versao",
+                "funcionario", "obra"), campos(gastoJson));
+
+        var alocacaoJson = mapper.readTree(mapper.writeValueAsString(AlocacaoResponse.de(alocacao, false)));
+        assertEquals(Set.of("id", "cargo", "dtInicio", "dtFim", "funcionario", "obra"), campos(alocacaoJson));
+        assertFalse(alocacaoJson.get("obra").has("orcamento"));
+
+        var pagina = mapper.readTree(mapper.writeValueAsString(PageResponse.de(
+                new org.springframework.data.domain.PageImpl<>(java.util.List.of(1, 2)))));
+        assertEquals(Set.of("content", "number", "size", "totalElements", "totalPages"), campos(pagina));
+
+        var relatorio = new com.jaf.application.model.Relatorio();
+        relatorio.setId(5L);
+        relatorio.setTitulo("Relatório");
+        relatorio.setDtEmissao(LocalDate.of(2026, 1, 1));
+        relatorio.setFuncionarioResponsavel(funcionario);
+        var relatorioJson = mapper.readTree(mapper.writeValueAsString(RelatorioResponse.de(relatorio)));
+        assertEquals(Set.of("id", "titulo", "dtEmissao", "funcionarioResponsavel"), campos(relatorioJson));
+        assertFalse(relatorioJson.get("funcionarioResponsavel").toString().contains("nao deve aparecer"));
+    }
+
     private Obra obra() {
         Obra obra = new Obra();
         obra.setId(1L);

@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -87,7 +88,10 @@ public class PresencaService {
         List<AlocacaoObra> alocacoes = alocacaoObraRepository.findByObraId(obraId);
         
         // Buscar presenças já registradas para esta data
-        List<Presenca> presencasExistentes = presencaRepository.findByObraIdAndData(obraId, data);
+        // Indexa por funcionário uma única vez, em vez de varrer a lista para cada alocado.
+        Map<Long, Presenca> presencaPorFuncionario = new HashMap<>();
+        presencaRepository.findByObraIdAndData(obraId, data)
+                .forEach(p -> presencaPorFuncionario.putIfAbsent(p.getFuncionario().getId(), p));
         
         return alocacoes.stream()
             .filter(a -> alocadoNaData(a, data))
@@ -96,9 +100,7 @@ public class PresencaService {
             PresencaListarDto dto = new PresencaListarDto();
             
             // Buscar presença existente para este funcionário nesta data
-            Optional<Presenca> presencaOpt = presencasExistentes.stream()
-                    .filter(p -> p.getFuncionario().getId().equals(alocacao.getFuncionario().getId()))
-                    .findFirst();
+            Optional<Presenca> presencaOpt = Optional.ofNullable(presencaPorFuncionario.get(alocacao.getFuncionario().getId()));
             
             if (presencaOpt.isPresent()) {
                 Presenca presenca = presencaOpt.get();
