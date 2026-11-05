@@ -382,6 +382,15 @@
   color: #fbbf24;
 }
 
+.prefixoMoeda {
+  color: #fbbf24;
+  flex-shrink: 0;
+  margin-right: 10px;
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+}
+
 .card:last-child {
   padding: 24px;
   gap: 12px;

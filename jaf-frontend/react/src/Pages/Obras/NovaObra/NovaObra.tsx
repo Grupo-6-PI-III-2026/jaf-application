@@ -26,6 +26,26 @@ const STATUS_OPCOES = [
   { label: "Cancelada", value: "CANCELADA" },
 ];
 
+function formatarOrcamento(entrada: string): string {
+  const texto = entrada.replace(/[^\d.,]/g, "");
+  if (!texto) return "";
+
+  const virgula = texto.indexOf(",");
+  const pontos = texto.match(/\./g)?.length ?? 0;
+  const ultimoPonto = texto.lastIndexOf(".");
+  const pontoDecimal = virgula < 0 && pontos === 1 && texto.length - ultimoPonto - 1 <= 2;
+  const separadorDecimal = virgula >= 0 ? virgula : pontoDecimal ? ultimoPonto : -1;
+  const inteiros = texto.slice(0, separadorDecimal < 0 ? texto.length : separadorDecimal).replace(/\D/g, "");
+  const fracao = separadorDecimal < 0
+    ? ""
+    : texto.slice(separadorDecimal + 1).replace(/\D/g, "").slice(0, 2);
+  const parteInteira = (inteiros || (separadorDecimal >= 0 ? "0" : "")).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+
+  return separadorDecimal < 0
+    ? parteInteira
+    : `${parteInteira},${fracao}`;
+}
+
 export default function NovaObra() {
   const navigate = useNavigate();
   // Trava síncrona: não depender de um novo render para impedir envios duplicados.
@@ -205,9 +225,9 @@ export default function NovaObra() {
               <div className={styles.cardBody}>
                 <label htmlFor="orcamento-obra" className={styles.rotulo}>ORÇAMENTO PLANEJADO</label>
                 <div className={styles.caixaCampo}>
-                  <DollarSign size={18} className={styles.icone} aria-hidden="true" />
+                  <span className={styles.prefixoMoeda} aria-hidden="true">R$</span>
                   <input id="orcamento-obra" type="text" inputMode="decimal" placeholder="0,00" value={orcamento}
-                    onChange={(e) => setOrcamento(e.target.value)} className={styles.campo} disabled={isLoading}
+                    onChange={(e) => setOrcamento(formatarOrcamento(e.target.value))} className={styles.campo} disabled={isLoading}
                     aria-invalid={!!errors.orcamento} aria-describedby={`info-orcamento${errors.orcamento ? " erro-orcamento-obra" : ""}`} />
                 </div>
                 {errors.orcamento && <span id="erro-orcamento-obra" role="alert" className={styles.errorText}>{errors.orcamento}</span>}

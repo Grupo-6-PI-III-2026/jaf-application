@@ -50,10 +50,12 @@ describe("nova obra", () => {
     expect(screen.queryByLabelText(/ENDEREÇO|CIDADE|ESTADO/i)).not.toBeInTheDocument();
     expect(container.querySelector('input[type="file"]')).not.toBeInTheDocument();
     expect(container.querySelectorAll("input, select")).toHaveLength(5);
+    expect(screen.getByText("R$")).toBeInTheDocument();
   });
 
   it("aceita início futuro e envia o responsável na mesma chamada de criação", async () => {
     await renderComResponsavel();
+    expect(screen.getByLabelText("ORÇAMENTO PLANEJADO")).toHaveValue("1.250,50");
     fireEvent.submit(screen.getByRole("form", { name: "Criar obra" }));
     await waitFor(() => expect(navigate).toHaveBeenCalledWith("/home"));
     expect(funcionarioService.listarAlocaveis).toHaveBeenCalledTimes(1);
@@ -64,6 +66,14 @@ describe("nova obra", () => {
     }, expect.any(String));
     expect(toast.error).not.toHaveBeenCalled();
   });
+
+  it("aplica a máscara ao valor digitado com ponto decimal", async () => {
+    await renderComResponsavel();
+    const orcamento = screen.getByLabelText("ORÇAMENTO PLANEJADO");
+    fireEvent.change(orcamento, { target: { value: "1250.5" } });
+    expect(orcamento).toHaveValue("1.250,5");
+  });
+
   it.each([{ permissoes: [] }, { permissoes: ["VISUALIZAR_FUNCIONARIOS"] }])("cria sem responsável quando não pode alocar ($permissoes)", async ({ permissoes }) => {
     validarSessao("ENGENHEIRO", ["CRIAR_OBRA", ...permissoes]);
     render(<NovaObra />);
