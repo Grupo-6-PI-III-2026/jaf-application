@@ -23,8 +23,10 @@ import java.util.*;
 import java.util.concurrent.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-@DataJpaTest(properties = {"spring.flyway.enabled=false", "spring.jpa.hibernate.ddl-auto=create-drop"}, showSql = false)
-@Import({ReembolsoService.class, AcessoObraService.class, GastoService.class})
+@DataJpaTest(properties = {"spring.flyway.enabled=false", "spring.jpa.hibernate.ddl-auto=create-drop",
+        "app.armazenamento.local.diretorio=${java.io.tmpdir}/jaf-teste-uploads"}, showSql = false)
+@Import({ReembolsoService.class, AcessoObraService.class, GastoService.class,
+        com.jaf.application.armazenamento.ArquivoService.class, com.jaf.application.armazenamento.ArmazenamentoLocal.class})
 class ReembolsoPersistenciaTest {
     @Autowired GastoRepository gastos;
     @Autowired ObraRepository obras;

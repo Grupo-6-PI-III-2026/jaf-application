@@ -162,6 +162,23 @@ terraform workspace show
 
 ---
 
+## Fotos e notas fiscais (S3)
+
+O Terraform cria um bucket privado (`jaf-arquivos-...`, veja `terraform output arquivos_bucket_name`)
+com criptografia, bloqueio de acesso público e acesso somente por HTTPS. O backend recebe
+`ARMAZENAMENTO_TIPO=s3`, o nome do bucket e a região; o navegador só abre os arquivos por URLs
+pré-assinadas que expiram em 15 minutos.
+
+- **Student:** a `LabRole` já tem acesso ao S3. Os arquivos somem quando o laboratório é encerrado.
+- **Pessoal:** o backend usa uma role própria que só lê, grava e apaga objetos desse bucket.
+- **Destroy:** com `arquivos_force_destroy = false`, o `destroy` falha se o bucket tiver arquivos.
+  Esvazie o bucket antes ou use `true` (padrão do perfil Student).
+
+Localmente (Docker Compose ou `mvnw spring-boot:run`) o backend grava em `uploads/` e serve os
+arquivos por `/api/arquivos` com URL assinada; não precisa de AWS.
+
+---
+
 ## Outputs apos o apply
 
 Para exibir novamente: `terraform output`

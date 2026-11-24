@@ -23,9 +23,8 @@ import {
 import { toast } from "sonner";
 import { Responsive } from "../../Components/Responsive/Responsive";
 import { authService } from "../../Service/Auth/Login/authService";
-
-const IMAGEM_PLACEHOLDER =
-  "https://s2.glbimg.com/YgImWrcpJX6FAHRJOlZtEnTaHYc=/e.glbimg.com/og/ed/f/original/2020/12/23/apartamento-sao-paulo-260-m2-atemporal3.jpg";
+import ImagemComPadrao from "../../Components/ImagemComPadrao/ImagemComPadrao";
+import { IMAGEM_OBRA_PADRAO } from "../../Constants/imagens";
 
 const ITENS_POR_PAGINA = 8;
 
@@ -284,7 +283,7 @@ export default function AlocacaoFuncionario() {
       {/* Card da obra */}
       <div className={styles.cardObra}>
         <div className={styles.cardObraImagem}>
-          <img src={IMAGEM_PLACEHOLDER} alt={obra.titulo} />
+          <ImagemComPadrao src={obra.fotoUrl} padrao={IMAGEM_OBRA_PADRAO} alt={obra.titulo} />
         </div>
         <div className={styles.cardObraInformacoes}>
           <div className={styles.badgeStatus}>

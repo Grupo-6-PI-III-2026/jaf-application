@@ -66,4 +66,7 @@ docker run -d \
   -e RABBITMQ_PORT=5672 \
   -e RABBITMQ_USER="${rabbitmq_user}" \
   -e RABBITMQ_PASSWORD="${rabbitmq_password}" \
+  -e ARMAZENAMENTO_TIPO=s3 \
+  -e ARMAZENAMENTO_S3_BUCKET="${arquivos_bucket}" \
+  -e AWS_REGION="${aws_region}" \
   ghcr.io/${repo_owner}/jaf-backend:latest

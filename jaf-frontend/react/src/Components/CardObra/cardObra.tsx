@@ -2,13 +2,15 @@ import { BarChart3, FileText, Pencil, MapPin, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import styles from "./CardObra.module.css";
 import { authService } from "../../Service/Auth/Login/authService";
+import ImagemComPadrao from "../ImagemComPadrao/ImagemComPadrao";
+import { IMAGEM_OBRA_PADRAO } from "../../Constants/imagens";
 
 type Props = {
   id?: number;
   nome: string;
   status: string;
   valor: number;
-  imagem: string;
+  imagem?: string | null;
   responsavelNome?: string;
   responsavelCargo?: string;
 };
@@ -39,7 +41,7 @@ export default function CardObra({ id, nome, status, valor, imagem, responsavelN
 
       {/* IMAGEM */}
       <div className={styles.imagemWrapper}>
-        <img src={imagem} alt={nome} />
+        <ImagemComPadrao src={imagem} padrao={IMAGEM_OBRA_PADRAO} alt={nome} />
       </div>
 
       {/* CONTEÚDO */}

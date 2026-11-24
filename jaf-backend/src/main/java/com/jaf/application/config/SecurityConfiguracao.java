@@ -77,7 +77,7 @@ public class SecurityConfiguracao {
                         // CORREÇÃO DE SEGURANÇA A01: Removido acesso público ao cadastro de funcionários
                         // Antes: .requestMatchers(HttpMethod.POST, "/funcionarios").permitAll()
                         // Agora: exige autenticação e permissão específica (ver @PreAuthorize no controller)
-                        .requestMatchers("/uploads/**").permitAll()  // fotos públicas
+                        .requestMatchers(HttpMethod.GET, "/arquivos").permitAll()  // protegido pela URL assinada
                         .requestMatchers(HttpMethod.POST, "/ocr").authenticated()
                         .anyRequest().authenticated()                  // todas as outras exigem token
                 )

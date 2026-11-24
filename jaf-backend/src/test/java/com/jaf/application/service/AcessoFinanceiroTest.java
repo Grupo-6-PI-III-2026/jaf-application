@@ -76,6 +76,19 @@ class AcessoFinanceiroTest {
         assertTrue(mapper.readTree(mapper.writeValueAsString(obra)).has("orcamento"));
         assertTrue(mapper.readTree(mapper.writeValueAsString(gasto)).get("obra").has("totalRecebido"));
     }
+    @Test void jsonExpoeIndicadoresMasNuncaAsChavesDosArquivos() throws Exception {
+        var factory = new DefaultListableBeanFactory(); factory.registerSingleton("acesso", acesso);
+        var mapper = new ObjectMapper().registerModule(new JavaTimeModule());
+        mapper.setHandlerInstantiator(new SpringHandlerInstantiator(factory));
+        var obra = new Obra(); obra.setId(1L); obra.setFotoChave("obras/x.png");
+        var pessoa = new Funcionario(); pessoa.setFotoChave("perfil/y.png");
+        var gasto = new Gasto(); gasto.setObra(obra); gasto.setFuncionario(pessoa); gasto.setNotaFiscalChave("notas/z.pdf");
+        var json = mapper.writeValueAsString(gasto);
+        var arvore = mapper.readTree(json);
+        assertTrue(arvore.get("possuiNotaFiscal").asBoolean());
+        assertTrue(arvore.get("obra").has("fotoUrl"));
+        assertFalse(json.contains("notas/z.pdf")); assertFalse(json.contains("obras/x.png")); assertFalse(json.contains("perfil/y.png"));
+    }
     @Test void saldoUsaRecebidoNaoOrcamentoNemParcelasEmDuplicidade() {
         usuario.setCargoGlobal(Cargo.ADMIN);
         var obra = new Obra(); obra.setId(1L); obra.setOrcamento("9999");

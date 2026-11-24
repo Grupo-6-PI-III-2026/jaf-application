@@ -1,5 +1,7 @@
 package com.jaf.application.service;
 
+import com.jaf.application.armazenamento.ArquivoService;
+import com.jaf.application.armazenamento.TipoArquivo;
 import com.jaf.application.dto.ObraDto;
 import com.jaf.application.enums.Cargo;
 import com.jaf.application.exceptions.BadRequest;
@@ -19,6 +21,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -28,17 +31,21 @@ import java.util.Set;
 @Service
 public class ObraService {
     private static final Logger logger = LoggerFactory.getLogger(ObraService.class);
+    private static final long FOTO_MAX_BYTES = 5L * 1024L * 1024L;
 
     private final ObraRepository obraRepository;
     private final AlocacaoObraRepository alocacaoObraRepository;
     private final FuncionarioRepository funcionarioRepository;
+    private final ArquivoService arquivos;
 
     public ObraService(ObraRepository obraRepository,
                        AlocacaoObraRepository alocacaoObraRepository,
-                       FuncionarioRepository funcionarioRepository) {
+                       FuncionarioRepository funcionarioRepository,
+                       ArquivoService arquivos) {
         this.obraRepository = obraRepository;
         this.alocacaoObraRepository = alocacaoObraRepository;
         this.funcionarioRepository = funcionarioRepository;
+        this.arquivos = arquivos;
     }
 
     public Obra criar(ObraDto dto) {
@@ -148,6 +155,24 @@ public class ObraService {
         return obraRepository.save(existente);
     }
 
+    public Obra atualizarFoto(Long id, MultipartFile arquivo) {
+        Obra obra = buscarPorId(id);
+        String anterior = obra.getFotoChave();
+        obra.setFotoChave(arquivos.armazenar(arquivo, "obras", TipoArquivo.IMAGENS, FOTO_MAX_BYTES));
+        Obra salva = obraRepository.save(obra);
+        arquivos.removerAposCommit(anterior);
+        return salva;
+    }
+
+    public Obra removerFoto(Long id) {
+        Obra obra = buscarPorId(id);
+        String anterior = obra.getFotoChave();
+        obra.setFotoChave(null);
+        Obra salva = obraRepository.save(obra);
+        arquivos.removerAposCommit(anterior);
+        return salva;
+    }
+
     public void deletar(Long id) {
         logger.info("Tentando deletar obra: ID={}", id);
 
@@ -156,7 +181,9 @@ public class ObraService {
             throw new NotFoundException("Obra nao encontrada");
         }
 
+        String foto = obraRepository.findById(id).map(Obra::getFotoChave).orElse(null);
         obraRepository.deleteById(id);
+        arquivos.removerAposCommit(foto);
         logger.info("Obra deletada com sucesso: ID={}", id);
     }
 }

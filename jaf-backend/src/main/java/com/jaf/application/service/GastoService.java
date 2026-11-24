@@ -1,5 +1,7 @@
 package com.jaf.application.service;
 
+import com.jaf.application.armazenamento.ArquivoService;
+import com.jaf.application.armazenamento.TipoArquivo;
 import com.jaf.application.dto.GastoDto;
 import com.jaf.application.enums.Cargo;
 import com.jaf.application.enums.StatusReembolso;
@@ -11,10 +13,12 @@ import com.jaf.application.model.AlocacaoObra;
 import com.jaf.application.model.Funcionario;
 import com.jaf.application.model.Gasto;
 import com.jaf.application.model.Obra;
+import com.jaf.application.model.OcrProcessamento;
 import com.jaf.application.repository.AlocacaoObraRepository;
 import com.jaf.application.repository.FuncionarioRepository;
 import com.jaf.application.repository.GastoRepository;
 import com.jaf.application.repository.GastoFiltro;
+import com.jaf.application.repository.OcrProcessamentoRepository;
 import com.jaf.application.repository.PagamentoReembolsoRepository;
 import com.jaf.application.repository.ObraRepository;
 import org.springframework.data.domain.Page;
@@ -23,6 +27,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.util.Collections;
@@ -32,25 +37,33 @@ import java.util.Set;
 
 @Service
 public class GastoService {
+    private static final long NOTA_MAX_BYTES = 10L * 1024L * 1024L;
+
     private final GastoRepository gastoRepository;
     private final FuncionarioRepository funcionarioRepository;
     private final ObraRepository obraRepository;
     private final AlocacaoObraRepository alocacaoObraRepository;
     private final AcessoObraService acesso;
     private final PagamentoReembolsoRepository pagamentos;
+    private final OcrProcessamentoRepository processamentos;
+    private final ArquivoService arquivos;
 
     public GastoService(GastoRepository gastoRepository,
                         FuncionarioRepository funcionarioRepository,
                         ObraRepository obraRepository,
                         AlocacaoObraRepository alocacaoObraRepository,
                         AcessoObraService acesso,
-                        PagamentoReembolsoRepository pagamentos) {
+                        PagamentoReembolsoRepository pagamentos,
+                        OcrProcessamentoRepository processamentos,
+                        ArquivoService arquivos) {
         this.gastoRepository = gastoRepository;
         this.funcionarioRepository = funcionarioRepository;
         this.obraRepository = obraRepository;
         this.alocacaoObraRepository = alocacaoObraRepository;
         this.acesso = acesso;
         this.pagamentos = pagamentos;
+        this.processamentos = processamentos;
+        this.arquivos = arquivos;
     }
 
     @Transactional
@@ -76,6 +89,7 @@ public class GastoService {
         gasto.setReembolsoConcluido("REEMBOLSO".equals(dto.getMetodoPagamento()) ? false : null);
         gasto.setFuncionario(funcionario);
         gasto.setObra(obra);
+        vincularNotaDoOcr(gasto, dto.getOcrJobId());
         return gastoRepository.save(gasto);
     }
 
@@ -168,6 +182,7 @@ public class GastoService {
         existente.setReembolsoConcluido("REEMBOLSO".equals(dto.getMetodoPagamento()) ? pago.compareTo(dto.getValor()) == 0 : null);
         existente.setFuncionario(funcionario);
         existente.setObra(obra);
+        vincularNotaDoOcr(existente, dto.getOcrJobId());
         return gastoRepository.save(existente);
     }
 
@@ -179,6 +194,57 @@ public class GastoService {
         if (pagamentos.existsByGastoId(id))
             throw new Conflict("Gasto possui pagamentos; histórico não pode ser excluído.");
         gastoRepository.deleteById(id);
+        arquivos.removerAposCommit(gasto.getNotaFiscalChave());
+    }
+
+    @Transactional
+    public Gasto anexarNotaFiscal(Long id, MultipartFile arquivo) {
+        Gasto gasto = gastoRepository.buscarParaAtualizar(id)
+                .orElseThrow(() -> new NotFoundException("Gasto nao encontrado."));
+        acesso.exigirObra(gasto.getObra().getId());
+        substituirNota(gasto, arquivos.armazenar(arquivo, "notas", TipoArquivo.NOTAS_FISCAIS, NOTA_MAX_BYTES));
+        return gastoRepository.save(gasto);
+    }
+
+    @Transactional
+    public Gasto removerNotaFiscal(Long id) {
+        Gasto gasto = gastoRepository.buscarParaAtualizar(id)
+                .orElseThrow(() -> new NotFoundException("Gasto nao encontrado."));
+        acesso.exigirObra(gasto.getObra().getId());
+        substituirNota(gasto, null);
+        return gastoRepository.save(gasto);
+    }
+
+    public String urlNotaFiscal(Long id, String email) {
+        Gasto gasto = buscarPorIdComEscopo(id, email);
+        if (gasto.getNotaFiscalChave() == null) {
+            throw new NotFoundException("Este gasto não possui nota fiscal anexada.");
+        }
+        return arquivos.gerarUrl(gasto.getNotaFiscalChave());
+    }
+
+    private void vincularNotaDoOcr(Gasto gasto, String ocrJobId) {
+        if (ocrJobId == null || ocrJobId.isBlank()) {
+            return;
+        }
+        String solicitante = acesso.atual().getEmail();
+        OcrProcessamento processamento = processamentos.findById(ocrJobId)
+                .filter(p -> p.getSolicitante().equalsIgnoreCase(solicitante))
+                .orElseThrow(() -> new NotFoundException("Leitura da nota fiscal não encontrada."));
+        String chave = processamento.liberarArquivo();
+        if (chave == null) {
+            throw new Conflict("A nota fiscal desta leitura já foi anexada a outro gasto.");
+        }
+        processamentos.save(processamento);
+        substituirNota(gasto, chave);
+    }
+
+    private void substituirNota(Gasto gasto, String chave) {
+        String anterior = gasto.getNotaFiscalChave();
+        gasto.setNotaFiscalChave(chave);
+        if (anterior != null && !anterior.equals(chave)) {
+            arquivos.removerAposCommit(anterior);
+        }
     }
 
     private void validarFlag(GastoDto dto, BigDecimal pago) {

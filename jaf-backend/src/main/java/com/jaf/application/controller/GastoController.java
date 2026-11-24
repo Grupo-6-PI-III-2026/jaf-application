@@ -7,10 +7,12 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -76,4 +78,25 @@ public class GastoController {
         gastoService.deletar(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping(value = "/{id}/nota-fiscal", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyAuthority('CRIAR_GASTO', 'EDITAR_GASTO')")
+    public ResponseEntity<Gasto> anexarNotaFiscal(@PathVariable Long id,
+                                                  @RequestParam("arquivo") MultipartFile arquivo) {
+        return ResponseEntity.ok(gastoService.anexarNotaFiscal(id, arquivo));
+    }
+
+    @GetMapping("/{id}/nota-fiscal")
+    @PreAuthorize("hasAuthority('VISUALIZAR_GASTOS')")
+    public ResponseEntity<NotaFiscalUrl> urlNotaFiscal(@PathVariable Long id, Authentication authentication) {
+        return ResponseEntity.ok(new NotaFiscalUrl(gastoService.urlNotaFiscal(id, authentication.getName())));
+    }
+
+    @DeleteMapping("/{id}/nota-fiscal")
+    @PreAuthorize("hasAuthority('EDITAR_GASTO')")
+    public ResponseEntity<Gasto> removerNotaFiscal(@PathVariable Long id) {
+        return ResponseEntity.ok(gastoService.removerNotaFiscal(id));
+    }
+
+    public record NotaFiscalUrl(String url) {}
 }

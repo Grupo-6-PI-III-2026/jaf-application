@@ -26,6 +26,9 @@ public class OcrProcessamento {
     @Column(name = "mensagem_erro", length = 1000)
     private String mensagemErro;
 
+    @Column(name = "arquivo_chave")
+    private String arquivoChave;
+
     @Column(name = "criado_em", nullable = false)
     private LocalDateTime criadoEm;
 
@@ -36,11 +39,24 @@ public class OcrProcessamento {
     }
 
     public OcrProcessamento(String id, String solicitante) {
+        this(id, solicitante, null);
+    }
+
+    public OcrProcessamento(String id, String solicitante, String arquivoChave) {
         this.id = id;
         this.solicitante = solicitante;
+        this.arquivoChave = arquivoChave;
         this.status = StatusOcr.PROCESSANDO;
         this.criadoEm = LocalDateTime.now();
         this.atualizadoEm = this.criadoEm;
+    }
+
+    /** Transfere o arquivo para um gasto; o mesmo arquivo nunca fica ligado a dois gastos. */
+    public String liberarArquivo() {
+        String chave = arquivoChave;
+        arquivoChave = null;
+        atualizadoEm = LocalDateTime.now();
+        return chave;
     }
 
     public void marcarConcluido(String textoBruto) {
@@ -76,6 +92,10 @@ public class OcrProcessamento {
 
     public String getMensagemErro() {
         return mensagemErro;
+    }
+
+    public String getArquivoChave() {
+        return arquivoChave;
     }
 
     public LocalDateTime getCriadoEm() {

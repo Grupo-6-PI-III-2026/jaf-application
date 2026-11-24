@@ -24,6 +24,17 @@ public class Obra {
     private LocalDate dtInicio;
     private LocalDate dtTerminoPrevisto;
 
+    @Column(name = "foto_chave")
+    private String fotoChave;
+
+    public String getFotoChave() {
+        return fotoChave;
+    }
+
+    public void setFotoChave(String fotoChave) {
+        this.fotoChave = fotoChave;
+    }
+
     public Long getId() {
         return id;
     }

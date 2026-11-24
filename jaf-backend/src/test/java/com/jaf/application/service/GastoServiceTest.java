@@ -25,6 +25,8 @@ class GastoServiceTest {
     @Mock AlocacaoObraRepository alocacaoObraRepository;
     @Mock PagamentoReembolsoRepository pagamentos;
     @Mock AcessoObraService acesso;
+    @Mock OcrProcessamentoRepository processamentos;
+    @Mock com.jaf.application.armazenamento.ArquivoService arquivos;
     @InjectMocks GastoService service;
     Gasto gasto; GastoDto dto;
 
@@ -115,5 +117,67 @@ class GastoServiceTest {
     @Test void paginacaoInvalidaRetornaErroDeCliente() {
         assertThrows(BadRequest.class, () -> service.listarPaginadoFiltrado(null, null, null, null, null, -1, 20, "id", "asc"));
         assertThrows(BadRequest.class, () -> service.listarPaginadoFiltrado(null, null, null, null, null, 0, 201, "id", "asc"));
+    }
+
+    private void podeCriar() {
+        dto.setMetodoPagamento("PIX");
+        var autor = new Funcionario(); autor.setEmail("autor@jaf.com");
+        when(acesso.atual()).thenReturn(autor);
+        when(funcionarioRepository.findById(2L)).thenReturn(Optional.of(gasto.getFuncionario()));
+        when(obraRepository.findById(1L)).thenReturn(Optional.of(gasto.getObra()));
+        when(alocacaoObraRepository.existsByFuncionarioIdAndObraId(2L, 1L)).thenReturn(true);
+    }
+
+    @Test void criarComOcrTransfereANotaDoProcessamento() {
+        podeCriar(); dto.setOcrJobId("job-1");
+        var processamento = new OcrProcessamento("job-1", "autor@jaf.com", "notas/nf.pdf");
+        when(processamentos.findById("job-1")).thenReturn(Optional.of(processamento));
+        when(gastoRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        Gasto criado = service.criar(dto);
+
+        assertEquals("notas/nf.pdf", criado.getNotaFiscalChave());
+        assertTrue(criado.possuiNotaFiscal());
+        assertNull(processamento.getArquivoChave());
+        verify(processamentos).save(processamento);
+    }
+
+    @Test void naoAceitaNotaDoOcrDeOutroUsuario() {
+        podeCriar(); dto.setOcrJobId("job-2");
+        when(processamentos.findById("job-2"))
+                .thenReturn(Optional.of(new OcrProcessamento("job-2", "outro@jaf.com", "notas/alheia.pdf")));
+
+        assertThrows(NotFoundException.class, () -> service.criar(dto));
+        verify(gastoRepository, never()).save(any());
+    }
+
+    @Test void naoReaproveitaNotaJaAnexada() {
+        podeCriar(); dto.setOcrJobId("job-3");
+        when(processamentos.findById("job-3"))
+                .thenReturn(Optional.of(new OcrProcessamento("job-3", "autor@jaf.com", null)));
+
+        assertThrows(Conflict.class, () -> service.criar(dto));
+        verify(gastoRepository, never()).save(any());
+    }
+
+    @Test void urlDaNotaExigeEscopoDoGasto() {
+        var admin = new Funcionario(); admin.setId(1L); admin.setCargoGlobal(com.jaf.application.enums.Cargo.ENGENHEIRO);
+        when(funcionarioRepository.findByEmailIgnoreCase("eng@jaf.com")).thenReturn(Optional.of(admin));
+        gasto.setNotaFiscalChave("notas/nf.pdf");
+        when(gastoRepository.findById(3L)).thenReturn(Optional.of(gasto));
+        when(alocacaoObraRepository.existsByFuncionarioIdAndObraId(1L, 1L)).thenReturn(false);
+
+        assertThrows(Forbidden.class, () -> service.urlNotaFiscal(3L, "eng@jaf.com"));
+        verifyNoInteractions(arquivos);
+    }
+
+    @Test void deletarRemoveANotaAnexada() {
+        gasto.setNotaFiscalChave("notas/nf.pdf");
+        when(gastoRepository.buscarParaAtualizar(3L)).thenReturn(Optional.of(gasto));
+
+        service.deletar(3L);
+
+        verify(gastoRepository).deleteById(3L);
+        verify(arquivos).removerAposCommit("notas/nf.pdf");
     }
 }

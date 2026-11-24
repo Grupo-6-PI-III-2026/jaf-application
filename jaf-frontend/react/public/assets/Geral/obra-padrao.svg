@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" role="img" aria-label="Obra sem foto">
+  <defs>
+    <linearGradient id="ceu" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#dbe7f5"/>
+      <stop offset="1" stop-color="#f4f7fb"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="450" fill="url(#ceu)"/>
+  <rect y="370" width="800" height="80" fill="#c9d3df"/>
+  <g fill="#8a9bb0">
+    <rect x="170" y="190" width="150" height="180"/>
+    <rect x="340" y="130" width="130" height="240"/>
+    <rect x="490" y="220" width="120" height="150"/>
+  </g>
+  <g fill="#f4f7fb" opacity="0.85">
+    <rect x="190" y="215" width="24" height="24"/><rect x="232" y="215" width="24" height="24"/><rect x="274" y="215" width="24" height="24"/>
+    <rect x="190" y="265" width="24" height="24"/><rect x="232" y="265" width="24" height="24"/><rect x="274" y="265" width="24" height="24"/>
+    <rect x="360" y="155" width="24" height="24"/><rect x="402" y="155" width="24" height="24"/><rect x="444" y="155" width="10" height="24"/>
+    <rect x="360" y="205" width="24" height="24"/><rect x="402" y="205" width="24" height="24"/>
+    <rect x="360" y="255" width="24" height="24"/><rect x="402" y="255" width="24" height="24"/>
+    <rect x="510" y="245" width="24" height="24"/><rect x="552" y="245" width="24" height="24"/>
+  </g>
+  <g stroke="#f2a03d" stroke-width="8" fill="none" stroke-linecap="round">
+    <path d="M640 370 V90"/>
+    <path d="M600 100 H760"/>
+    <path d="M640 140 L600 100"/>
+    <path d="M730 100 V170"/>
+  </g>
+  <rect x="716" y="170" width="28" height="22" fill="#f2a03d"/>
+</svg>

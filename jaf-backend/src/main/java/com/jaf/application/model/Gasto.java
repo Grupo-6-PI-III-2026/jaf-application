@@ -1,5 +1,7 @@
 package com.jaf.application.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
@@ -19,6 +21,10 @@ public class Gasto {
     private LocalDate dtGasto;
 
     private Boolean reembolsoConcluido;
+
+    @JsonIgnore
+    @Column(name = "nota_fiscal_chave")
+    private String notaFiscalChave;
 
     @ManyToOne
     @JoinColumn(name = "funcionario_id")
@@ -106,5 +112,18 @@ public class Gasto {
 
     public void setReembolsoConcluido(Boolean reembolsoConcluido) {
         this.reembolsoConcluido = reembolsoConcluido;
+    }
+
+    public String getNotaFiscalChave() {
+        return notaFiscalChave;
+    }
+
+    public void setNotaFiscalChave(String notaFiscalChave) {
+        this.notaFiscalChave = notaFiscalChave;
+    }
+
+    @JsonProperty("possuiNotaFiscal")
+    public boolean possuiNotaFiscal() {
+        return notaFiscalChave != null;
     }
 }

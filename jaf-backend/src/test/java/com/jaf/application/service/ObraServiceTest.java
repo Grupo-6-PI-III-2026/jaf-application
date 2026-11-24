@@ -1,5 +1,7 @@
 package com.jaf.application.service;
 
+import com.jaf.application.armazenamento.ArquivoService;
+import com.jaf.application.armazenamento.TipoArquivo;
 import com.jaf.application.dto.ObraDto;
 import com.jaf.application.enums.Cargo;
 import com.jaf.application.exceptions.Conflict;
@@ -40,6 +42,9 @@ class ObraServiceTest {
 
     @Mock
     private FuncionarioRepository funcionarioRepository;
+
+    @Mock
+    private ArquivoService arquivos;
 
     @InjectMocks
     private ObraService obraService;
@@ -218,5 +223,28 @@ class ObraServiceTest {
 
         assertThrows(NotFoundException.class, () -> obraService.deletar(999L));
         verify(obraRepository, never()).deleteById(anyLong());
+    }
+
+    @Test
+    void deletarObra_RemoveFotoArmazenada() {
+        obra.setFotoChave("obras/foto.jpg");
+        when(obraRepository.existsById(1L)).thenReturn(true);
+        when(obraRepository.findById(1L)).thenReturn(Optional.of(obra));
+
+        obraService.deletar(1L);
+
+        verify(arquivos).removerAposCommit("obras/foto.jpg");
+    }
+
+    @Test
+    void atualizarFoto_SubstituiERemoveAnterior() {
+        obra.setFotoChave("obras/antiga.jpg");
+        var arquivo = new org.springframework.mock.web.MockMultipartFile("arquivo", "obra.jpg", "image/jpeg", new byte[]{1});
+        when(obraRepository.findById(1L)).thenReturn(Optional.of(obra));
+        when(arquivos.armazenar(arquivo, "obras", TipoArquivo.IMAGENS, 5L * 1024L * 1024L)).thenReturn("obras/nova.jpg");
+        when(obraRepository.save(obra)).thenReturn(obra);
+
+        assertEquals("obras/nova.jpg", obraService.atualizarFoto(1L, arquivo).getFotoChave());
+        verify(arquivos).removerAposCommit("obras/antiga.jpg");
     }
 }

@@ -13,6 +13,7 @@ import styles from "./Sidebar.module.css";
 import { useUser } from "../../../Context/useUser";
 import { CargoLabel, DEFAULT_AVATAR_URL } from "../../../Types/user";
 import { authService } from "../../../Service/Auth/Login/authService";
+import ImagemComPadrao from "../../ImagemComPadrao/ImagemComPadrao";
 
 interface MenuItem {
   icon: LucideIcon;
@@ -48,7 +49,6 @@ interface SidebarProps {
 
 export function Sidebar({ recolhivel = false, aberta = false, onNavegar }: SidebarProps) {
   const { user } = useUser();
-  const avatarUrl = user?.fotoUrl || DEFAULT_AVATAR_URL;
   const visibleMenuSections = menuSections
     .map((section) => ({
       ...section,
@@ -101,7 +101,7 @@ export function Sidebar({ recolhivel = false, aberta = false, onNavegar }: Sideb
       {user && (
         <div className={styles.perfil}>
           <div className={styles.circuloPerfil}>
-            <img src={avatarUrl} alt={user.nome} />
+            <ImagemComPadrao src={user.fotoUrl} padrao={DEFAULT_AVATAR_URL} alt={user.nome} />
           </div>
           <div className={styles.nomePerfil}>
             <h1>{user.nome}</h1>

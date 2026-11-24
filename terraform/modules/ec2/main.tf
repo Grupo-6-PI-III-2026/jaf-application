@@ -48,10 +48,59 @@ resource "aws_iam_instance_profile" "instance" {
   role  = aws_iam_role.instance[0].name
 }
 
+# Role separada: só o backend acessa o bucket de fotos e notas fiscais.
+resource "aws_iam_role" "backend" {
+  count = var.use_lab_role ? 0 : 1
+  name  = "${var.project_name}-backend-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "ec2.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+
+  tags = {
+    Environment = var.environment
+    Project     = var.project_name
+    ManagedBy   = "Terraform"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "backend_ssm" {
+  count      = var.use_lab_role ? 0 : 1
+  role       = aws_iam_role.backend[0].name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+resource "aws_iam_role_policy" "backend_arquivos" {
+  count = var.use_lab_role ? 0 : 1
+  name  = "${var.project_name}-backend-arquivos"
+  role  = aws_iam_role.backend[0].id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
+      Resource = "${var.arquivos_bucket_arn}/*"
+    }]
+  })
+}
+
+resource "aws_iam_instance_profile" "backend" {
+  count = var.use_lab_role ? 0 : 1
+  name  = "${var.project_name}-backend-profile"
+  role  = aws_iam_role.backend[0].name
+}
+
 locals {
-  instance_profile_name = var.use_lab_role ? data.aws_iam_instance_profile.lab_profile[0].name : aws_iam_instance_profile.instance[0].name
-  ocr_habilitado        = var.ocr_asg.desired_capacity > 0
-  rabbitmq_host         = local.ocr_habilitado ? aws_instance.rabbitmq[0].private_ip : "localhost"
+  instance_profile_name         = var.use_lab_role ? data.aws_iam_instance_profile.lab_profile[0].name : aws_iam_instance_profile.instance[0].name
+  backend_instance_profile_name = var.use_lab_role ? data.aws_iam_instance_profile.lab_profile[0].name : aws_iam_instance_profile.backend[0].name
+  ocr_habilitado                = var.ocr_asg.desired_capacity > 0
+  rabbitmq_host                 = local.ocr_habilitado ? aws_instance.rabbitmq[0].private_ip : "localhost"
 
   user_data_frontend = templatefile("${path.module}/../../scripts/frontend.sh", {
     ghcr_user    = var.ghcr_user
@@ -72,6 +121,8 @@ locals {
     rabbitmq_host     = local.rabbitmq_host
     rabbitmq_user     = var.rabbitmq_user
     rabbitmq_password = var.rabbitmq_password
+    arquivos_bucket   = var.arquivos_bucket_name
+    aws_region        = var.aws_region
   })
 
   user_data_ocr = templatefile("${path.module}/../../scripts/ocr.sh", {
@@ -175,7 +226,14 @@ resource "aws_launch_template" "backend" {
   key_name      = aws_key_pair.main.key_name
 
   iam_instance_profile {
-    name = local.instance_profile_name
+    name = local.backend_instance_profile_name
+  }
+
+  # O backend roda em container: IMDSv2 precisa de 2 saltos para entregar as credenciais do S3.
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 2
   }
 
   user_data = base64encode(local.user_data_backend)

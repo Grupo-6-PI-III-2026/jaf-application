@@ -218,6 +218,13 @@ variable "max_instancias_ec2" {
   default     = 6
 }
 
+# ── Armazenamento (S3) ──────────────────────────────────────────
+variable "arquivos_force_destroy" {
+  description = "true permite que o destroy apague o bucket de fotos e notas fiscais mesmo com arquivos"
+  type        = bool
+  default     = false
+}
+
 variable "public_key_path" {
   description = "Caminho para a chave pública SSH (ex: ~/.ssh/id_rsa.pub)"
   type        = string

@@ -17,6 +17,7 @@ export interface Gasto {
   dtGasto: string;
   funcionario: Funcionario;
   reembolsoConcluido: boolean | null;
+  possuiNotaFiscal?: boolean;
   obra: {
     id: number;
     titulo: string;
@@ -33,6 +34,7 @@ export interface GastoCriarDto {
   funcionarioId: number;
   obraId: number;
   reembolsoConcluido?: boolean | null;
+  ocrJobId?: string | null;
 }
 
 export type StatusReembolso = "PENDENTE" | "PARCIAL" | "PAGO";
@@ -71,5 +73,24 @@ export const gastoService = {
   },
   deletar: async (id: number): Promise<void> => {
     await api.delete(`/gastos/${id}`);
+  },
+
+  anexarNotaFiscal: async (id: number, arquivo: File): Promise<Gasto> => {
+    const formData = new FormData();
+    formData.append("arquivo", arquivo);
+    const response = await api.post<Gasto>(`/gastos/${id}/nota-fiscal`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return response.data;
+  },
+
+  obterUrlNotaFiscal: async (id: number): Promise<string> => {
+    const response = await api.get<{ url: string }>(`/gastos/${id}/nota-fiscal`);
+    return response.data.url;
+  },
+
+  removerNotaFiscal: async (id: number): Promise<Gasto> => {
+    const response = await api.delete<Gasto>(`/gastos/${id}/nota-fiscal`);
+    return response.data;
   },
 };

@@ -8,6 +8,7 @@ export interface Obra {
   status: string;
   dtInicio: string;
   dtTerminoPrevisto: string;
+  fotoUrl?: string | null;
 }
 
 export interface ObraCriarDto {
@@ -41,5 +42,19 @@ export const obraService = {
 
   deletar: async (id: number): Promise<void> => {
     await api.delete(`/obras/${id}`);
+  },
+
+  enviarFoto: async (id: number, arquivo: File): Promise<Obra> => {
+    const formData = new FormData();
+    formData.append("arquivo", arquivo);
+    const response = await api.post<Obra>(`/obras/${id}/foto`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return response.data;
+  },
+
+  removerFoto: async (id: number): Promise<Obra> => {
+    const response = await api.delete<Obra>(`/obras/${id}/foto`);
+    return response.data;
   },
 };

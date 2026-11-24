@@ -1,11 +1,14 @@
 package com.jaf.application.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.jaf.application.armazenamento.ArquivoService;
+import com.jaf.application.armazenamento.TipoArquivo;
 import com.jaf.application.config.RabbitMQConfig;
 import com.jaf.application.dto.OcrResponseDto;
 import com.jaf.application.dto.OcrResultadoMensagem;
 import com.jaf.application.dto.OcrSolicitacaoMensagem;
 import com.jaf.application.enums.StatusOcr;
+import com.jaf.application.exceptions.BadRequest;
 import com.jaf.application.exceptions.NotFoundException;
 import com.jaf.application.model.OcrProcessamento;
 import com.jaf.application.repository.OcrProcessamentoRepository;
@@ -53,14 +56,17 @@ public class OcrService {
 
     private final RabbitTemplate rabbitTemplate;
     private final OcrProcessamentoRepository processamentoRepository;
+    private final ArquivoService arquivos;
     private final RestTemplate restTemplate;
     private final String ocrServiceUrl;
 
     public OcrService(RabbitTemplate rabbitTemplate,
                       OcrProcessamentoRepository processamentoRepository,
+                      ArquivoService arquivos,
                       @Value("${ocr.service.url:http://localhost:8000/api/ocr}") String ocrServiceUrl) {
         this.rabbitTemplate = rabbitTemplate;
         this.processamentoRepository = processamentoRepository;
+        this.arquivos = arquivos;
         this.restTemplate = new RestTemplate();
         this.ocrServiceUrl = ocrServiceUrl;
     }
@@ -100,31 +106,47 @@ public class OcrService {
     public OcrResponseDto processarNota(MultipartFile arquivo, String solicitante) {
         String erroValidacao = validarArquivo(arquivo);
         if (erroValidacao != null) {
-            OcrResponseDto resposta = new OcrResponseDto();
-            resposta.setStatus(StatusOcr.ERRO);
-            resposta.setSucesso(false);
-            resposta.setMensagem(erroValidacao);
-            return resposta;
+            return erro(erroValidacao);
+        }
+
+        byte[] conteudo;
+        String chave;
+        try {
+            conteudo = arquivo.getBytes();
+            chave = arquivos.armazenar(conteudo, "notas", TipoArquivo.NOTAS_FISCAIS);
+        } catch (BadRequest exception) {
+            return erro(exception.getMessage());
+        } catch (IOException | RuntimeException exception) {
+            LOGGER.error("Falha ao armazenar a nota fiscal enviada por {}", solicitante, exception);
+            return erro("Não foi possível armazenar a nota fiscal. Tente novamente em instantes.");
         }
 
         // Salvo antes de publicar: o resultado pode voltar antes deste método terminar.
         OcrProcessamento processamento = processamentoRepository.save(
-                new OcrProcessamento(UUID.randomUUID().toString(), solicitante));
+                new OcrProcessamento(UUID.randomUUID().toString(), solicitante, chave));
 
         try {
             OcrSolicitacaoMensagem mensagem = new OcrSolicitacaoMensagem(
                     processamento.getId(),
                     arquivo.getOriginalFilename() != null ? arquivo.getOriginalFilename() : "nota-fiscal.jpg",
-                    Base64.getEncoder().encodeToString(arquivo.getBytes())
+                    Base64.getEncoder().encodeToString(conteudo)
             );
             rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, RabbitMQConfig.RK_SOLICITAR, mensagem);
-        } catch (IOException | AmqpException exception) {
+        } catch (AmqpException exception) {
             LOGGER.error("Falha ao enviar nota fiscal {} para o OCR", processamento.getId(), exception);
             processamento.marcarErro("Serviço de leitura de nota fiscal indisponível. Tente novamente em instantes.");
             processamentoRepository.save(processamento);
         }
 
         return paraResposta(processamento);
+    }
+
+    private OcrResponseDto erro(String mensagem) {
+        OcrResponseDto resposta = new OcrResponseDto();
+        resposta.setStatus(StatusOcr.ERRO);
+        resposta.setSucesso(false);
+        resposta.setMensagem(mensagem);
+        return resposta;
     }
 
     public OcrResponseDto consultar(String jobId, String solicitante) {

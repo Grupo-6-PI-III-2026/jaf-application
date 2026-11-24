@@ -47,7 +47,8 @@ class FuncionarioAutorizacaoTest {
     @BeforeEach
     void preparar() {
         acesso = new AcessoObraService(funcionarios, alocacoes);
-        service = new FuncionarioService(encoder, funcionarios, jwt, authenticationManager, acesso);
+        service = new FuncionarioService(encoder, funcionarios, jwt, authenticationManager, acesso,
+                mock(com.jaf.application.armazenamento.ArquivoService.class));
         cargoService = new CargoPermissaoService(cargos, acesso);
         permissaoService = new FuncionarioPermissaoService(individuais, funcionarios, cargoService, acesso);
         ator = new Funcionario();

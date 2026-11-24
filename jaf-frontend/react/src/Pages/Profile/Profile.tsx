@@ -11,6 +11,8 @@ import {
   type AlterarSenhaDto,
 } from "../../Types/user";
 import styles from "./Profile.module.css";
+import ImagemComPadrao from "../../Components/ImagemComPadrao/ImagemComPadrao";
+import { FOTO_MAX_BYTES, TIPOS_FOTO_ACEITOS } from "../../Constants/imagens";
 
 const IconEdit = () => (
   <svg
@@ -120,7 +122,6 @@ type Tab = "info" | "seguranca" | "excluir";
 
 const EMAIL_REGEX = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
 const SENHA_REGEX = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d).{6,}$/;
-const FOTO_MAX_BYTES = 5 * 1024 * 1024;
 
 const getApiMessage = (error: unknown, fallback: string) => {
   if (axios.isAxiosError(error)) {
@@ -170,8 +171,8 @@ export default function Profile() {
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (!file.type.startsWith("image/")) {
-        setSaveError("Selecione um arquivo de imagem valido.");
+      if (!TIPOS_FOTO_ACEITOS.split(",").includes(file.type)) {
+        setSaveError("Envie uma imagem JPG, PNG, WEBP ou GIF.");
         event.target.value = "";
         return;
       }
@@ -194,6 +195,8 @@ export default function Profile() {
       const { url } = await funcionarioService.uploadFoto(fotoFile);
       setFotoSelecionada(url);
       setFotoFile(null);
+      // O upload já grava a foto no perfil; atualiza o menu lateral sem esperar o "Salvar".
+      await refreshUser();
       toast.success("Foto enviada com sucesso!");
     } catch (error: unknown) {
       console.error("Erro ao fazer upload da foto:", error);
@@ -353,8 +356,9 @@ export default function Profile() {
               className={styles.avatarWrapper}
             >
               {avatarSrc ? (
-                <img
+                <ImagemComPadrao
                   src={avatarSrc}
+                  padrao={DEFAULT_AVATAR_URL}
                   alt={user.nome}
                   className={styles.avatarImg}
                 />
@@ -486,7 +490,7 @@ export default function Profile() {
                       <input
                         id="foto-upload"
                         type="file"
-                        accept="image/*"
+                        accept={TIPOS_FOTO_ACEITOS}
                         style={{ display: 'none' }}
                         onChange={handleFileSelect}
                       />

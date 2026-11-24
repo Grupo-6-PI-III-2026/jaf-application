@@ -1,10 +1,13 @@
 package com.jaf.application.service;
 
+import com.jaf.application.armazenamento.ArquivoService;
+import com.jaf.application.armazenamento.TipoArquivo;
 import com.jaf.application.config.RabbitMQConfig;
 import com.jaf.application.dto.OcrResponseDto;
 import com.jaf.application.dto.OcrResultadoMensagem;
 import com.jaf.application.dto.OcrSolicitacaoMensagem;
 import com.jaf.application.enums.StatusOcr;
+import com.jaf.application.exceptions.BadRequest;
 import com.jaf.application.exceptions.NotFoundException;
 import com.jaf.application.model.OcrProcessamento;
 import com.jaf.application.repository.OcrProcessamentoRepository;
@@ -40,14 +43,19 @@ class OcrServiceTest {
     @Mock
     private OcrProcessamentoRepository processamentoRepository;
 
+    @Mock
+    private ArquivoService arquivos;
+
     private OcrService ocrService;
 
+    private static final byte[] PNG = {(byte) 0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n', 1, 2};
+
     private final MockMultipartFile notaValida =
-            new MockMultipartFile("arquivo", "nota.png", "image/png", new byte[]{1, 2, 3, 4});
+            new MockMultipartFile("arquivo", "nota.png", "image/png", PNG);
 
     @BeforeEach
     void setUp() {
-        ocrService = new OcrService(rabbitTemplate, processamentoRepository, "http://ocr.invalid/api/ocr");
+        ocrService = new OcrService(rabbitTemplate, processamentoRepository, arquivos, "http://ocr.invalid/api/ocr");
     }
 
     @Test
@@ -61,19 +69,48 @@ class OcrServiceTest {
 
     @Test
     void processarNota_publicaSolicitacaoERetornaProcessando() {
+        when(arquivos.armazenar(PNG, "notas", TipoArquivo.NOTAS_FISCAIS)).thenReturn("notas/nf.png");
         when(processamentoRepository.save(any())).thenAnswer(invocacao -> invocacao.getArgument(0));
 
         OcrResponseDto resposta = ocrService.processarNota(notaValida, SOLICITANTE);
 
         ArgumentCaptor<OcrSolicitacaoMensagem> mensagem = ArgumentCaptor.forClass(OcrSolicitacaoMensagem.class);
         verify(rabbitTemplate).convertAndSend(eq(RabbitMQConfig.EXCHANGE), eq(RabbitMQConfig.RK_SOLICITAR), mensagem.capture());
+        ArgumentCaptor<OcrProcessamento> salvo = ArgumentCaptor.forClass(OcrProcessamento.class);
+        verify(processamentoRepository).save(salvo.capture());
 
         assertEquals(StatusOcr.PROCESSANDO, resposta.getStatus());
         assertTrue(resposta.isSucesso());
         assertNotNull(resposta.getJobId());
+        assertEquals("notas/nf.png", salvo.getValue().getArquivoChave());
         assertEquals(resposta.getJobId(), mensagem.getValue().jobId());
         assertEquals("nota.png", mensagem.getValue().filename());
-        assertArrayEquals(new byte[]{1, 2, 3, 4}, Base64.getDecoder().decode(mensagem.getValue().imagemBase64()));
+        assertArrayEquals(PNG, Base64.getDecoder().decode(mensagem.getValue().imagemBase64()));
+    }
+
+    @Test
+    void processarNota_conteudoDisfarcado_naoPublicaNemPersiste() {
+        MockMultipartFile html = new MockMultipartFile("arquivo", "nota.png", "image/png", "<script>".getBytes());
+        when(arquivos.armazenar(any(byte[].class), eq("notas"), any()))
+                .thenThrow(new BadRequest("Formato não suportado."));
+
+        OcrResponseDto resposta = ocrService.processarNota(html, SOLICITANTE);
+
+        assertEquals(StatusOcr.ERRO, resposta.getStatus());
+        assertEquals("Formato não suportado.", resposta.getMensagem());
+        verifyNoInteractions(rabbitTemplate, processamentoRepository);
+    }
+
+    @Test
+    void processarNota_armazenamentoIndisponivel_naoPublica() {
+        when(arquivos.armazenar(any(byte[].class), eq("notas"), any()))
+                .thenThrow(new IllegalStateException("S3 fora do ar"));
+
+        OcrResponseDto resposta = ocrService.processarNota(notaValida, SOLICITANTE);
+
+        assertFalse(resposta.isSucesso());
+        assertEquals(StatusOcr.ERRO, resposta.getStatus());
+        verifyNoInteractions(rabbitTemplate, processamentoRepository);
     }
 
     @Test
@@ -89,6 +126,7 @@ class OcrServiceTest {
 
     @Test
     void processarNota_brokerIndisponivel_marcaErro() {
+        when(arquivos.armazenar(PNG, "notas", TipoArquivo.NOTAS_FISCAIS)).thenReturn("notas/nf.png");
         when(processamentoRepository.save(any())).thenAnswer(invocacao -> invocacao.getArgument(0));
         doThrow(new AmqpConnectException(new ConnectException("Connection refused")))
                 .when(rabbitTemplate).convertAndSend(anyString(), anyString(), any(Object.class));

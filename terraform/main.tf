@@ -125,6 +125,20 @@ module "ec2" {
   rabbitmq_user     = var.rabbitmq_user
   rabbitmq_password = var.rabbitmq_password
   ocr_space_api_key = var.ocr_space_api_key
+
+  # Fotos e notas fiscais no S3
+  aws_region           = var.aws_region
+  arquivos_bucket_name = module.storage.bucket_name
+  arquivos_bucket_arn  = module.storage.bucket_arn
+}
+
+# ── Módulo: Armazenamento (S3) ─────────────────────────────────
+module "storage" {
+  source = "./modules/storage"
+
+  project_name  = var.project_name
+  environment   = var.environment
+  force_destroy = var.arquivos_force_destroy
 }
 
 # ── Módulo: RDS ───────────────────────────────────────────────

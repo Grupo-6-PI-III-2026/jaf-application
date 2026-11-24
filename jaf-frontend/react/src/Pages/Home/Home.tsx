@@ -22,14 +22,6 @@ const formatarMoeda = (valor: number) =>
 
 const normalizar = (valor: string) => valor.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/_/g, " ").trim().toLowerCase();
 
-// Array de imagens placeholder para as obras
-const imagensObras = [
-  "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800",
-  "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800",
-  "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=800",
-  "https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?w=800",
-];
-
 export default function Home() {
   const admin = authService.isAdmin();
   const [obras, setObras] = useState<Obra[]>([]);
@@ -159,7 +151,7 @@ export default function Home() {
 
             <div className={styles.lista}>
               {obrasFiltradas.length > 0 ? (
-                obrasFiltradas.map((obra, index) => {
+                obrasFiltradas.map((obra) => {
                   const responsavel = responsaveisPorObra.get(obra.id);
                   return (
                     <CardObra
@@ -168,7 +160,7 @@ export default function Home() {
                       nome={obra.titulo}
                       status={obra.status}
                       valor={totalGastoPorObra.get(obra.id) ?? 0}
-                      imagem={imagensObras[index % imagensObras.length]}
+                      imagem={obra.fotoUrl}
                       responsavelNome={responsavel?.funcionario.nome}
                       responsavelCargo={responsavel?.cargo?.replace(/_/g, " ")}
                     />

@@ -35,6 +35,18 @@ public class GastoDto {
 
     private Boolean reembolsoConcluido;
 
+    /** Processamento de OCR cujo arquivo deve ser anexado ao gasto como nota fiscal. */
+    @Size(max = 36)
+    private String ocrJobId;
+
+    public String getOcrJobId() {
+        return ocrJobId;
+    }
+
+    public void setOcrJobId(String ocrJobId) {
+        this.ocrJobId = ocrJobId;
+    }
+
     public String getDescricao() {
         return descricao;
     }

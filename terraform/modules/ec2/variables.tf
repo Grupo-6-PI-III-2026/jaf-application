@@ -190,3 +190,19 @@ variable "ocr_space_api_key" {
   type        = string
   sensitive   = true
 }
+
+# ── Armazenamento de arquivos (S3) ──────────────────────────────────────────────────────
+variable "aws_region" {
+  description = "Região AWS usada pelo SDK S3 do backend"
+  type        = string
+}
+
+variable "arquivos_bucket_name" {
+  description = "Bucket privado de fotos e notas fiscais"
+  type        = string
+}
+
+variable "arquivos_bucket_arn" {
+  description = "ARN do bucket de arquivos (permissão da role do backend na conta pessoal)"
+  type        = string
+}

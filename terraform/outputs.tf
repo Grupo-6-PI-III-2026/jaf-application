@@ -47,3 +47,8 @@ output "eic_endpoint_id" {
   description = "ID do endpoint para conexão às instâncias privadas"
   value       = module.vpc.eic_endpoint_id
 }
+
+output "arquivos_bucket_name" {
+  description = "Bucket privado de fotos e notas fiscais"
+  value       = module.storage.bucket_name
+}

@@ -1,5 +1,6 @@
 package com.jaf.application.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.jaf.application.enums.Cargo;
 import jakarta.persistence.*;
 
@@ -17,6 +18,10 @@ public class Funcionario {
 
     @Column(name = "foto_url", length = 512)
     private String fotoUrl;
+
+    @JsonIgnore
+    @Column(name = "foto_chave")
+    private String fotoChave;
 
     @Enumerated(EnumType.STRING)
     private Cargo cargoGlobal;
@@ -62,6 +67,14 @@ public class Funcionario {
 
     public void setFotoUrl(String fotoUrl) {
         this.fotoUrl = fotoUrl;
+    }
+
+    public String getFotoChave() {
+        return fotoChave;
+    }
+
+    public void setFotoChave(String fotoChave) {
+        this.fotoChave = fotoChave;
     }
 
     public Cargo getCargoGlobal() {

@@ -1,5 +1,7 @@
 package com.jaf.application.service;
 
+import com.jaf.application.armazenamento.ArquivoService;
+import com.jaf.application.armazenamento.TipoArquivo;
 import com.jaf.application.config.GerenciadorTokenJwt;
 import com.jaf.application.dto.AlterarSenhaDto;
 import com.jaf.application.dto.FuncionarioDto;
@@ -23,27 +25,41 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.regex.Pattern;
 
 @Service
 public class FuncionarioService {
     private static final Logger logger = LoggerFactory.getLogger(FuncionarioService.class);
+    private static final long FOTO_MAX_BYTES = 5L * 1024L * 1024L;
+    private static final Pattern AVATAR_PADRAO = Pattern.compile("^/assets/Geral/avatar-[a-z]+\\.svg$");
 
     private final PasswordEncoder passwordEncoder;
     private final FuncionarioRepository funcionarioRepository;
     private final GerenciadorTokenJwt gerenciadorTokenJwt;
     private final AuthenticationManager authenticationManager;
     private final AcessoObraService acesso;
+    private final ArquivoService arquivos;
 
     public FuncionarioService(PasswordEncoder passwordEncoder, FuncionarioRepository funcionarioRepository,
                               GerenciadorTokenJwt gerenciadorTokenJwt, AuthenticationManager authenticationManager,
-                              AcessoObraService acesso) {
+                              AcessoObraService acesso, ArquivoService arquivos) {
         this.passwordEncoder = passwordEncoder;
         this.funcionarioRepository = funcionarioRepository;
         this.gerenciadorTokenJwt = gerenciadorTokenJwt;
         this.authenticationManager = authenticationManager;
         this.acesso = acesso;
+        this.arquivos = arquivos;
+    }
+
+    public FuncionarioResponseDto paraResposta(Funcionario funcionario) {
+        FuncionarioResponseDto resposta = new FuncionarioResponseDto(funcionario);
+        if (funcionario.getFotoChave() != null) {
+            resposta.setFotoUrl(arquivos.gerarUrl(funcionario.getFotoChave()));
+        }
+        return resposta;
     }
 
     public FuncionarioResponseDto criar(FuncionarioDto dto) {
@@ -69,7 +85,7 @@ public class FuncionarioService {
 
         Funcionario salvo = funcionarioRepository.save(novoFuncionario);
         logger.info("Funcionário criado com sucesso: ID={}, Email={}", salvo.getId(), salvo.getEmail());
-        return new FuncionarioResponseDto(salvo);
+        return paraResposta(salvo);
     }
 
     public List<FuncionarioResponseDto> listar() {
@@ -79,7 +95,7 @@ public class FuncionarioService {
         }
 
         return funcionariosEncontrados.stream()
-                .map(FuncionarioResponseDto::new)
+                .map(this::paraResposta)
                 .toList();
     }
 
@@ -115,7 +131,7 @@ public class FuncionarioService {
     public FuncionarioResponseDto buscarPorId(Long id) {
         Funcionario funcionario = funcionarioRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Usuário não encontrado."));
-        return new FuncionarioResponseDto(funcionario);
+        return paraResposta(funcionario);
     }
 
     public FuncionarioResponseDto atualizar(Long id, FuncionarioDto dto) {
@@ -127,7 +143,7 @@ public class FuncionarioService {
         existente.setEmail(dto.getEmail());
         existente.setCargoGlobal(dto.getCargo());
 
-        return new FuncionarioResponseDto(funcionarioRepository.save(existente));
+        return paraResposta(funcionarioRepository.save(existente));
     }
 
     public FuncionarioResponseDto atualizarPerfil(String emailAtual, FuncionarioPerfilUpdateDto dto) {
@@ -136,6 +152,11 @@ public class FuncionarioService {
         String nome = dto.getNome().trim();
         String email = dto.getEmail().trim().toLowerCase();
         String fotoUrl = dto.getFotoUrl() == null || dto.getFotoUrl().isBlank() ? null : dto.getFotoUrl().trim();
+        boolean avatarPadrao = fotoUrl != null && AVATAR_PADRAO.matcher(fotoUrl).matches();
+        // Qualquer outro valor só é aceito como "manter a foto enviada"; URLs externas nunca são gravadas.
+        if (fotoUrl != null && !avatarPadrao && existente.getFotoChave() == null) {
+            throw new BadRequest("Envie a foto pelo upload ou escolha um dos avatares disponíveis.");
+        }
 
         if (!email.equalsIgnoreCase(existente.getEmail())) {
             funcionarioRepository.findByEmailIgnoreCase(email)
@@ -147,10 +168,26 @@ public class FuncionarioService {
 
         existente.setNome(nome);
         existente.setEmail(email);
-        existente.setFotoUrl(fotoUrl);
+        String fotoRemovida = null;
+        if (fotoUrl == null || avatarPadrao) {
+            fotoRemovida = existente.getFotoChave();
+            existente.setFotoChave(null);
+            existente.setFotoUrl(fotoUrl);
+        }
 
         Funcionario salvo = funcionarioRepository.save(existente);
-        return new FuncionarioResponseDto(salvo);
+        arquivos.removerAposCommit(fotoRemovida);
+        return paraResposta(salvo);
+    }
+
+    public String atualizarFoto(String email, MultipartFile arquivo) {
+        Funcionario existente = buscarPorEmail(email);
+        String anterior = existente.getFotoChave();
+        existente.setFotoChave(arquivos.armazenar(arquivo, "perfil", TipoArquivo.IMAGENS, FOTO_MAX_BYTES));
+        existente.setFotoUrl(null);
+        Funcionario salvo = funcionarioRepository.save(existente);
+        arquivos.removerAposCommit(anterior);
+        return arquivos.gerarUrl(salvo.getFotoChave());
     }
 
     public void alterarSenha(String email, AlterarSenhaDto dto) {
@@ -176,6 +213,7 @@ public class FuncionarioService {
     public void excluirConta(String email) {
         Funcionario existente = buscarPorEmail(email);
         funcionarioRepository.delete(existente);
+        arquivos.removerAposCommit(existente.getFotoChave());
     }
 
     public void deletar(Long id) {
@@ -184,6 +222,7 @@ public class FuncionarioService {
         acesso.exigirExclusaoFuncionario(existente);
         acesso.exigirExclusaoDeOutro(existente);
         funcionarioRepository.deleteById(id);
+        arquivos.removerAposCommit(existente.getFotoChave());
     }
 
     public FuncionarioResponseDto atualizarCargo(Long id, String novoCargo) {
@@ -200,7 +239,7 @@ public class FuncionarioService {
         }
 
         existente.setCargoGlobal(cargo);
-        return new FuncionarioResponseDto(funcionarioRepository.save(existente));
+        return paraResposta(funcionarioRepository.save(existente));
     }
 
   

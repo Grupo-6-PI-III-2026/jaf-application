@@ -9,7 +9,7 @@ import { funcionarioService } from "../../../Service/Funcionarios/funcionarioSer
 
 const { navigate } = vi.hoisted(() => ({ navigate: vi.fn() }));
 vi.mock("react-router-dom", () => ({ useNavigate: () => navigate }));
-vi.mock("../../../Service/Obras/obraService", () => ({ obraService: { criar: vi.fn() } }));
+vi.mock("../../../Service/Obras/obraService", () => ({ obraService: { criar: vi.fn(), enviarFoto: vi.fn() } }));
 vi.mock("../../../Service/Alocacoes/alocacaoService", () => ({ alocacaoService: { criar: vi.fn() } }));
 vi.mock("../../../Service/Funcionarios/funcionarioService", () => ({ funcionarioService: { listar: vi.fn() } }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn() } }));
@@ -50,8 +50,37 @@ describe("nova obra", () => {
     expect(screen.getByText(/Orçamento planejado não é dinheiro recebido/)).toBeInTheDocument();
     expect(screen.queryByText(/Localização|Documentação|OCR|Upload/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/ENDEREÇO|CIDADE|ESTADO/i)).not.toBeInTheDocument();
-    expect(container.querySelector('input[type="file"]')).not.toBeInTheDocument();
-    expect(container.querySelectorAll("input, select")).toHaveLength(5);
+    expect(container.querySelectorAll('input[type="file"]')).toHaveLength(1);
+    expect(screen.getByLabelText("FOTO DA OBRA")).toHaveAttribute("accept", "image/jpeg,image/png,image/webp,image/gif");
+    expect(container.querySelectorAll("input, select")).toHaveLength(6);
+  });
+
+  it("envia a foto escolhida depois de criar e alocar a obra", async () => {
+    URL.createObjectURL = vi.fn(() => "blob:foto");
+    URL.revokeObjectURL = vi.fn();
+    const foto = new File(["x"], "obra.png", { type: "image/png" });
+    await renderComResponsavel();
+    fireEvent.change(screen.getByLabelText("FOTO DA OBRA"), { target: { files: [foto] } });
+    expect(screen.getByText("obra.png")).toBeInTheDocument();
+    fireEvent.submit(screen.getByRole("form", { name: "Criar obra" }));
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith("/home"));
+    expect(obraService.enviarFoto).toHaveBeenCalledWith(42, foto);
+    expect(vi.mocked(alocacaoService.criar).mock.invocationCallOrder[0])
+      .toBeLessThan(vi.mocked(obraService.enviarFoto).mock.invocationCallOrder[0]);
+  });
+
+  it("rejeita foto fora do formato e mantém a obra criada quando o envio da foto falha", async () => {
+    URL.createObjectURL = vi.fn(() => "blob:foto");
+    URL.revokeObjectURL = vi.fn();
+    vi.mocked(obraService.enviarFoto).mockRejectedValue(new Error("falha"));
+    await renderComResponsavel();
+    fireEvent.change(screen.getByLabelText("FOTO DA OBRA"), { target: { files: [new File(["%PDF"], "a.pdf", { type: "application/pdf" })] } });
+    expect(screen.getByText(/Envie uma imagem JPG, PNG, WEBP ou GIF/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("FOTO DA OBRA"), { target: { files: [new File(["x"], "obra.jpg", { type: "image/jpeg" })] } });
+    fireEvent.submit(screen.getByRole("form", { name: "Criar obra" }));
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith("/home"));
+    expect(toast.warning).toHaveBeenCalledWith(expect.stringMatching(/Não foi possível enviar a foto/));
+    expect(toast.success).toHaveBeenCalled();
   });
 
   it("aceita início futuro, envia somente o contrato e aloca com CRIAR_ALOCACAO sem VISUALIZAR_FUNCIONARIOS", async () => {

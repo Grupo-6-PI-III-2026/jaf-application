@@ -7,7 +7,6 @@ import com.jaf.application.model.Funcionario;
 import com.jaf.application.service.FuncionarioService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -22,14 +21,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.server.ResponseStatusException;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Set;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/funcionarios/me")
@@ -37,15 +28,6 @@ import java.util.UUID;
 public class FuncionarioPerfilController {
 
     private final FuncionarioService funcionarioService;
-
-    private static final Path UPLOAD_DIR = Paths.get("uploads", "fotos");
-        private static final long FOTO_MAX_BYTES = 5L * 1024L * 1024L;
-        private static final Set<String> TIPOS_IMAGEM_ACEITOS = Set.of(
-            "image/jpeg",
-            "image/png",
-            "image/webp",
-            "image/gif"
-        );
 
     public FuncionarioPerfilController(FuncionarioService funcionarioService) {
         this.funcionarioService = funcionarioService;
@@ -55,7 +37,7 @@ public class FuncionarioPerfilController {
     public ResponseEntity<FuncionarioResponseDto> meuPerfil(
             @AuthenticationPrincipal UserDetails userDetails) {
         Funcionario funcionario = funcionarioService.buscarPorEmail(userDetails.getUsername());
-        return ResponseEntity.ok(new FuncionarioResponseDto(funcionario));
+        return ResponseEntity.ok(funcionarioService.paraResposta(funcionario));
     }
 
     @PutMapping
@@ -68,29 +50,9 @@ public class FuncionarioPerfilController {
     @PostMapping(value = "/foto", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<FotoUploadResponse> uploadFoto(
             @AuthenticationPrincipal UserDetails userDetails,
-            @RequestParam("file") MultipartFile file) throws IOException {
-
-        if (file == null || file.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Arquivo invalido.");
-        }
-        if (file.getSize() > FOTO_MAX_BYTES) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A foto deve ter no maximo 5 MB.");
-        }
-        if (file.getContentType() == null || !TIPOS_IMAGEM_ACEITOS.contains(file.getContentType())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Envie uma imagem JPG, PNG, WEBP ou GIF.");
-        }
-
-        String ext = getExtensao(file.getOriginalFilename());
-        String filename = UUID.randomUUID().toString() + "." + ext;
-
-        Path uploadDir = UPLOAD_DIR.toAbsolutePath().normalize();
-        Files.createDirectories(uploadDir);
-        Path destino = uploadDir.resolve(filename);
-
-        file.transferTo(destino.toFile());
-
-        String url = "/uploads/fotos/" + filename;
-        return ResponseEntity.ok(new FotoUploadResponse(url));
+            @RequestParam("file") MultipartFile file) {
+        return ResponseEntity.ok(new FotoUploadResponse(
+                funcionarioService.atualizarFoto(userDetails.getUsername(), file)));
     }
 
     @PatchMapping("/senha")
@@ -105,13 +67,6 @@ public class FuncionarioPerfilController {
     public ResponseEntity<Void> excluirConta(@AuthenticationPrincipal UserDetails userDetails) {
         funcionarioService.excluirConta(userDetails.getUsername());
         return ResponseEntity.noContent().build();
-    }
-
-    private String getExtensao(String filename) {
-        if (filename == null || !filename.contains(".")) {
-            return "jpg";
-        }
-        return filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
     }
 
     public record FotoUploadResponse(String url) {}

@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { isAxiosError } from "axios";
-import { FileText, Calendar, User, DollarSign, ChevronDown } from "lucide-react";
+import { FileText, Calendar, User, DollarSign, ChevronDown, ImagePlus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import styles from "./NovaObra.module.css";
@@ -10,6 +10,8 @@ import { funcionarioService } from "../../../Service/Funcionarios/funcionarioSer
 import { authService } from "../../../Service/Auth/Login/authService";
 import type { FuncionarioPermissoes } from "../../../Types/permissoes";
 import { dataValida, erroApi, valorDecimal } from "../../../Utils/financeiro";
+import ImagemComPadrao from "../../../Components/ImagemComPadrao/ImagemComPadrao";
+import { FOTO_MAX_BYTES, IMAGEM_OBRA_PADRAO, TIPOS_FOTO_ACEITOS } from "../../../Constants/imagens";
 
 interface ErrosFormulario {
   nomeObra?: string;
@@ -17,6 +19,7 @@ interface ErrosFormulario {
   dataInicio?: string;
   dataFim?: string;
   orcamento?: string;
+  foto?: string;
 }
 
 const STATUS_OPCOES = [
@@ -43,6 +46,28 @@ export default function NovaObra() {
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
   const [orcamento, setOrcamento] = useState("");
+  const [foto, setFoto] = useState<File | null>(null);
+  const previewFoto = useMemo(() => (foto ? URL.createObjectURL(foto) : null), [foto]);
+
+  useEffect(() => () => { if (previewFoto) URL.revokeObjectURL(previewFoto); }, [previewFoto]);
+
+  const selecionarFoto = (arquivo: File | null) => {
+    if (arquivo && (!TIPOS_FOTO_ACEITOS.split(",").includes(arquivo.type) || arquivo.size > FOTO_MAX_BYTES)) {
+      setErrors((atual) => ({ ...atual, foto: "Envie uma imagem JPG, PNG, WEBP ou GIF de até 5 MB." }));
+      return;
+    }
+    setErrors((atual) => ({ ...atual, foto: undefined }));
+    setFoto(arquivo);
+  };
+
+  const enviarFoto = async (obraCriada: Obra) => {
+    if (!foto) return;
+    try {
+      await obraService.enviarFoto(obraCriada.id, foto);
+    } catch {
+      toast.warning(`Não foi possível enviar a foto da obra "${obraCriada.titulo}". Você pode adicioná-la ao editar a obra.`);
+    }
+  };
 
   useEffect(() => {
     // A lista só é necessária para alocar; CRIAR_ALOCACAO também autoriza a consulta na API.
@@ -129,8 +154,10 @@ export default function NovaObra() {
           navigate(`/obras/${obraCriada.id}/alocacoes`);
           return;
         }
+        await enviarFoto(obraCriada);
         toast.success(`Obra "${obraCriada.titulo}" criada com sucesso!`);
       } else {
+        await enviarFoto(obraCriada);
         toast.success(`Obra "${obraCriada.titulo}" criada. Solicite a um usuário com permissão de alocação que vincule o responsável.`);
       }
       navigate("/home");
@@ -233,6 +260,27 @@ export default function NovaObra() {
                 </div>
                 {errors.orcamento && <span id="erro-orcamento-obra" role="alert" className={styles.errorText}>{errors.orcamento}</span>}
                 <p id="info-orcamento" className={styles.infoTexto}>Orçamento planejado não é dinheiro recebido. O total recebido começa em zero e deve ser atualizado no financeiro da obra.</p>
+              </div>
+            </section>
+            <section className={styles.card} aria-labelledby="foto-obra">
+              <div className={styles.cardHeader}>
+                <ImagePlus size={20} className={styles.iconeCard} aria-hidden="true" />
+                <h2 id="foto-obra" className={styles.cardTitulo}>Foto da obra</h2>
+              </div>
+              <div className={styles.cardBody}>
+                <ImagemComPadrao src={previewFoto} padrao={IMAGEM_OBRA_PADRAO} alt="Pré-visualização da foto da obra" className={styles.previewFoto} />
+                <label className={styles.areaUpload}>
+                  <input type="file" accept={TIPOS_FOTO_ACEITOS} className={styles.inputArquivo} disabled={isLoading}
+                    aria-label="FOTO DA OBRA" aria-describedby={`info-foto${errors.foto ? " erro-foto-obra" : ""}`}
+                    onChange={(e) => { selecionarFoto(e.target.files?.[0] ?? null); e.target.value = ""; }} />
+                  <span className={styles.uploadConteudo}>
+                    <span className={styles.uploadTexto}>{foto ? foto.name : "Escolher imagem"}</span>
+                    <span className={styles.uploadSubtexto}>JPG, PNG, WEBP ou GIF até 5 MB</span>
+                  </span>
+                </label>
+                {foto && <button type="button" className={styles.botaoSelecionarArquivos} onClick={() => setFoto(null)} disabled={isLoading}>Usar imagem padrão</button>}
+                {errors.foto && <span id="erro-foto-obra" role="alert" className={styles.errorText}>{errors.foto}</span>}
+                <p id="info-foto" className={styles.infoTexto}>Opcional. Sem foto, a obra exibe a imagem padrão.</p>
               </div>
             </section>
             <div className={styles.card}>

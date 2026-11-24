@@ -10,6 +10,7 @@ import {
   Upload,
   X,
   Trash2,
+  FileText,
 } from "lucide-react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import styles from "./DetalhamentoObras.module.css";
@@ -32,6 +33,8 @@ import FinanceiroObra from "../../Components/Financeiro/FinanceiroObra";
 import ReembolsoModal from "../../Components/Financeiro/ReembolsoModal";
 import ResumoReembolsos from "../../Components/Financeiro/ResumoReembolsos";
 import { dataValida, erroApi, valorDecimal } from "../../Utils/financeiro";
+import ImagemComPadrao from "../../Components/ImagemComPadrao/ImagemComPadrao";
+import { FOTO_MAX_BYTES, IMAGEM_OBRA_PADRAO, TIPOS_FOTO_ACEITOS } from "../../Constants/imagens";
 
 const formatarMoeda = (valor: number) =>
   valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -143,8 +146,12 @@ export default function DetalhamentoObras() {
   const [periodoFinanceiro, setPeriodoFinanceiro] = useState<PeriodoFiltroValue>(periodoFiltroInicial);
   const [dataSelecionada, setDataSelecionada] = useState<string>(dataHoje());
   const [notaFiscalArquivo, setNotaFiscalArquivo] = useState<File | null>(null);
+  const [notaFiscalJobId, setNotaFiscalJobId] = useState<string | null>(null);
   const [processandoNotaFiscal, setProcessandoNotaFiscal] = useState(false);
   const [mensagemNotaFiscal, setMensagemNotaFiscal] = useState<string | null>(null);
+  const [abrindoNotaId, setAbrindoNotaId] = useState<number | null>(null);
+  const [fotoObraArquivo, setFotoObraArquivo] = useState<File | null>(null);
+  const [removerFotoObra, setRemoverFotoObra] = useState(false);
   const [novoGasto, setNovoGasto] = useState({
     descricao: "",
     categoria: "MATERIAL",
@@ -320,7 +327,24 @@ export default function DetalhamentoObras() {
 
   function limparNotaFiscal() {
     setNotaFiscalArquivo(null);
+    setNotaFiscalJobId(null);
     setMensagemNotaFiscal(null);
+  }
+
+  function selecionarNotaFiscal(arquivo: File | null) {
+    setNotaFiscalArquivo(arquivo);
+    setNotaFiscalJobId(null);
+    setMensagemNotaFiscal(null);
+  }
+
+  function selecionarFotoObra(arquivo: File | null) {
+    if (!arquivo) return;
+    if (!TIPOS_FOTO_ACEITOS.split(",").includes(arquivo.type) || arquivo.size > FOTO_MAX_BYTES) {
+      toast.error("Envie uma imagem JPG, PNG, WEBP ou GIF de até 5 MB");
+      return;
+    }
+    setFotoObraArquivo(arquivo);
+    setRemoverFotoObra(false);
   }
 
   function fecharModalGasto() {
@@ -336,9 +360,21 @@ export default function DetalhamentoObras() {
 
   function fecharModalEdicao() {
     setModalEdicaoAberto(false);
+    setFotoObraArquivo(null);
+    setRemoverFotoObra(false);
     if (searchParams.get("editar")) {
       setSearchParams({});
     }
+  }
+
+  async function aplicarFotoObra(obraSalva: Obra) {
+    try {
+      if (fotoObraArquivo) return await obraService.enviarFoto(obraSalva.id, fotoObraArquivo);
+      if (removerFotoObra && obraSalva.fotoUrl) return await obraService.removerFoto(obraSalva.id);
+    } catch (error) {
+      toast.warning(erroApi(error, "Obra salva, mas não foi possível atualizar a foto"));
+    }
+    return obraSalva;
   }
 
   async function salvarEdicaoObra(evento: FormEvent<HTMLFormElement>) {
@@ -364,7 +400,7 @@ export default function DetalhamentoObras() {
         dtInicio: edicaoObra.dtInicio,
         dtTerminoPrevisto: edicaoObra.dtTerminoPrevisto,
       });
-      setObra(obraAtualizada);
+      setObra(await aplicarFotoObra(obraAtualizada));
       fecharModalEdicao();
       toast.success("Obra atualizada com sucesso");
     } catch (error) {
@@ -404,9 +440,19 @@ export default function DetalhamentoObras() {
         dtGasto: novoGasto.dtGasto,
         funcionarioId: Number(novoGasto.funcionarioId),
         obraId: obra.id,
+        ocrJobId: notaFiscalJobId ?? undefined,
       };
-      if (gastoEditando) await gastoService.atualizar(gastoEditando.id, payload);
-      else await gastoService.criar(payload);
+      const gastoSalvo = gastoEditando
+        ? await gastoService.atualizar(gastoEditando.id, payload)
+        : await gastoService.criar(payload);
+      // Sem leitura do OCR concluída, o arquivo escolhido é anexado diretamente.
+      if (notaFiscalArquivo && !notaFiscalJobId && gastoSalvo) {
+        try {
+          await gastoService.anexarNotaFiscal(gastoSalvo.id, notaFiscalArquivo);
+        } catch (error) {
+          toast.warning(erroApi(error, "Gasto salvo, mas não foi possível anexar a nota fiscal"));
+        }
+      }
       setRevisaoFinanceira((r) => r + 1);
       setModalGastoAberto(false);
       setGastoEditando(null);
@@ -460,6 +506,7 @@ export default function DetalhamentoObras() {
         dtGasto: resultado.dtGasto || gastoAtual.dtGasto,
         metodoPagamento: metodoPagamento || gastoAtual.metodoPagamento,
       }));
+      setNotaFiscalJobId(resultado.jobId ?? null);
 
       setMensagemNotaFiscal(resultado.mensagem);
       toast.success("Campos preenchidos a partir da nota fiscal");
@@ -486,6 +533,61 @@ export default function DetalhamentoObras() {
     try { await gastoService.deletar(gasto.id); setRevisaoFinanceira((r) => r + 1); toast.success("Gasto excluído"); }
     catch (e) { toast.error(erroApi(e, "Não foi possível excluir o gasto")); }
     finally { setExcluindoGastoId(null); }
+  }
+
+  async function abrirNotaFiscal(gasto: Gasto) {
+    // A aba é aberta antes do await para o navegador não bloqueá-la como pop-up.
+    const aba = window.open("", "_blank");
+    setAbrindoNotaId(gasto.id);
+    try {
+      const url = await gastoService.obterUrlNotaFiscal(gasto.id);
+      if (aba) {
+        aba.opener = null;
+        aba.location.href = url;
+      } else {
+        window.open(url, "_blank", "noopener");
+      }
+    } catch (e) {
+      aba?.close();
+      toast.error(erroApi(e, "Não foi possível abrir a nota fiscal"));
+    } finally {
+      setAbrindoNotaId(null);
+    }
+  }
+
+  async function removerNotaDoGasto(gasto: Gasto) {
+    if (!window.confirm("Remover a nota fiscal anexada a este gasto?")) return;
+    try {
+      setGastoEditando(await gastoService.removerNotaFiscal(gasto.id));
+      setRevisaoFinanceira((r) => r + 1);
+      toast.success("Nota fiscal removida");
+    } catch (e) {
+      toast.error(erroApi(e, "Não foi possível remover a nota fiscal"));
+    }
+  }
+
+  function renderizarNotaFiscal(gasto: Gasto) {
+    if (!gasto.possuiNotaFiscal) {
+      return (
+        <span className={styles.semReembolso} title="Sem nota fiscal">
+          <span aria-hidden="true">—</span>
+          <span className={styles.textoOculto}>Sem nota</span>
+        </span>
+      );
+    }
+    return (
+      <button
+        className={styles.botaoIcone}
+        type="button"
+        aria-label="Ver nota fiscal"
+        title="Ver nota fiscal"
+        aria-busy={abrindoNotaId === gasto.id}
+        disabled={abrindoNotaId === gasto.id}
+        onClick={() => void abrirNotaFiscal(gasto)}
+      >
+        <FileText size={15} aria-hidden="true" />
+      </button>
+    );
   }
 
   function renderizarAcoesGasto(gasto: Gasto) {
@@ -633,6 +735,32 @@ export default function DetalhamentoObras() {
                 Término previsto
                 <input type="date" value={edicaoObra.dtTerminoPrevisto} onChange={(evento) => atualizarEdicaoObra("dtTerminoPrevisto", evento.target.value)} required />
               </label>
+              <div className={styles.notaFiscalBox}>
+                <div>
+                  <strong>Foto da obra</strong>
+                  <span>
+                    {fotoObraArquivo
+                      ? fotoObraArquivo.name
+                      : removerFotoObra || !obra.fotoUrl
+                        ? "Sem foto: a imagem padrão será exibida."
+                        : "A foto atual será mantida."}
+                  </span>
+                </div>
+                <label className={styles.botaoUploadNota}>
+                  <Upload size={16} />
+                  Escolher foto
+                  <input type="file" accept={TIPOS_FOTO_ACEITOS} onChange={(evento) => selecionarFotoObra(evento.target.files?.[0] ?? null)} />
+                </label>
+                {(fotoObraArquivo || (obra.fotoUrl && !removerFotoObra)) && (
+                  <button
+                    type="button"
+                    className={styles.botaoProcessarNota}
+                    onClick={() => { setFotoObraArquivo(null); setRemoverFotoObra(Boolean(obra.fotoUrl)); }}
+                  >
+                    Usar imagem padrão
+                  </button>
+                )}
+              </div>
             </div>
 
             <footer className={styles.modalFooter}>
@@ -662,7 +790,13 @@ export default function DetalhamentoObras() {
               <div className={styles.notaFiscalBox}>
                 <div>
                   <strong>Nota fiscal</strong>
-                  <span>{notaFiscalArquivo ? notaFiscalArquivo.name : "Selecione uma imagem ou PDF para preencher os campos automaticamente."}</span>
+                  <span>
+                    {notaFiscalArquivo
+                      ? notaFiscalArquivo.name
+                      : gastoEditando?.possuiNotaFiscal
+                        ? "Nota anexada. Escolha outro arquivo para substituí-la."
+                        : "Selecione uma imagem ou PDF. A nota fica anexada ao gasto e pode preencher os campos automaticamente."}
+                  </span>
                   {mensagemNotaFiscal && <small>{mensagemNotaFiscal}</small>}
                 </div>
                 <label className={styles.botaoUploadNota}>
@@ -671,7 +805,7 @@ export default function DetalhamentoObras() {
                   <input
                     type="file"
                     accept="image/jpeg,image/png,image/gif,image/bmp,image/tiff,image/webp,application/pdf"
-                    onChange={(evento) => setNotaFiscalArquivo(evento.target.files?.[0] ?? null)}
+                    onChange={(evento) => selecionarNotaFiscal(evento.target.files?.[0] ?? null)}
                   />
                 </label>
                 <button
@@ -682,6 +816,18 @@ export default function DetalhamentoObras() {
                 >
                   {processandoNotaFiscal ? "Lendo nota..." : "Extrair campos"}
                 </button>
+                {gastoEditando?.possuiNotaFiscal && !notaFiscalArquivo && (
+                  <>
+                    <button type="button" className={styles.botaoProcessarNota} onClick={() => void abrirNotaFiscal(gastoEditando)}>
+                      Ver nota atual
+                    </button>
+                    {podeEditarGasto && (
+                      <button type="button" className={styles.botaoProcessarNota} onClick={() => void removerNotaDoGasto(gastoEditando)}>
+                        Remover nota
+                      </button>
+                    )}
+                  </>
+                )}
               </div>
 
               <label>
@@ -823,10 +969,7 @@ export default function DetalhamentoObras() {
       {/* Card da obra */}
       <div className={styles.cardObra}>
         <div className={styles.cardObraImagem}>
-          <img
-            src="https://s2.glbimg.com/YgImWrcpJX6FAHRJOlZtEnTaHYc=/e.glbimg.com/og/ed/f/original/2020/12/23/apartamento-sao-paulo-260-m2-atemporal3.jpg"
-            alt={obra.titulo}
-          />
+          <ImagemComPadrao src={obra.fotoUrl} padrao={IMAGEM_OBRA_PADRAO} alt={obra.titulo} />
         </div>
         <div className={styles.cardObraInformacoes}>
           <div className={styles.badgeStatus}>
@@ -1032,6 +1175,10 @@ export default function DetalhamentoObras() {
                         <dt>Material</dt>
                         <dd>{gasto.categoria || "-"}</dd>
                       </div>
+                      <div>
+                        <dt>Nota</dt>
+                        <dd>{renderizarNotaFiscal(gasto)}</dd>
+                      </div>
                     </dl>
                     {renderizarAcoesGasto(gasto)}
                   </li>
@@ -1057,6 +1204,7 @@ export default function DetalhamentoObras() {
                 <th>ETAPA</th>
                 <th>MATERIAL</th>
                 <th>DATA</th>
+                <th>NOTA</th>
                 <th>AÇÕES</th>
               </tr>
             </thead>
@@ -1089,12 +1237,13 @@ export default function DetalhamentoObras() {
                     <td>{gasto.etapa || "-"}</td>
                     <td>{gasto.categoria || "-"}</td>
                     <td>{formatarData(gasto.dtGasto)}</td>
+                    <td>{renderizarNotaFiscal(gasto)}</td>
                     <td>{renderizarAcoesGasto(gasto)}</td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={9} className={styles.estadoLista}>
+                  <td colSpan={10} className={styles.estadoLista}>
                     {buscaFinanceira ? "Nenhum lançamento encontrado para a busca." : "Nenhum gasto registrado para esta obra."}
                   </td>
                 </tr>

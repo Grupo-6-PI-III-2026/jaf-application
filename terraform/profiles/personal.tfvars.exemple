@@ -28,6 +28,9 @@ single_nat_gateway = true
 # RDS Single-AZ; a mudança é aplicada na hora (há uma breve indisponibilidade)
 rds_multi_az          = false
 rds_apply_immediately = true
+
+# false impede o destroy de apagar fotos e notas fiscais; esvazie o bucket antes se quiser destruir.
+arquivos_force_destroy = false
 rds_backup_retention_period = 0
 
 backend_public_access = true

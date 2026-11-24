@@ -1,5 +1,7 @@
 package com.jaf.application.service;
 
+import com.jaf.application.armazenamento.ArquivoService;
+import com.jaf.application.armazenamento.TipoArquivo;
 import com.jaf.application.config.GerenciadorTokenJwt;
 import com.jaf.application.dto.AlterarSenhaDto;
 import com.jaf.application.dto.FuncionarioDto;
@@ -44,6 +46,9 @@ class FuncionarioServiceTest {
 
     @Mock
     private AcessoObraService acesso;
+
+    @Mock
+    private ArquivoService arquivos;
 
     @InjectMocks
     private FuncionarioService funcionarioService;
@@ -148,6 +153,66 @@ class FuncionarioServiceTest {
 
         assertNotNull(resultado);
         verify(funcionarioRepository, times(1)).save(any(Funcionario.class));
+    }
+
+    @Test
+    void atualizarPerfil_AvatarPadrao_SubstituiFotoEnviada() {
+        funcionario.setFotoChave("perfil/antiga.png");
+        FuncionarioPerfilUpdateDto dto = perfil("/assets/Geral/avatar-gestor.svg");
+        when(funcionarioRepository.findByEmailIgnoreCase("joao@teste.com")).thenReturn(Optional.of(funcionario));
+        when(funcionarioRepository.save(funcionario)).thenReturn(funcionario);
+
+        var resultado = funcionarioService.atualizarPerfil("joao@teste.com", dto);
+
+        assertNull(funcionario.getFotoChave());
+        assertEquals("/assets/Geral/avatar-gestor.svg", resultado.getFotoUrl());
+        verify(arquivos).removerAposCommit("perfil/antiga.png");
+    }
+
+    @Test
+    void atualizarPerfil_UrlExternaSemUpload_BadRequest() {
+        when(funcionarioRepository.findByEmailIgnoreCase("joao@teste.com")).thenReturn(Optional.of(funcionario));
+
+        assertThrows(BadRequest.class,
+                () -> funcionarioService.atualizarPerfil("joao@teste.com", perfil("https://exemplo.com/x.png")));
+        verify(funcionarioRepository, never()).save(any());
+    }
+
+    @Test
+    void atualizarPerfil_UrlDaFotoAtual_MantemArquivoEnviado() {
+        funcionario.setFotoChave("perfil/atual.png");
+        when(funcionarioRepository.findByEmailIgnoreCase("joao@teste.com")).thenReturn(Optional.of(funcionario));
+        when(funcionarioRepository.save(funcionario)).thenReturn(funcionario);
+        when(arquivos.gerarUrl("perfil/atual.png")).thenReturn("https://bucket/perfil/atual.png?assinatura");
+
+        var resultado = funcionarioService.atualizarPerfil("joao@teste.com",
+                perfil("https://bucket/perfil/atual.png?assinatura-antiga"));
+
+        assertEquals("perfil/atual.png", funcionario.getFotoChave());
+        assertEquals("https://bucket/perfil/atual.png?assinatura", resultado.getFotoUrl());
+        verify(arquivos, never()).removerAposCommit("perfil/atual.png");
+    }
+
+    @Test
+    void atualizarFoto_GravaNovaChaveERemoveAnterior() {
+        funcionario.setFotoChave("perfil/antiga.png");
+        var arquivo = new org.springframework.mock.web.MockMultipartFile("file", "foto.png", "image/png", new byte[]{1});
+        when(funcionarioRepository.findByEmailIgnoreCase("joao@teste.com")).thenReturn(Optional.of(funcionario));
+        when(arquivos.armazenar(arquivo, "perfil", TipoArquivo.IMAGENS, 5L * 1024L * 1024L)).thenReturn("perfil/nova.png");
+        when(funcionarioRepository.save(funcionario)).thenReturn(funcionario);
+        when(arquivos.gerarUrl("perfil/nova.png")).thenReturn("/api/arquivos?chave=perfil/nova.png");
+
+        assertEquals("/api/arquivos?chave=perfil/nova.png", funcionarioService.atualizarFoto("joao@teste.com", arquivo));
+        assertEquals("perfil/nova.png", funcionario.getFotoChave());
+        verify(arquivos).removerAposCommit("perfil/antiga.png");
+    }
+
+    private FuncionarioPerfilUpdateDto perfil(String fotoUrl) {
+        FuncionarioPerfilUpdateDto dto = new FuncionarioPerfilUpdateDto();
+        dto.setNome("João Silva");
+        dto.setEmail("joao@teste.com");
+        dto.setFotoUrl(fotoUrl);
+        return dto;
     }
 
     @Test

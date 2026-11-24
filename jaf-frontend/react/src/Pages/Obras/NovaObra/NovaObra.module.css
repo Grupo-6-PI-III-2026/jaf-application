@@ -405,6 +405,14 @@
 }
 
 /* Upload de Arquivos */
+.previewFoto {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 10px;
+  background-color: #f4f7fb;
+}
+
 .areaUpload {
   cursor: pointer;
   display: block;
